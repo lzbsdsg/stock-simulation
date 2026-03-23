@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -47,12 +48,13 @@ class SinaMarketDataAdapterTest {
   @SuppressWarnings("unchecked")
   void should_batch_get_quotes() throws Exception {
     HttpClient httpClient = Mockito.mock(HttpClient.class);
-    HttpResponse<String> response = Mockito.mock(HttpResponse.class);
+    HttpResponse<byte[]> response = Mockito.mock(HttpResponse.class);
     when(response.statusCode()).thenReturn(200);
+    String payload =
+        "var hq_str_sh600519=\"贵州茅台,1668.00,1650.00,1670.00,1680.00,1648.00,0,0,123456,123456789.00,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-03-24,10:01:02,00\";"
+            + "var hq_str_sz000001=\"平安银行,11.10,11.00,11.23,11.30,10.98,0,0,999999,1234567.00,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-03-24,10:01:03,00\";";
     when(response.body())
-        .thenReturn(
-            "var hq_str_sh600519=\"贵州茅台,1668.00,1650.00,1670.00,1680.00,1648.00,0,0,123456,123456789.00,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-03-24,10:01:02,00\";"
-                + "var hq_str_sz000001=\"平安银行,11.10,11.00,11.23,11.30,10.98,0,0,999999,1234567.00,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-03-24,10:01:03,00\";");
+        .thenReturn(payload.getBytes(StandardCharsets.UTF_8));
     when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(response);
 
     SinaMarketDataAdapter adapter = new SinaMarketDataAdapter(httpClient);

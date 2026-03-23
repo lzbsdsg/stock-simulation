@@ -12,6 +12,7 @@ import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -19,6 +20,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -30,6 +32,7 @@ import org.springframework.stereotype.Component;
 public class TencentMarketDataAdapter implements MarketDataProvider {
 
   private static final String TENCENT_QUOTE_URL = "https://qt.gtimg.cn/q=";
+  private static final Charset GBK = Charset.forName("GBK");
   private final HttpClient httpClient;
 
   public TencentMarketDataAdapter() {
@@ -177,17 +180,58 @@ public class TencentMarketDataAdapter implements MarketDataProvider {
               .header("Accept", "text/plain")
               .GET()
               .build();
-      HttpResponse<String> response =
-          httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+      HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
       if (response.statusCode() >= 400) {
         throw new IllegalStateException("Tencent response status is " + response.statusCode());
       }
-      return response.body();
+      return decodePayload(response);
     } catch (IOException | InterruptedException ex) {
       if (ex instanceof InterruptedException) {
         Thread.currentThread().interrupt();
       }
       throw new IllegalStateException("Failed to request Tencent quote", ex);
+    }
+  }
+
+  private String decodePayload(HttpResponse<byte[]> response) {
+    byte[] body = response.body();
+    if (body == null || body.length == 0) {
+      return "";
+    }
+
+    Charset charset = resolveCharset(response);
+    if (charset != null) {
+      return new String(body, charset);
+    }
+
+    String utf8Body = new String(body, StandardCharsets.UTF_8);
+    // Some quote APIs return GBK without charset header; fallback on obvious mojibake marker.
+    if (utf8Body.indexOf('\uFFFD') >= 0) {
+      return new String(body, GBK);
+    }
+    return utf8Body;
+  }
+
+  private Charset resolveCharset(HttpResponse<byte[]> response) {
+    Optional<String> contentTypeValue =
+        response.headers() == null ? Optional.empty() : response.headers().firstValue("Content-Type");
+    String contentType = contentTypeValue.orElse("");
+    if (contentType.isBlank()) {
+      return null;
+    }
+    int idx = contentType.toLowerCase(Locale.ROOT).indexOf("charset=");
+    if (idx < 0) {
+      return null;
+    }
+    String name = contentType.substring(idx + "charset=".length()).trim();
+    int semicolon = name.indexOf(';');
+    if (semicolon >= 0) {
+      name = name.substring(0, semicolon).trim();
+    }
+    try {
+      return Charset.forName(name);
+    } catch (Exception ex) {
+      return null;
     }
   }
 
