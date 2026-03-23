@@ -6,6 +6,7 @@ import com.lzbsdsg.stocksimulation.user.domain.entity.Account;
 import com.lzbsdsg.stocksimulation.user.domain.repository.AccountRepository;
 import com.lzbsdsg.stocksimulation.user.domain.service.AccountDomainService;
 import java.math.BigDecimal;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class AccountApplicationService {
+
+  private static final int MAX_OPTIMISTIC_RETRY = 3;
 
   private final AccountRepository accountRepository;
   private final AccountDomainService accountDomainService;
@@ -43,22 +46,94 @@ public class AccountApplicationService {
   }
 
   /** 冻结资金（买入下单时调用） */
+  @Transactional
   public void freezeBalance(Long userId, BigDecimal amount) {
-    // TODO: SELECT FOR UPDATE → 校验可用余额 → 扣减可用 + 增加冻结
+    validatePositiveAmount(amount);
+    executeWithOptimisticRetry(
+        userId,
+        account -> {
+          try {
+            accountDomainService.freeze(account, amount);
+          } catch (IllegalStateException ex) {
+            throw new BizException(ErrorCode.TRADE_ORDER_INSUFFICIENT_FUND, ex.getMessage());
+          }
+        });
   }
 
   /** 解冻资金（撤单/成交结算时调用） */
+  @Transactional
   public void unfreezeBalance(Long userId, BigDecimal amount) {
-    // TODO: 校验冻结余额 → 解冻
+    validatePositiveAmount(amount);
+    executeWithOptimisticRetry(
+        userId,
+        account -> {
+          try {
+            accountDomainService.unfreeze(account, amount);
+          } catch (IllegalStateException ex) {
+            throw new BizException(ErrorCode.BAD_REQUEST, ex.getMessage());
+          }
+        });
   }
 
   /** 成交扣款（撮合时调用） */
+  @Transactional
   public void deductFrozen(Long userId, BigDecimal frozenAmount, BigDecimal actualCost) {
-    // TODO: 解冻 frozenAmount → 扣减 actualCost → 多退少补
+    validatePositiveAmount(frozenAmount);
+    validatePositiveAmount(actualCost);
+    executeWithOptimisticRetry(
+        userId,
+        account -> {
+          if (account.getFrozenBalance().compareTo(frozenAmount) < 0) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "解冻金额超过冻结金额");
+          }
+
+          account.setFrozenBalance(account.getFrozenBalance().subtract(frozenAmount));
+
+          BigDecimal delta = frozenAmount.subtract(actualCost);
+          if (delta.compareTo(BigDecimal.ZERO) >= 0) {
+            account.setAvailableBalance(account.getAvailableBalance().add(delta));
+            return;
+          }
+
+          BigDecimal extraCost = delta.abs();
+          if (account.getAvailableBalance().compareTo(extraCost) < 0) {
+            throw new BizException(ErrorCode.TRADE_ORDER_INSUFFICIENT_FUND, "可用资金不足");
+          }
+          account.setAvailableBalance(account.getAvailableBalance().subtract(extraCost));
+        });
   }
 
   /** 卖出入账（撮合时调用） */
+  @Transactional
   public void creditBalance(Long userId, BigDecimal amount) {
-    // TODO: 增加可用余额
+    validatePositiveAmount(amount);
+    executeWithOptimisticRetry(
+        userId,
+        account -> account.setAvailableBalance(account.getAvailableBalance().add(amount)));
+  }
+
+  private void executeWithOptimisticRetry(Long userId, java.util.function.Consumer<Account> mutate) {
+    for (int attempt = 1; attempt <= MAX_OPTIMISTIC_RETRY; attempt++) {
+      Account account =
+          accountRepository
+              .findByUserIdForUpdate(userId)
+              .orElseThrow(() -> new BizException(ErrorCode.USER_ACCOUNT_NOT_FOUND));
+
+      mutate.accept(account);
+      if (!account.isBalanceConsistent()) {
+        throw new BizException(ErrorCode.BAD_REQUEST, "账户余额不一致");
+      }
+
+      if (accountRepository.updateWithVersion(account)) {
+        return;
+      }
+    }
+    throw new OptimisticLockingFailureException("账户更新发生乐观锁冲突，请重试");
+  }
+
+  private void validatePositiveAmount(BigDecimal amount) {
+    if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+      throw new BizException(ErrorCode.BAD_REQUEST, "金额必须大于0");
+    }
   }
 }

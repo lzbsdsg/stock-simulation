@@ -20,10 +20,9 @@ public class Account {
     this.version = 0;
   }
 
-  /** 余额恒等式校验: available + frozen ≤ initial（因交易手续费扣减） */
+  /** 余额一致性校验：可用/冻结余额均不可为负。 */
   public boolean isBalanceConsistent() {
-    return availableBalance.add(frozenBalance).compareTo(initialBalance) <= 0
-        && availableBalance.compareTo(BigDecimal.ZERO) >= 0
+    return availableBalance.compareTo(BigDecimal.ZERO) >= 0
         && frozenBalance.compareTo(BigDecimal.ZERO) >= 0;
   }
 
