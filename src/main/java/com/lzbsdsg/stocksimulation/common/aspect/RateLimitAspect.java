@@ -1,12 +1,28 @@
 package com.lzbsdsg.stocksimulation.common.aspect;
 
 import com.lzbsdsg.stocksimulation.common.annotation.RateLimit;
+import com.lzbsdsg.stocksimulation.common.exception.BizException;
+import com.lzbsdsg.stocksimulation.common.result.ErrorCode;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.script.RedisScript;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 /**
  * 限流 AOP 切面
@@ -18,17 +34,107 @@ import org.springframework.stereotype.Component;
 public class RateLimitAspect {
 
   private static final Logger log = LoggerFactory.getLogger(RateLimitAspect.class);
+  private static final String HEADER_LIMIT = "X-RateLimit-Limit";
+  private static final String HEADER_REMAINING = "X-RateLimit-Remaining";
+  private static final String HEADER_RESET = "X-RateLimit-Reset";
 
-  // TODO: 注入 RedisTemplate，实现 Lua 脚本限流
+  private final StringRedisTemplate stringRedisTemplate;
+  private final RedisScript<List> rateLimitScript;
+
+  public RateLimitAspect(StringRedisTemplate stringRedisTemplate) {
+    this.stringRedisTemplate = stringRedisTemplate;
+    DefaultRedisScript<List> script = new DefaultRedisScript<>();
+    script.setLocation(new ClassPathResource("lua/rate_limit.lua"));
+    script.setResultType(List.class);
+    this.rateLimitScript = script;
+  }
 
   @Around("@annotation(rateLimit)")
   public Object around(ProceedingJoinPoint joinPoint, RateLimit rateLimit) throws Throwable {
-    // TODO: 实现限流逻辑
-    // 1. 获取当前用户ID或IP
-    // 2. 构建 Redis key: rate:{keyPrefix}:{userId}
-    // 3. 执行 Lua 脚本（令牌桶/滑动窗口）
-    // 4. 超限则抛出 BizException(ErrorCode.TOO_MANY_REQUESTS)
+    long capacity = rateLimit.limit() > 0 ? rateLimit.limit() : rateLimit.maxRequests();
+    long windowSeconds =
+        rateLimit.window() > 0
+            ? rateLimit.window()
+            : Math.max(1, rateLimit.timeUnit().toSeconds(rateLimit.timeWindow()));
+    double refillRatePerSecond = (double) capacity / windowSeconds;
+    long nowMillis = Instant.now().toEpochMilli();
+
+    String identity = resolveIdentity();
+    String configuredKey = rateLimit.key().isBlank() ? rateLimit.keyPrefix() : rateLimit.key();
+    String keyPrefix =
+        configuredKey.isBlank() ? joinPoint.getSignature().toShortString() : configuredKey;
+    String rateLimitKey = "rate_limit:" + keyPrefix + ":" + identity;
+
+    List<?> result =
+        stringRedisTemplate.execute(
+            rateLimitScript,
+            Collections.singletonList(rateLimitKey),
+            String.valueOf(capacity),
+            String.valueOf(refillRatePerSecond),
+            String.valueOf(nowMillis),
+            "1");
+
+    long allowed = toLong(result, 0, 1L);
+    long remaining = toLong(result, 1, Math.max(capacity - 1, 0));
+    long resetInSeconds = toLong(result, 2, windowSeconds);
+    setLimitHeaders(capacity, remaining, resetInSeconds);
+
+    if (allowed == 0L) {
+      log.debug("Rate limited: key={}, remaining={}", rateLimitKey, remaining);
+      throw new BizException(ErrorCode.TOO_MANY_REQUESTS);
+    }
 
     return joinPoint.proceed();
+  }
+
+  private String resolveIdentity() {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication != null
+        && authentication.isAuthenticated()
+        && !(authentication instanceof AnonymousAuthenticationToken)) {
+      return authentication.getName();
+    }
+    ServletRequestAttributes attributes =
+        (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+    if (attributes == null) {
+      return "anonymous";
+    }
+    HttpServletRequest request = attributes.getRequest();
+    String ip = request.getHeader("X-Forwarded-For");
+    if (ip != null && !ip.isBlank()) {
+      return ip.split(",")[0].trim();
+    }
+    return request.getRemoteAddr();
+  }
+
+  private void setLimitHeaders(long limit, long remaining, long resetInSeconds) {
+    ServletRequestAttributes attributes =
+        (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+    if (attributes == null) {
+      return;
+    }
+    HttpServletResponse response = attributes.getResponse();
+    if (response == null) {
+      return;
+    }
+    long resetEpoch = Instant.now().getEpochSecond() + Math.max(resetInSeconds, 1);
+    response.setHeader(HEADER_LIMIT, String.valueOf(limit));
+    response.setHeader(HEADER_REMAINING, String.valueOf(Math.max(remaining, 0)));
+    response.setHeader(HEADER_RESET, String.valueOf(resetEpoch));
+  }
+
+  private long toLong(List<?> result, int index, long fallback) {
+    if (result == null || result.size() <= index || result.get(index) == null) {
+      return fallback;
+    }
+    Object value = result.get(index);
+    if (value instanceof Number number) {
+      return number.longValue();
+    }
+    try {
+      return Long.parseLong(String.valueOf(value));
+    } catch (NumberFormatException ex) {
+      return fallback;
+    }
   }
 }

@@ -1,5 +1,12 @@
 package com.lzbsdsg.stocksimulation.config;
 
+import com.github.benmanes.caffeine.cache.Caffeine;
+import java.time.Duration;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.caffeine.CaffeineCacheManager;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
 /**
  * Caffeine 本地缓存配置（L1 缓存）。
  *
@@ -8,8 +15,46 @@ package com.lzbsdsg.stocksimulation.config;
  *
  * <p>统计: recordStats() → Micrometer 采集命中率 caffeine_hit_rate Gauge
  */
+@Configuration
 public class CaffeineConfig {
-  // TODO: @Configuration
-  // TODO: @Bean CaffeineCacheManager 多 region
-  // TODO: @Bean CacheMetricsRegistrar (Micrometer)
+
+  public static final String CACHE_QUOTE = "quote";
+  public static final String CACHE_STOCK = "stock";
+  public static final String CACHE_CONFIG = "config";
+  public static final String CACHE_LOGIN_LOCK = "loginLock";
+
+  @Bean
+  public CacheManager cacheManager() {
+    CaffeineCacheManager manager = new CaffeineCacheManager();
+    manager.setAllowNullValues(false);
+    manager.registerCustomCache(
+        CACHE_QUOTE,
+        Caffeine.newBuilder()
+            .expireAfterWrite(Duration.ofSeconds(3))
+            .maximumSize(5000)
+            .recordStats()
+            .build());
+    manager.registerCustomCache(
+        CACHE_STOCK,
+        Caffeine.newBuilder()
+            .expireAfterWrite(Duration.ofMinutes(5))
+            .maximumSize(6000)
+            .recordStats()
+            .build());
+    manager.registerCustomCache(
+        CACHE_CONFIG,
+        Caffeine.newBuilder()
+            .expireAfterWrite(Duration.ofMinutes(10))
+            .maximumSize(200)
+            .recordStats()
+            .build());
+    manager.registerCustomCache(
+        CACHE_LOGIN_LOCK,
+        Caffeine.newBuilder()
+            .expireAfterWrite(Duration.ofMinutes(30))
+            .maximumSize(10000)
+            .recordStats()
+            .build());
+    return manager;
+  }
 }

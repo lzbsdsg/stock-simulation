@@ -21,6 +21,11 @@ public final class TraceIdUtil {
     return traceId;
   }
 
+  /** 设置外部传入 traceId 到 MDC */
+  public static void set(String traceId) {
+    MDC.put(TRACE_ID_KEY, traceId);
+  }
+
   /** 获取当前 traceId */
   public static String get() {
     return MDC.get(TRACE_ID_KEY);

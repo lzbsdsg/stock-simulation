@@ -10,11 +10,47 @@
 -- 返回: {allowed(0/1), remaining_tokens}
 -- ============================================================
 
--- TODO: 实现令牌桶算法
--- 1. 获取上次填充时间和剩余 token
--- 2. 计算时间差，补充 token（不超过桶容量）
--- 3. 判断 remaining >= cost
--- 4. 扣减并更新，设置 key TTL
--- 5. 返回结果
+local key = KEYS[1]
+local capacity = tonumber(ARGV[1])
+local refill_rate = tonumber(ARGV[2])
+local now_ms = tonumber(ARGV[3])
+local cost = tonumber(ARGV[4])
 
-return {1, 0}
+if capacity <= 0 or refill_rate <= 0 or cost <= 0 then
+	return {0, 0, 1}
+end
+
+local data = redis.call('HMGET', key, 'tokens', 'ts')
+local last_tokens = tonumber(data[1])
+local last_ts = tonumber(data[2])
+
+if last_tokens == nil then
+	last_tokens = capacity
+	last_ts = now_ms
+end
+
+local elapsed_ms = math.max(0, now_ms - last_ts)
+local refill = (elapsed_ms / 1000.0) * refill_rate
+local current_tokens = math.min(capacity, last_tokens + refill)
+
+local allowed = 0
+if current_tokens >= cost then
+	allowed = 1
+	current_tokens = current_tokens - cost
+end
+
+redis.call('HMSET', key, 'tokens', current_tokens, 'ts', now_ms)
+
+local ttl_seconds = math.ceil((capacity / refill_rate) * 2)
+if ttl_seconds < 1 then
+	ttl_seconds = 1
+end
+redis.call('EXPIRE', key, ttl_seconds)
+
+local remaining = math.floor(current_tokens)
+local reset_in = math.ceil((capacity - current_tokens) / refill_rate)
+if reset_in < 1 then
+	reset_in = 1
+end
+
+return {allowed, remaining, reset_in}

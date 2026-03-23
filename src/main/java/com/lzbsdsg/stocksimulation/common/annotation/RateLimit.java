@@ -15,6 +15,15 @@ import java.util.concurrent.TimeUnit;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface RateLimit {
 
+  /** 每个窗口最大请求数（与 maxRequests 语义等价，优先使用该字段）。 */
+  int limit() default -1;
+
+  /** 时间窗口秒数（与 timeWindow+timeUnit 语义等价，优先使用该字段）。 */
+  long window() default -1;
+
+  /** 限流 key 前缀（与 keyPrefix 语义等价，优先使用该字段）。 */
+  String key() default "";
+
   /** 时间窗口内最大请求数 */
   int maxRequests() default 100;
 

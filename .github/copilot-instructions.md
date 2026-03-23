@@ -278,6 +278,39 @@ public interface MarketDataProvider {
 - 刷新时旧 Refresh Token 立即失效（Rotation）。
 - 登出时将 Access Token 加入 Redis 黑名单至过期。
 
+---
+
+## 七、代码格式与提交门禁（强制）
+
+### 7.1 Java/测试代码格式规则
+
+- Java 代码格式统一由 **Spotless + googleJavaFormat** 管理。
+- 任何新增/修改的 Java 文件（含 `src/main/java`、`src/test/java`）都必须通过 Spotless 检查。
+- 禁止手工“目测格式正确即提交”，必须以命令检查结果为准。
+
+### 7.2 本地执行流程（必须按顺序）
+
+在仓库根目录执行：
+
+```bash
+./mvnw spotless:check
+```
+
+若失败，执行：
+
+```bash
+./mvnw spotless:apply
+./mvnw spotless:check
+```
+
+仅当 `spotless:check` 通过后，才允许进入测试与提交步骤。
+
+### 7.3 Copilot 代码生成约束
+
+- 生成或修改 Java 代码后，Copilot 必须优先保证 Spotless 可通过。
+- 对长链式调用、长参数列表、缩进层级，优先采用可被 googleJavaFormat 接受的换行布局。
+- 发现 `spotless-maven-plugin:check` 报错时，优先修复格式，再处理业务问题。
+
 ### 6.4 接口限流
 
 - Nginx 全局：单 IP 100 req/s（`limit_req_zone`）。
