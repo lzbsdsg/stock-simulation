@@ -182,7 +182,7 @@ Week 20  ████ Beta 发布 + 文档收尾
 **状态**：✅ 已完成（实现与验收口径见 `iteration-3-delivery.md` 与 `iteration-3-acceptance-script.md`）
 
 **Flyway 迁移**：
-- [x] `V20260213_002__create_account_tables.sql` → t_user_account (含 version 字段)
+- [x] `V20260213_002__create_account_table.sql` → t_user_account (含 version 字段)
 
 **后端任务**：
 - [x] **Domain**: Account entity (余额恒等式: total = available + frozen), AccountDomainService
@@ -220,7 +220,10 @@ Week 20  ████ Beta 发布 + 文档收尾
 **目标**：接入外部行情数据源 + 多级缓存(L1 Caffeine + L2 Redis)
 
 **Flyway 迁移**：
-- [ ] `V20260213_003__create_market_tables.sql` → t_market_stock_info（导入 A 股基础数据 ~5000条）
+- [x] `V20260213_003__create_stock_info_table.sql` → t_market_stock_info（建表）
+- [x] `V20260324_004__seed_market_stock_info.sql` → 首批样例种子（幂等 upsert）
+- [x] `V20260324_005__seed_market_stock_info_from_csv.sql` → CSV 基础导入（约 2800 条，幂等 upsert）
+- [x] `V20260324_006__seed_market_stock_info_full_a_share.sql` → 全量 A 股导入（当前快照 5490 条，含沪深北，幂等 upsert）
 
 **后端任务**：
 - [ ] **Domain**: StockInfo entity, QuoteSnapshot value object, KLinePoint, KLinePeriod
@@ -546,8 +549,8 @@ Week 20  ████ Beta 发布 + 文档收尾
 **目标**：完善实时推送、自选股管理、站内消息通知
 
 **Flyway 迁移**：
-- [ ] `V20260213_007__create_watchlist_tables.sql` → t_watchlist_item
-- [ ] `V20260213_008__create_notification_tables.sql` → t_notification_message
+- [ ] `V20260213_006__create_watchlist_table.sql` → t_watchlist_item
+- [ ] `V20260213_007__create_notification_table.sql` → t_notification_message
 
 **后端任务**：
 - [ ] **Watchlist**: WatchlistController + WatchlistApplicationService + WatchlistRepository

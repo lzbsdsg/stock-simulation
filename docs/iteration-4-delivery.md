@@ -64,6 +64,10 @@
 ### 2.4 Flyway
 
 - 已存在并使用 V20260213_003__create_stock_info_table.sql 创建 t_market_stock_info。
+- 已补充 V20260324_004__seed_market_stock_info.sql 作为首批样例数据种子（upsert）。
+- 已补充 V20260324_005__seed_market_stock_info_from_csv.sql，从 uploads/stock_info_sina.csv 导入约 2800 条股票基础数据（upsert，可重复执行）。
+- 已补充 V20260324_006__seed_market_stock_info_full_a_share.sql，从 Sina A 股节点导入全量股票基础数据（当前快照 5490 条，upsert，可重复执行）。
+- 全量覆盖统计（V20260324_006 快照）：市场分布 SH=2306，SZ=2884，BJ=300；板块分布 MAIN=3364，ST=178，GEM=1351，STAR=597；代码前缀分布 sz30*=1393，sh688*=603。
 
 ## 3. 本迭代测试清单
 
@@ -88,6 +92,7 @@ Set-Location "d:\StockSimulation\stock-simulation"
 
 - 通过测试数：18
 - 失败测试数：0
+- 执行时间：约 9 秒（本地环境）
 
 ## 4. 接口验收（不仅限于测试类通过）
 
@@ -178,5 +183,5 @@ Authorization: Bearer ACCESS_TOKEN
 ## 6. 备注
 
 - K 线在第三方数据接口不可用时提供 Provider 级兜底生成，保障契约可用性与接口稳定性。
-- 股票搜索依赖 t_market_stock_info 数据，若本地为空，请先导入基础股票数据。
+- 股票搜索依赖 t_market_stock_info 数据，默认可通过 Flyway 种子迁移自动导入全量 A 股基础股票数据。
 - 若希望进行严格端到端验收，请结合 Redis/PostgreSQL 运行环境执行上述接口与缓存行为脚本。

@@ -561,12 +561,12 @@ stock-simulation/
 │   ├── logback-spring.xml
 │   └── db/migration/
 │       ├── V20260213_001__create_user_tables.sql
-│       ├── V20260213_002__create_market_tables.sql
-│       ├── V20260213_003__create_trade_tables.sql
-│       ├── V20260213_004__create_portfolio_tables.sql
-│       ├── V20260213_005__create_watchlist_tables.sql
-│       ├── V20260213_006__create_notification_tables.sql
-│       ├── V20260213_007__create_sys_config_tables.sql
+│       ├── V20260213_002__create_account_table.sql
+│       ├── V20260213_003__create_stock_info_table.sql
+│       ├── V20260213_004__create_trade_tables.sql
+│       ├── V20260213_005__create_portfolio_tables.sql
+│       ├── V20260213_006__create_watchlist_table.sql
+│       ├── V20260213_007__create_notification_table.sql
 │       └── V20260214_001__add_table_partitions.sql   # 流水/快照表月分区
 ├── src/test/java/com/lzbsdsg/stocksimulation/
 │   ├── auth/

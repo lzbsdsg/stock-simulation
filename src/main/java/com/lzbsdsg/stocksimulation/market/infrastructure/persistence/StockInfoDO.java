@@ -3,7 +3,7 @@ package com.lzbsdsg.stocksimulation.market.infrastructure.persistence;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import lombok.Data;
 
 /** 股票信息 DO */
@@ -26,7 +26,7 @@ public class StockInfoDO {
 
   private Boolean listed;
 
-  private LocalDateTime createdAt;
+  private Instant createdAt;
 
-  private LocalDateTime updatedAt;
+  private Instant updatedAt;
 }
