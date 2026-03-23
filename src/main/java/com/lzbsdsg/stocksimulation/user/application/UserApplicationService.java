@@ -8,9 +8,11 @@ import com.lzbsdsg.stocksimulation.common.result.ErrorCode;
 import com.lzbsdsg.stocksimulation.user.application.command.ChangePasswordCommand;
 import com.lzbsdsg.stocksimulation.user.application.command.UpdateUserProfileCommand;
 import com.lzbsdsg.stocksimulation.user.application.dto.UserProfileDTO;
+import com.lzbsdsg.stocksimulation.user.infrastructure.storage.AvatarStorageService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 /** 用户应用服务。 */
 @Service
@@ -18,11 +20,16 @@ public class UserApplicationService {
 
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
+  private final AvatarStorageService avatarStorageService;
   private final PasswordDomainService passwordDomainService;
 
-  public UserApplicationService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+  public UserApplicationService(
+      UserRepository userRepository,
+      PasswordEncoder passwordEncoder,
+      AvatarStorageService avatarStorageService) {
     this.userRepository = userRepository;
     this.passwordEncoder = passwordEncoder;
+    this.avatarStorageService = avatarStorageService;
     this.passwordDomainService = new PasswordDomainService();
   }
 
@@ -30,13 +37,7 @@ public class UserApplicationService {
   public UserProfileDTO getCurrentUser(Long userId) {
     User user =
         userRepository.findById(userId).orElseThrow(() -> new BizException(ErrorCode.USER_NOT_FOUND));
-    return new UserProfileDTO(
-        user.getId(),
-        user.getEmail(),
-        user.getNickname(),
-        user.getAvatarUrl(),
-        user.getRole(),
-        user.getStatus());
+    return toProfileDTO(user);
   }
 
   @Transactional
@@ -46,13 +47,17 @@ public class UserApplicationService {
     user.setNickname(command.nickname());
     user.setAvatarUrl(command.avatarUrl());
     User saved = userRepository.save(user);
-    return new UserProfileDTO(
-        saved.getId(),
-        saved.getEmail(),
-        saved.getNickname(),
-        saved.getAvatarUrl(),
-        saved.getRole(),
-        saved.getStatus());
+    return toProfileDTO(saved);
+  }
+
+  @Transactional
+  public UserProfileDTO uploadAvatar(Long userId, MultipartFile avatarFile) {
+    User user =
+        userRepository.findById(userId).orElseThrow(() -> new BizException(ErrorCode.USER_NOT_FOUND));
+    String avatarUrl = avatarStorageService.store(avatarFile, userId);
+    user.setAvatarUrl(avatarUrl);
+    User saved = userRepository.save(user);
+    return toProfileDTO(saved);
   }
 
   @Transactional
@@ -66,5 +71,15 @@ public class UserApplicationService {
       throw new BizException(ErrorCode.AUTH_PASSWORD_TOO_WEAK);
     }
     userRepository.updatePassword(userId, passwordEncoder.encode(command.newPassword()));
+  }
+
+  private UserProfileDTO toProfileDTO(User user) {
+    return new UserProfileDTO(
+        user.getId(),
+        user.getEmail(),
+        user.getNickname(),
+        user.getAvatarUrl(),
+        user.getRole(),
+        user.getStatus());
   }
 }

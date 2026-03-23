@@ -10,9 +10,12 @@ import com.lzbsdsg.stocksimulation.user.application.dto.UserProfileDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 /** 用户控制器 */
 @Tag(name = "用户模块")
@@ -37,6 +40,13 @@ public class UserController {
   @PutMapping("/me")
   public Result<UserProfileDTO> updateCurrentUser(@Valid @RequestBody UpdateUserProfileCommand command) {
     UserProfileDTO profile = userApplicationService.updateProfile(currentUserId(), command);
+    return Result.success(profile);
+  }
+
+  @Operation(summary = "上传并更新头像")
+  @PostMapping(value = "/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  public Result<UserProfileDTO> uploadAvatar(@RequestPart("file") MultipartFile file) {
+    UserProfileDTO profile = userApplicationService.uploadAvatar(currentUserId(), file);
     return Result.success(profile);
   }
 

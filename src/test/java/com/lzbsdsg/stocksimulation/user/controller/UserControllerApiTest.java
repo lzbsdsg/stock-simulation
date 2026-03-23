@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -27,6 +28,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.mock.web.MockMultipartFile;
 
 @WebMvcTest(UserController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -97,5 +101,32 @@ class UserControllerApiTest {
                         new ChangePasswordCommand("Strong123", "NewStrong123"))))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.code").value(200));
+  }
+
+  @Test
+  void should_upload_avatar() throws Exception {
+    MockMultipartFile file =
+        new MockMultipartFile("file", "avatar.png", "image/png", "fakepng".getBytes());
+    when(userApplicationService.uploadAvatar(eq(1L), any(MultipartFile.class)))
+        .thenReturn(
+            new UserProfileDTO(
+                1L,
+                "u@test.com",
+                "nick",
+                "/uploads/avatars/202603/u1-abc.png",
+                "USER",
+                "ACTIVE"));
+
+    mockMvc
+        .perform(
+            multipart("/api/v1/user/avatar")
+                .file(file)
+                .with(
+                    request -> {
+                      request.setMethod("POST");
+                      return request;
+                    }))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.avatarUrl").value("/uploads/avatars/202603/u1-abc.png"));
   }
 }

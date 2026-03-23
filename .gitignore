@@ -5,11 +5,13 @@ target/
 
 ### Runtime Logs & PIDs ###
 logs/
+uploads/
 *.log
 *.out
 *.pid
 hs_err_pid*
 replay_pid*
+register-response.json
 
 ### Local Env / Secrets ###
 .env

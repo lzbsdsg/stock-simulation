@@ -166,6 +166,37 @@ void should_throw_when_initial_balance_below_minimum()
 
 @Test
 void should_throw_when_initial_balance_above_maximum()
+
+// ===== UserControllerApiTest =====
+
+@Test
+void should_get_current_user_profile()
+
+@Test
+void should_update_current_user_profile()
+
+@Test
+void should_upload_avatar_successfully_with_multipart_file()
+
+@Test
+void should_reject_avatar_when_file_too_large_or_invalid_type()
+
+@Test
+void should_reject_avatar_upload_when_unauthenticated()
+
+// ===== AvatarStorageServiceTest =====
+
+@Test
+void should_store_avatar_to_uploads_avatars_yyyymm_and_return_public_url()
+
+@Test
+void should_reject_non_image_file()
+
+@Test
+void should_reject_file_size_exceed_limit()
+
+@Test
+void should_fallback_extension_from_content_type_when_filename_missing_ext()
 ```
 
 #### 2.1.5 Trade 模块测试
@@ -494,6 +525,26 @@ void should_cache_kline_data()
 // GET /api/v1/portfolio/positions
 @Test void should_return_positions_with_realtime_profit()
 @Test void should_return_empty_positions_for_new_user()
+
+// ===== UserControllerApiTest =====
+
+// GET /api/v1/user/me
+@Test void should_get_current_user_200()
+@Test void should_reject_without_auth_401()
+
+// PUT /api/v1/user/me
+@Test void should_update_profile_200()
+@Test void should_reject_invalid_nickname_400()
+
+// POST /api/v1/user/avatar
+@Test void should_upload_avatar_200()
+@Test void should_reject_avatar_invalid_type_400()
+@Test void should_reject_avatar_too_large_400()
+@Test void should_reject_avatar_without_auth_401()
+
+// GET /uploads/**
+@Test void should_access_uploaded_avatar_200()
+@Test void should_return_404_when_avatar_not_exists()
 ```
 
 ---

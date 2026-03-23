@@ -903,6 +903,133 @@ Response 200:
 
 ---
 
+## API 26: 获取当前用户资料
+
+```
+GET /api/v1/user/me
+Auth: Bearer Token
+RateLimit: 100/min
+SLO: P99 < 100ms
+
+Response 200:
+{
+  "code": "000000",
+  "data": {
+    "userId": 10001,
+    "email": "user@example.com",
+    "nickname": "股民小张",
+    "avatarUrl": "/uploads/avatars/202603/u10001-acde1234.png",
+    "role": "USER",
+    "status": "ACTIVE"
+  }
+}
+
+Error Codes:
+- AUTH_UNAUTHORIZED: 未登录或 Token 无效
+```
+
+---
+
+## API 27: 修改当前用户资料
+
+```
+PUT /api/v1/user/me
+Auth: Bearer Token
+RateLimit: 60/min
+SLO: P99 < 200ms
+
+Request Body:
+{
+  "nickname": "newNick",
+  "avatarUrl": "https://cdn.example.com/avatar.png"
+}
+
+Response 200:
+{
+  "code": "000000",
+  "data": {
+    "userId": 10001,
+    "email": "user@example.com",
+    "nickname": "newNick",
+    "avatarUrl": "https://cdn.example.com/avatar.png",
+    "role": "USER",
+    "status": "ACTIVE"
+  }
+}
+
+Error Codes:
+- AUTH_UNAUTHORIZED: 未登录或 Token 无效
+- BAD_REQUEST: 参数校验失败（昵称长度等）
+```
+
+---
+
+## API 28: 修改密码
+
+```
+PUT /api/v1/user/password
+Auth: Bearer Token
+RateLimit: 30/min
+SLO: P99 < 200ms
+
+Request Body:
+{
+  "oldPassword": "Strong123",
+  "newPassword": "NewStrong123"
+}
+
+Response 200:
+{
+  "code": "000000",
+  "message": "success",
+  "data": null
+}
+
+Error Codes:
+- AUTH_UNAUTHORIZED: 未登录或 Token 无效
+- AUTH_LOGIN_FAILED: 原密码错误
+- AUTH_PASSWORD_TOO_WEAK: 新密码强度不足
+```
+
+---
+
+## API 29: 上传并更新头像
+
+```
+POST /api/v1/user/avatar
+Auth: Bearer Token
+RateLimit: 30/min
+SLO: P99 < 300ms
+Content-Type: multipart/form-data
+
+Form Data:
+- file: 头像文件（jpg/jpeg/png/webp/gif，默认 <= 2MB）
+
+Response 200:
+{
+  "code": "000000",
+  "data": {
+    "userId": 10001,
+    "email": "user@example.com",
+    "nickname": "股民小张",
+    "avatarUrl": "/uploads/avatars/202603/u10001-acde1234.png",
+    "role": "USER",
+    "status": "ACTIVE"
+  }
+}
+
+Error Codes:
+- AUTH_UNAUTHORIZED: 未登录或 Token 无效
+- BAD_REQUEST: 文件为空/超出大小限制/格式不支持
+
+实现说明:
+- 文件落盘目录：uploads/avatars/{yyyyMM}/
+- 返回 URL 前缀：/uploads
+- 静态映射：GET /uploads/** 可直接访问头像文件
+```
+
+---
+
 ## WebSocket 端点
 
 ```

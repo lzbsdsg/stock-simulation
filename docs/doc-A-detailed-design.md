@@ -50,6 +50,7 @@
 | 12 | 读写分离：PostgreSQL 主从复制，写操作走主库，读操作走从库 |
 | 13 | WebSocket 单实例连接上限 10000，超限拒绝新连接 |
 | 14 | 峰值下单 TPS 目标 ≥ 3000，通过行级锁(非表锁)保证不同用户完全并行 |
+| 15 | 头像上传采用本地存储（默认目录 `uploads/avatars/{yyyyMM}/`），数据库仅保存 `avatar_url`；默认大小限制 2MB，格式限制 jpg/jpeg/png/webp/gif |
 
 ---
 
@@ -93,6 +94,7 @@
 | US-15 | 作为用户，我可以查看收益曲线和最大回撤 | P1 |
 | US-16 | 作为用户，我可以查看排行榜 | P2 |
 | US-17 | 作为管理员，我可以管理用户和系统配置 | P3 |
+| US-18 | 作为用户，我可以上传并更换头像，更新后可立即访问展示 | P1 |
 
 ### 4.2 核心流程
 
@@ -109,6 +111,18 @@
 用户输入邮箱+密码 → Caffeine缓存检查锁定状态 → 查询User → BCrypt验证
 成功 → 清零失败计数 → 签发JWT(access 30min + refresh 7d)
 失败 → 失败计数+1 → 达到5次锁定30min → 写入Caffeine缓存
+```
+
+#### 头像上传流程
+
+```
+用户选择头像文件（jpg/jpeg/png/webp/gif, <=2MB）
+→ 前端 multipart/form-data 调用 POST /api/v1/user/avatar
+→ 后端鉴权后校验文件类型/大小
+→ 文件写入 uploads/avatars/{yyyyMM}/u{userId}-{uuid}.{ext}
+→ 更新 t_user.avatar_url
+→ 返回 avatarUrl（如 /uploads/avatars/202603/u1-xxxx.png）
+→ 前端刷新用户信息并展示新头像
 ```
 
 #### 行情获取流程（多级缓存路径）
@@ -881,6 +895,7 @@ CREATE TABLE t_trade_deal (
 | 24 | PUT | /api/v1/watchlist/sort | Bearer | 100/min | 自选排序 |
 | 25 | GET | /api/v1/notifications | Bearer | 100/min | 消息列表 |
 | 26 | PUT | /api/v1/notifications/{id}/read | Bearer | 100/min | 标记已读 |
+| 27 | POST | /api/v1/user/avatar | Bearer | 30/min | 上传并更新用户头像（multipart） |
 | WS | — | /ws/market | Bearer | 10000连接/实例 | WebSocket行情推送(背压) |
 
 ---
