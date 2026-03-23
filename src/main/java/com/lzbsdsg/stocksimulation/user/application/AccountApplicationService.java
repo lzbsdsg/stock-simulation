@@ -108,11 +108,11 @@ public class AccountApplicationService {
   public void creditBalance(Long userId, BigDecimal amount) {
     validatePositiveAmount(amount);
     executeWithOptimisticRetry(
-        userId,
-        account -> account.setAvailableBalance(account.getAvailableBalance().add(amount)));
+        userId, account -> account.setAvailableBalance(account.getAvailableBalance().add(amount)));
   }
 
-  private void executeWithOptimisticRetry(Long userId, java.util.function.Consumer<Account> mutate) {
+  private void executeWithOptimisticRetry(
+      Long userId, java.util.function.Consumer<Account> mutate) {
     for (int attempt = 1; attempt <= MAX_OPTIMISTIC_RETRY; attempt++) {
       Account account =
           accountRepository

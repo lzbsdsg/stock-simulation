@@ -24,13 +24,12 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.mock.web.MockMultipartFile;
 
 @WebMvcTest(UserController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -77,7 +76,8 @@ class UserControllerApiTest {
   void should_update_current_user() throws Exception {
     UpdateUserProfileCommand command = new UpdateUserProfileCommand("newNick", "https://a.b/c.png");
     when(userApplicationService.updateProfile(eq(1L), any(UpdateUserProfileCommand.class)))
-        .thenReturn(new UserProfileDTO(1L, "u@test.com", "newNick", "https://a.b/c.png", "USER", "ACTIVE"));
+        .thenReturn(
+            new UserProfileDTO(1L, "u@test.com", "newNick", "https://a.b/c.png", "USER", "ACTIVE"));
 
     mockMvc
         .perform(
@@ -90,7 +90,9 @@ class UserControllerApiTest {
 
   @Test
   void should_change_password() throws Exception {
-    doNothing().when(userApplicationService).changePassword(eq(1L), any(ChangePasswordCommand.class));
+    doNothing()
+        .when(userApplicationService)
+        .changePassword(eq(1L), any(ChangePasswordCommand.class));
 
     mockMvc
         .perform(
@@ -110,12 +112,7 @@ class UserControllerApiTest {
     when(userApplicationService.uploadAvatar(eq(1L), any(MultipartFile.class)))
         .thenReturn(
             new UserProfileDTO(
-                1L,
-                "u@test.com",
-                "nick",
-                "/uploads/avatars/202603/u1-abc.png",
-                "USER",
-                "ACTIVE"));
+                1L, "u@test.com", "nick", "/uploads/avatars/202603/u1-abc.png", "USER", "ACTIVE"));
 
     mockMvc
         .perform(

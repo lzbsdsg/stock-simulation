@@ -40,7 +40,8 @@ public class AvatarStorageService {
     Path root = Paths.get(storageRootDir).toAbsolutePath().normalize();
     Path avatarDir = root.resolve("avatars").resolve(monthFolder);
 
-    String fileName = "u" + userId + "-" + UUID.randomUUID().toString().replace("-", "") + "." + extension;
+    String fileName =
+        "u" + userId + "-" + UUID.randomUUID().toString().replace("-", "") + "." + extension;
     Path target = avatarDir.resolve(fileName).normalize();
 
     try {

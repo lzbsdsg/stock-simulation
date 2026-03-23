@@ -36,14 +36,18 @@ public class UserApplicationService {
   @Transactional(readOnly = true)
   public UserProfileDTO getCurrentUser(Long userId) {
     User user =
-        userRepository.findById(userId).orElseThrow(() -> new BizException(ErrorCode.USER_NOT_FOUND));
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new BizException(ErrorCode.USER_NOT_FOUND));
     return toProfileDTO(user);
   }
 
   @Transactional
   public UserProfileDTO updateProfile(Long userId, UpdateUserProfileCommand command) {
     User user =
-        userRepository.findById(userId).orElseThrow(() -> new BizException(ErrorCode.USER_NOT_FOUND));
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new BizException(ErrorCode.USER_NOT_FOUND));
     user.setNickname(command.nickname());
     user.setAvatarUrl(command.avatarUrl());
     User saved = userRepository.save(user);
@@ -53,7 +57,9 @@ public class UserApplicationService {
   @Transactional
   public UserProfileDTO uploadAvatar(Long userId, MultipartFile avatarFile) {
     User user =
-        userRepository.findById(userId).orElseThrow(() -> new BizException(ErrorCode.USER_NOT_FOUND));
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new BizException(ErrorCode.USER_NOT_FOUND));
     String avatarUrl = avatarStorageService.store(avatarFile, userId);
     user.setAvatarUrl(avatarUrl);
     User saved = userRepository.save(user);
@@ -63,7 +69,9 @@ public class UserApplicationService {
   @Transactional
   public void changePassword(Long userId, ChangePasswordCommand command) {
     User user =
-        userRepository.findById(userId).orElseThrow(() -> new BizException(ErrorCode.USER_NOT_FOUND));
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new BizException(ErrorCode.USER_NOT_FOUND));
     if (!passwordEncoder.matches(command.oldPassword(), user.getPasswordHash())) {
       throw new BizException(ErrorCode.AUTH_LOGIN_FAILED);
     }

@@ -132,11 +132,11 @@ public class AuthControllerApiTest {
         .andExpect(status().isOk());
   }
 
-    @Test
-    void should_logout_success_when_missing_authorization_header() throws Exception {
-        doNothing().when(authApplicationService).logout(any());
-        mockMvc.perform(post("/api/v1/auth/logout")).andExpect(status().isOk());
-    }
+  @Test
+  void should_logout_success_when_missing_authorization_header() throws Exception {
+    doNothing().when(authApplicationService).logout(any());
+    mockMvc.perform(post("/api/v1/auth/logout")).andExpect(status().isOk());
+  }
 
   @Test
   void should_reset_password_success() throws Exception {

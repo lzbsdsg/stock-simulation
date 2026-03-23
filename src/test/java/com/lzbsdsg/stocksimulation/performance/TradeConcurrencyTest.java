@@ -119,11 +119,12 @@ public class TradeConcurrencyTest {
     AccountApplicationService service = new AccountApplicationService(repository);
 
     assertThrows(
-      OptimisticLockingFailureException.class,
-      () -> service.freezeBalance(3L, new BigDecimal("100")));
+        OptimisticLockingFailureException.class,
+        () -> service.freezeBalance(3L, new BigDecimal("100")));
   }
 
-  private Account account(Long userId, String initial, String available, String frozen, int version) {
+  private Account account(
+      Long userId, String initial, String available, String frozen, int version) {
     Account account = new Account();
     account.setUserId(userId);
     account.setInitialBalance(new BigDecimal(initial));
