@@ -1,0 +1,60 @@
+HELP.md
+target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### Runtime Logs & PIDs ###
+logs/
+*.log
+*.out
+*.pid
+hs_err_pid*
+replay_pid*
+
+### Local Env / Secrets ###
+.env
+.env.*
+!.env.example
+docker-compose.override.yml
+docker-compose.local.yml
+src/main/resources/application-local.yml
+src/main/resources/application-local-*.yml
+
+### Temp Files ###
+tmp/
+temp/
+Thumbs.db
+Desktop.ini
+
+### Archives ###
+*.zip
+*.tar
+*.gz
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/

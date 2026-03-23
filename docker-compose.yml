@@ -1,0 +1,165 @@
+# docker-compose.yml — 生产级编排（docker compose up -d）
+# PostgreSQL 主从 + Redis Cluster + RabbitMQ + Nginx + 监控栈
+
+version: "3.9"
+
+services:
+  # ============================================================
+  # Nginx — 反向代理 + 限流 + WS 粘性
+  # ============================================================
+  nginx:
+    image: nginx:1.25-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app1
+      - app2
+    restart: unless-stopped
+
+  # ============================================================
+  # App 实例（可水平扩展）
+  # ============================================================
+  app1:
+    build: .
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres-master
+      - redis
+      - rabbitmq
+    restart: unless-stopped
+
+  app2:
+    build: .
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8080
+    ports:
+      - "8082:8080"
+    depends_on:
+      - postgres-master
+      - redis
+      - rabbitmq
+    restart: unless-stopped
+
+  # ============================================================
+  # PostgreSQL 主库
+  # ============================================================
+  postgres-master:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: stock_simulation
+      POSTGRES_USER: stock_app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg-master-data:/var/lib/postgresql/data
+    command: >
+      postgres
+        -c wal_level=replica
+        -c max_wal_senders=3
+        -c max_replication_slots=3
+        -c hot_standby=on
+    restart: unless-stopped
+
+  # ============================================================
+  # PostgreSQL 从库
+  # ============================================================
+  postgres-slave:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: stock_app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    depends_on:
+      - postgres-master
+    volumes:
+      - pg-slave-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # ============================================================
+  # Redis (单节点开发 / Cluster 生产)
+  # ============================================================
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+  # ============================================================
+  # RabbitMQ
+  # ============================================================
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
+
+  # ============================================================
+  # Prometheus
+  # ============================================================
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+    restart: unless-stopped
+
+  # ============================================================
+  # Grafana
+  # ============================================================
+  grafana:
+    image: grafana/grafana:10.4.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD}
+    volumes:
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # ============================================================
+  # Loki (日志聚合)
+  # ============================================================
+  loki:
+    image: grafana/loki:2.9.0
+    ports:
+      - "3100:3100"
+    restart: unless-stopped
+
+  # ============================================================
+  # Tempo (分布式追踪)
+  # ============================================================
+  tempo:
+    image: grafana/tempo:2.4.0
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+    restart: unless-stopped
+
+volumes:
+  pg-master-data:
+  pg-slave-data:
+  redis-data:
+  rabbitmq-data:
+  grafana-data:

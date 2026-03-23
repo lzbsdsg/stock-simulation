@@ -1,0 +1,38 @@
+# Prometheus 配置
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alert-rules.yml"
+
+scrape_configs:
+  # Spring Boot Actuator / Micrometer
+  - job_name: "stock-simulation"
+    metrics_path: "/actuator/prometheus"
+    static_configs:
+      - targets:
+          - "app1:8081"
+          - "app2:8081"
+        labels:
+          app: "stock-simulation"
+
+  # Nginx (需安装 nginx-prometheus-exporter)
+  - job_name: "nginx"
+    static_configs:
+      - targets: ["nginx-exporter:9113"]
+
+  # Redis
+  - job_name: "redis"
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+
+  # PostgreSQL
+  - job_name: "postgres"
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+
+  # RabbitMQ
+  - job_name: "rabbitmq"
+    static_configs:
+      - targets: ["rabbitmq:15692"]

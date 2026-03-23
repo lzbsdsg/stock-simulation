@@ -1,0 +1,7 @@
+{
+  "annotations": { "list": [] },
+  "title": "Market Dashboard — Stock Simulation",
+  "description": "行情监控: 缓存命中率、WS连接数、推送延迟、Provider可用性",
+  "panels": [],
+  "_comment": "TODO: 面板 — L1/L2 缓存命中率、WS活跃连接、推送队列深度、Provider断路器状态、Pub/Sub扇出延迟"
+}

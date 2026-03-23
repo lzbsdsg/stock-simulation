@@ -1,0 +1,7 @@
+{
+  "annotations": { "list": [] },
+  "title": "HTTP Dashboard — Stock Simulation",
+  "description": "HTTP 请求监控: QPS、P95/P99 延迟、错误率、限流命中率",
+  "panels": [],
+  "_comment": "TODO: 面板 — 请求速率、延迟分位数、错误率、X-Cache-Status 比例、限流触发次数"
+}

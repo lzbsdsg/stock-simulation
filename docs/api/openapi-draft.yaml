@@ -1,0 +1,994 @@
+# 股市仿真交易系统 — OpenAPI 草案
+
+> 版本：2.0-draft | 基础路径：/api/v1 | 鉴权：Bearer JWT
+> 变更：v2.0 整合百万用户高并发设计（限流头、缓存标识、背压协议、SLO标注）
+
+---
+
+## 统一响应格式
+
+```yaml
+# 成功
+{
+  "code": "000000",
+  "message": "success",
+  "data": { ... },
+  "traceId": "uuid",
+  "timestamp": "ISO8601"
+}
+
+# 失败
+{
+  "code": "AUTH_LOGIN_FAILED",
+  "message": "用户名或密码错误",
+  "data": null,
+  "traceId": "uuid",
+  "timestamp": "ISO8601"
+}
+
+# 分页
+{
+  "code": "000000",
+  "data": { "records": [...], "total": 100, "page": 1, "size": 20 }
+}
+```
+
+## 统一响应头
+
+所有受限流保护的接口，响应中包含以下头：
+
+| Header | 说明 |
+|---|---|
+| `X-RateLimit-Limit` | 当前窗口限额 |
+| `X-RateLimit-Remaining` | 当前窗口剩余额度 |
+| `X-RateLimit-Reset` | 窗口重置时间 (Unix timestamp) |
+| `X-Cache-Status` | 缓存命中状态：HIT-L1 / HIT-L2 / MISS / STALE |
+| `X-Request-Id` | 等于 traceId，全链路追踪标识 |
+
+---
+
+## API 1: 发送邮箱验证码
+
+```
+POST /api/v1/auth/otp/send
+Auth: 不需要
+RateLimit: 同一邮箱 60s/次，同一IP 20次/h
+SLO: P99 < 300ms
+
+Request Body:
+{
+  "email": "user@example.com"
+}
+
+Response 200:
+{
+  "code": "000000",
+  "message": "验证码已发送",
+  "data": { "expireSeconds": 300 }
+}
+
+Response Headers:
+  X-RateLimit-Limit: 1
+  X-RateLimit-Remaining: 0
+  X-RateLimit-Reset: 1739462460
+
+Error Codes:
+- AUTH_OTP_RATE_LIMITED: 发送过于频繁，请60秒后重试
+- AUTH_OTP_EMAIL_INVALID: 邮箱格式不正确
+
+实现说明:
+- 邮件发送走 RabbitMQ 异步，API 立即返回
+- Redis SETNX 实现频率限制：otp:limit:{email} TTL=60s
+- IP 限制：otp:ip:{ip} INCR + TTL=3600s
+```
+
+---
+
+## API 2: 邮箱验证码注册
+
+```
+POST /api/v1/auth/register
+Auth: 不需要
+SLO: P99 < 300ms
+
+Request Body:
+{
+  "email": "user@example.com",
+  "otp": "123456",
+  "password": "MyPass123",
+  "nickname": "股民小张",
+  "initialBalance": 100000.00
+}
+
+Response 200:
+{
+  "code": "000000",
+  "data": {
+    "accessToken": "eyJhbGciOi...",
+    "refreshToken": "eyJhbGciOi...",
+    "expiresIn": 1800,
+    "userId": 10001
+  }
+}
+
+Error Codes:
+- AUTH_OTP_EXPIRED: 验证码已过期
+- AUTH_OTP_INVALID: 验证码不正确
+- AUTH_REGISTER_EMAIL_EXISTS: 邮箱已注册
+- AUTH_PASSWORD_TOO_WEAK: 密码不符合要求（≥8位，需含大小写+数字）
+- USER_BALANCE_EXCEED_LIMIT: 初始资金超过上限(1,000,000)
+
+实现说明:
+- OTP 验证后立即删除 Redis key（一次性）
+- 事务内创建 User + Account
+- JWT 签发后立即返回
+```
+
+---
+
+## API 3: 密码登录
+
+```
+POST /api/v1/auth/login
+Auth: 不需要
+SLO: P99 < 200ms
+
+Request Body:
+{
+  "email": "user@example.com",
+  "password": "MyPass123"
+}
+
+Response 200:
+{
+  "code": "000000",
+  "data": {
+    "accessToken": "eyJhbGciOi...",
+    "refreshToken": "eyJhbGciOi...",
+    "expiresIn": 1800,
+    "userId": 10001,
+    "nickname": "股民小张"
+  }
+}
+
+Error Codes:
+- AUTH_LOGIN_FAILED: 用户名或密码错误
+- AUTH_ACCOUNT_LOCKED: 账号已锁定，请30分钟后重试
+
+实现说明:
+- Caffeine 缓存锁定状态检查（<1ms 快速拒绝）
+- BCrypt cost=12 验证 (~100ms)
+- 连续失败 5 次锁定 30 分钟，Caffeine + Redis 双写
+```
+
+---
+
+## API 4: 刷新 Token
+
+```
+POST /api/v1/auth/refresh
+Auth: 不需要（但需要 Refresh Token）
+SLO: P99 < 100ms
+
+Request Body:
+{
+  "refreshToken": "eyJhbGciOi..."
+}
+
+Response 200:
+{
+  "code": "000000",
+  "data": {
+    "accessToken": "eyJhbGciOi...(new)",
+    "refreshToken": "eyJhbGciOi...(new)",
+    "expiresIn": 1800
+  }
+}
+
+Error Codes:
+- AUTH_REFRESH_TOKEN_EXPIRED: Refresh Token 已过期
+- AUTH_REFRESH_TOKEN_INVALID: Refresh Token 无效（已轮换/已登出）
+
+实现说明:
+- Refresh Token Rotation：旧token立即加入Redis黑名单
+- 新token对立即签发
+```
+
+---
+
+## API 5: 登出
+
+```
+POST /api/v1/auth/logout
+Auth: Bearer Token
+SLO: P99 < 100ms
+
+Response 200:
+{
+  "code": "000000",
+  "message": "已登出"
+}
+
+实现说明:
+- Access Token 加入 Redis 黑名单，TTL = token剩余有效期
+- Refresh Token 同时失效
+```
+
+---
+
+## API 6: 忘记密码（发OTP）
+
+```
+POST /api/v1/auth/forgot-password
+Auth: 不需要
+RateLimit: 同一邮箱 60s/次
+SLO: P99 < 300ms
+
+Request Body:
+{
+  "email": "user@example.com"
+}
+
+Response 200:
+{
+  "code": "000000",
+  "message": "验证码已发送"
+}
+
+Error Codes:
+- AUTH_OTP_RATE_LIMITED: 发送过于频繁
+- AUTH_OTP_EMAIL_INVALID: 邮箱格式不正确
+
+实现说明:
+- 邮箱不存在也返回成功（防止枚举用户）
+- 邮件异步发送 (MQ)
+```
+
+---
+
+## API 7: 重置密码（验OTP）
+
+```
+POST /api/v1/auth/reset-password
+Auth: 不需要
+SLO: P99 < 200ms
+
+Request Body:
+{
+  "email": "user@example.com",
+  "otp": "123456",
+  "newPassword": "NewPass456"
+}
+
+Response 200:
+{
+  "code": "000000",
+  "message": "密码已重置"
+}
+
+Error Codes:
+- AUTH_OTP_EXPIRED: 验证码已过期
+- AUTH_OTP_INVALID: 验证码不正确
+- AUTH_PASSWORD_TOO_WEAK: 密码不符合要求
+```
+
+---
+
+## API 8: 获取单只股票行情快照
+
+```
+GET /api/v1/market/quote/{stockCode}
+Auth: Bearer Token
+RateLimit: 60/min
+SLO: P95 < 50ms, P99 < 100ms
+
+Path Params:
+- stockCode: 股票代码，如 "sh600519"（上证）或 "sz000001"（深证）
+
+Response 200:
+{
+  "code": "000000",
+  "data": {
+    "stockCode": "sh600519",
+    "stockName": "贵州茅台",
+    "currentPrice": 1688.00,
+    "openPrice": 1680.00,
+    "closePrice": 1675.50,
+    "highPrice": 1695.00,
+    "lowPrice": 1670.00,
+    "volume": 2356800,
+    "amount": 3976543200.00,
+    "changePercent": 0.75,
+    "changeAmount": 12.50,
+    "limitUp": 1843.05,
+    "limitDown": 1508.00,
+    "timestamp": "2026-02-13T14:35:00+08:00"
+  }
+}
+
+Response Headers:
+  X-Cache-Status: HIT-L1
+  X-RateLimit-Limit: 60
+  X-RateLimit-Remaining: 55
+  X-RateLimit-Reset: 1739462520
+
+Error Codes:
+- MARKET_STOCK_NOT_FOUND: 股票代码不存在
+- MARKET_DATA_UNAVAILABLE: 行情数据暂不可用（降级返回stale缓存时 code=000000 + X-Cache-Status=STALE）
+
+缓存路径:
+  L1 Caffeine (TTL=3s, max=5000) → L2 Redis (TTL=5s) → Provider回源
+  典型延迟: L1 <1ms, L2 <5ms, 回源 <100ms
+```
+
+---
+
+## API 9: 批量获取行情快照
+
+```
+GET /api/v1/market/quotes?codes=sh600519,sz000001,sh601318
+Auth: Bearer Token
+RateLimit: 60/min
+SLO: P95 < 80ms, P99 < 150ms
+
+Query Params:
+- codes: 逗号分隔的股票代码（最多50只）
+
+Response 200:
+{
+  "code": "000000",
+  "data": [
+    { "stockCode": "sh600519", "stockName": "贵州茅台", "currentPrice": 1688.00, ... },
+    { "stockCode": "sz000001", "stockName": "平安银行", "currentPrice": 11.35, ... },
+    { "stockCode": "sh601318", "stockName": "中国平安", "currentPrice": 48.20, ... }
+  ]
+}
+
+Response Headers:
+  X-Cache-Status: HIT-L1
+
+Error Codes:
+- MARKET_BATCH_EXCEED_LIMIT: 批量查询超过50只上限
+
+实现说明:
+- 逐只检查 L1/L2 缓存，仅对 MISS 的回源,最后合并返回
+- 自选股列表页使用此接口
+```
+
+---
+
+## API 10: 获取 K 线数据
+
+```
+GET /api/v1/market/kline/{stockCode}
+Auth: Bearer Token
+RateLimit: 60/min
+SLO: P99 < 200ms
+
+Query Params:
+- period: daily | weekly | monthly (默认 daily)
+- from: 2026-01-01 (ISO date)
+- to: 2026-02-13 (ISO date)
+
+Response 200:
+{
+  "code": "000000",
+  "data": {
+    "stockCode": "sh600519",
+    "period": "daily",
+    "points": [
+      {
+        "date": "2026-02-12",
+        "open": 1670.00,
+        "close": 1675.50,
+        "high": 1682.00,
+        "low": 1665.00,
+        "volume": 1823400,
+        "amount": 3045670000.00
+      },
+      ...
+    ]
+  }
+}
+
+Response Headers:
+  X-Cache-Status: HIT-L2
+
+Error Codes:
+- MARKET_STOCK_NOT_FOUND: 股票代码不存在
+- MARKET_KLINE_DATE_INVALID: 日期范围不合法
+
+缓存路径:
+  Redis L2 TTL=60s → Provider回源
+```
+
+---
+
+## API 11: 搜索股票
+
+```
+GET /api/v1/market/search?keyword=贵州
+Auth: Bearer Token
+RateLimit: 60/min
+SLO: P99 < 100ms
+
+Query Params:
+- keyword: 股票名称/代码/拼音首字母
+- limit: 10 (默认)
+
+Response 200:
+{
+  "code": "000000",
+  "data": [
+    { "stockCode": "sh600519", "stockName": "贵州茅台", "pinyin": "GZMT" },
+    { "stockCode": "sh600540", "stockName": "贵州轮胎", "pinyin": "GZLT" }
+  ]
+}
+
+实现说明:
+- 股票列表 Caffeine 缓存 TTL=5min（全量 ~5000条）
+- 搜索在内存中执行（Caffeine local），< 1ms
+```
+
+---
+
+## API 12: 委托下单
+
+```
+POST /api/v1/trade/orders
+Auth: Bearer Token
+RateLimit: 10/min
+SLO: P95 < 100ms, P99 < 200ms
+
+Request Body:
+{
+  "clientOrderId": "550e8400-e29b-41d4-a716-446655440000",
+  "stockCode": "sh600519",
+  "side": "BUY",
+  "price": 1688.00,
+  "quantity": 100
+}
+
+Response 200:
+{
+  "code": "000000",
+  "data": {
+    "orderId": 20001,
+    "clientOrderId": "550e8400-e29b-41d4-a716-446655440000",
+    "stockCode": "sh600519",
+    "stockName": "贵州茅台",
+    "side": "BUY",
+    "price": 1688.00,
+    "quantity": 100,
+    "frozenAmount": 168855.04,
+    "status": "PENDING",
+    "createdAt": "2026-02-13T10:15:30+08:00"
+  }
+}
+
+Response Headers:
+  X-RateLimit-Limit: 10
+  X-RateLimit-Remaining: 8
+  X-RateLimit-Reset: 1739462520
+
+Error Codes:
+- TRADE_ORDER_INSUFFICIENT_FUND: 可用资金不足
+- TRADE_ORDER_PRICE_LIMIT: 委托价格超出涨跌停范围
+- TRADE_ORDER_QUANTITY_INVALID: 数量必须是100的整数倍
+- TRADE_ORDER_TIME_CLOSED: 非交易时间
+- TRADE_ORDER_INSUFFICIENT_POSITION: 可用持仓不足(卖出)
+- TRADE_ORDER_T1_RESTRICTED: T+1限制，当日买入不可卖出
+- TRADE_ORDER_DUPLICATE: 重复委托(clientOrderId已存在)
+- RATE_LIMIT_EXCEEDED: 下单频率超限
+
+幂等性:
+- clientOrderId (UUID) 作为幂等键
+- Redis SETNX idempotent:order:{clientOrderId} TTL=5min
+- DB UNIQUE INDEX on (client_order_id)
+- 重复请求直接返回首次结果
+
+事务说明:
+- SELECT ... FOR UPDATE 仅锁当前用户 Account 行（不锁表）
+- 事务目标 < 50ms
+- 提交后异步发 MQ 撮合
+```
+
+---
+
+## API 13: 撤销委托
+
+```
+DELETE /api/v1/trade/orders/{orderId}
+Auth: Bearer Token
+RateLimit: 10/min
+SLO: P99 < 200ms
+
+Response 200:
+{
+  "code": "000000",
+  "data": {
+    "orderId": 20001,
+    "status": "CANCELLED",
+    "unfrozenAmount": 168855.04
+  }
+}
+
+Error Codes:
+- TRADE_ORDER_NOT_FOUND: 委托不存在
+- TRADE_ORDER_CANCEL_FAILED: 委托已成交/已撤销，不可撤单
+
+实现说明:
+- CAS 乐观更新：WHERE status = PENDING AND version = ?
+- 成功后事务内解冻资金/持仓
+```
+
+---
+
+## API 14: 查询委托列表
+
+```
+GET /api/v1/trade/orders
+Auth: Bearer Token
+RateLimit: 100/min
+SLO: P99 < 200ms
+路由: @ReadOnly → 从库
+
+Query Params:
+- status: PENDING | FILLED | PARTIAL_FILLED | CANCELLED | EXPIRED (可选)
+- page: 1 (默认)
+- size: 20 (默认, 最大100)
+- startDate: 2026-02-01 (可选)
+- endDate: 2026-02-13 (可选)
+
+Response 200:
+{
+  "code": "000000",
+  "data": {
+    "records": [
+      {
+        "orderId": 20001,
+        "stockCode": "sh600519",
+        "stockName": "贵州茅台",
+        "side": "BUY",
+        "price": 1688.00,
+        "quantity": 100,
+        "filledQuantity": 100,
+        "status": "FILLED",
+        "createdAt": "2026-02-13T10:15:30+08:00",
+        "updatedAt": "2026-02-13T10:15:35+08:00"
+      }
+    ],
+    "total": 25,
+    "page": 1,
+    "size": 20
+  }
+}
+```
+
+---
+
+## API 15: 查询成交记录
+
+```
+GET /api/v1/trade/trades
+Auth: Bearer Token
+RateLimit: 100/min
+SLO: P99 < 200ms
+路由: @ReadOnly → 从库
+
+Query Params:
+- page: 1
+- size: 20
+- startDate: 2026-02-01
+- endDate: 2026-02-13
+
+Response 200:
+{
+  "code": "000000",
+  "data": {
+    "records": [
+      {
+        "tradeId": 30001,
+        "orderId": 20001,
+        "stockCode": "sh600519",
+        "stockName": "贵州茅台",
+        "side": "BUY",
+        "price": 1688.00,
+        "quantity": 100,
+        "amount": 168800.00,
+        "commission": 50.64,
+        "stampTax": 0.00,
+        "transferFee": 1.69,
+        "totalFee": 52.33,
+        "tradedAt": "2026-02-13T10:15:35+08:00"
+      }
+    ],
+    "total": 12,
+    "page": 1,
+    "size": 20
+  }
+}
+```
+
+---
+
+## API 16: 资产总览
+
+```
+GET /api/v1/portfolio/overview
+Auth: Bearer Token
+RateLimit: 100/min
+SLO: P99 < 200ms
+
+Response 200:
+{
+  "code": "000000",
+  "data": {
+    "totalAsset": 523456.78,
+    "availableBalance": 354456.78,
+    "frozenBalance": 0.00,
+    "marketValue": 169000.00,
+    "totalProfit": 23456.78,
+    "totalProfitPercent": 4.69,
+    "todayProfit": 1250.00,
+    "todayProfitPercent": 0.24,
+    "initialBalance": 500000.00
+  }
+}
+
+实现说明:
+- 持仓市值计算依赖行情缓存（L1 Caffeine）
+- 不实时查 DB，优先用缓存中的快照
+```
+
+---
+
+## API 17: 持仓列表
+
+```
+GET /api/v1/portfolio/positions
+Auth: Bearer Token
+RateLimit: 100/min
+SLO: P99 < 200ms
+
+Response 200:
+{
+  "code": "000000",
+  "data": [
+    {
+      "stockCode": "sh600519",
+      "stockName": "贵州茅台",
+      "quantity": 100,
+      "availableQuantity": 100,
+      "frozenQuantity": 0,
+      "costPrice": 1688.00,
+      "currentPrice": 1690.00,
+      "marketValue": 169000.00,
+      "profit": 200.00,
+      "profitPercent": 0.12,
+      "frozenUntil": null
+    }
+  ]
+}
+
+实现说明:
+- currentPrice 从 L1 Caffeine 获取，不穿透到 Provider
+- 持仓数据从 DB 读取后 + 行情缓存合并返回
+```
+
+---
+
+## API 18: 资金流水
+
+```
+GET /api/v1/portfolio/fund-flows
+Auth: Bearer Token
+RateLimit: 100/min
+SLO: P99 < 300ms
+路由: @ReadOnly → 从库
+
+Query Params:
+- page: 1
+- size: 20
+- type: TRADE | FREEZE | UNFREEZE | FEE | INIT (可选)
+
+Response 200:
+{
+  "code": "000000",
+  "data": {
+    "records": [
+      {
+        "flowId": 40001,
+        "type": "TRADE",
+        "amount": -168800.00,
+        "balanceAfter": 331200.00,
+        "description": "买入 贵州茅台 100股 @1688.00",
+        "relatedOrderId": 20001,
+        "createdAt": "2026-02-13T10:15:35+08:00"
+      }
+    ],
+    "total": 50,
+    "page": 1,
+    "size": 20
+  }
+}
+
+实现说明:
+- fund_flow 表按月分区，查询自动路由到对应分区
+- 大范围跨月查询走从库
+```
+
+---
+
+## API 19: 收益曲线
+
+```
+GET /api/v1/portfolio/equity-curve
+Auth: Bearer Token
+RateLimit: 100/min
+SLO: P99 < 300ms
+路由: @ReadOnly → 从库
+
+Query Params:
+- days: 30 (默认30天, 最大365)
+
+Response 200:
+{
+  "code": "000000",
+  "data": {
+    "points": [
+      { "date": "2026-01-15", "totalAsset": 500000.00, "profitPercent": 0.00 },
+      { "date": "2026-01-16", "totalAsset": 501200.00, "profitPercent": 0.24 },
+      ...
+    ],
+    "maxDrawdown": 3.25,
+    "maxDrawdownDate": "2026-02-05"
+  }
+}
+
+实现说明:
+- 数据来源: asset_snapshot 表（按月分区）
+- 每日 15:00 收盘后生成快照（分批处理）
+```
+
+---
+
+## API 20: 自选股列表
+
+```
+GET /api/v1/watchlist
+Auth: Bearer Token
+RateLimit: 100/min
+SLO: P99 < 150ms
+
+Response 200:
+{
+  "code": "000000",
+  "data": [
+    {
+      "stockCode": "sh600519",
+      "stockName": "贵州茅台",
+      "currentPrice": 1690.00,
+      "changePercent": 0.87,
+      "sortOrder": 1,
+      "addedAt": "2026-02-10T09:00:00+08:00"
+    }
+  ]
+}
+
+实现说明:
+- 自选股列表从 DB 读取
+- 行情数据批量从 Caffeine L1 获取（batchGetQuotes 内部优化）
+- 整体延迟: DB ~20ms + Caffeine <1ms
+```
+
+---
+
+## API 21: 添加自选股
+
+```
+POST /api/v1/watchlist
+Auth: Bearer Token
+RateLimit: 100/min
+SLO: P99 < 200ms
+
+Request Body:
+{
+  "stockCode": "sh600519"
+}
+
+Response 200:
+{
+  "code": "000000",
+  "message": "已添加到自选股"
+}
+
+Error Codes:
+- WATCHLIST_EXCEED_LIMIT: 自选股数量已达上限(50只)
+- MARKET_STOCK_NOT_FOUND: 股票代码不存在
+```
+
+---
+
+## API 22: 删除自选股
+
+```
+DELETE /api/v1/watchlist/{stockCode}
+Auth: Bearer Token
+RateLimit: 100/min
+SLO: P99 < 100ms
+
+Response 200:
+{
+  "code": "000000",
+  "message": "已从自选股移除"
+}
+```
+
+---
+
+## API 23: 自选股排序
+
+```
+PUT /api/v1/watchlist/sort
+Auth: Bearer Token
+RateLimit: 100/min
+SLO: P99 < 200ms
+
+Request Body:
+{
+  "sortedCodes": ["sh600519", "sz000001", "sh601318"]
+}
+
+Response 200:
+{
+  "code": "000000",
+  "message": "排序已更新"
+}
+```
+
+---
+
+## API 24: 站内消息列表
+
+```
+GET /api/v1/notifications
+Auth: Bearer Token
+RateLimit: 100/min
+SLO: P99 < 200ms
+
+Query Params:
+- page: 1
+- size: 20
+- isRead: false (可选)
+
+Response 200:
+{
+  "code": "000000",
+  "data": {
+    "records": [
+      {
+        "id": 50001,
+        "type": "TRADE_FILLED",
+        "title": "委托成交通知",
+        "content": "您的买入委托已成交：贵州茅台 100股 @1688.00",
+        "isRead": false,
+        "createdAt": "2026-02-13T10:15:35+08:00"
+      }
+    ],
+    "total": 8,
+    "page": 1,
+    "size": 20,
+    "unreadCount": 3
+  }
+}
+```
+
+---
+
+## API 25: 标记消息已读
+
+```
+PUT /api/v1/notifications/{id}/read
+Auth: Bearer Token
+RateLimit: 100/min
+SLO: P99 < 100ms
+
+Response 200:
+{
+  "code": "000000",
+  "message": "已标记为已读"
+}
+```
+
+---
+
+## WebSocket 端点
+
+```
+连接：ws(s)://{host}/ws/market
+协议：STOMP over SockJS
+鉴权：连接时 header 携带 Authorization: Bearer {token}
+连接限制：单实例最大 10000 连接，超限返回 HTTP 503
+
+订阅频道：
+- /topic/quotes/{userId}         → 自选股行情推送(3s/次)
+- /user/queue/trade-notify       → 个人成交通知
+- /topic/system-broadcast        → 系统广播
+
+行情推送消息格式：
+{
+  "type": "QUOTE_UPDATE",
+  "data": [
+    { "stockCode": "sh600519", "currentPrice": 1690.50, "changePercent": 0.90, "volume": 2400000 },
+    ...
+  ],
+  "timestamp": "2026-02-13T14:35:03+08:00"
+}
+
+成交通知消息格式：
+{
+  "type": "TRADE_FILLED",
+  "data": {
+    "orderId": 20001,
+    "stockName": "贵州茅台",
+    "side": "BUY",
+    "price": 1688.00,
+    "quantity": 100
+  }
+}
+
+架构说明 (v2.0):
+- Nginx ip_hash 保证同一用户 WS 粘性到同一 App 实例
+- 每个 App 实例维护本地连接注册表 (ConcurrentHashMap)
+- 行情数据由 MarketIngestService(分布式锁选主) 拉取 → Redis Pub/Sub 广播
+- 所有 App 实例订阅 Pub/Sub → 更新本地 L1 Caffeine → 推送管理的 WS 连接
+
+背压控制:
+- 推送队列深度 > 100: 丢弃该连接最旧消息（非关键行情可丢）
+- 推送延迟 > 5s: 降级为10s推送周期
+- 单连接发送缓冲区 > 64KB: 暂停推送，等缓冲区消化
+
+断线重连协议 (客户端):
+- 断线后立即重连
+- 重连失败 → 指数退避: 1s → 2s → 4s → 8s → 16s → 30s(max)
+- 每次重连重新鉴权 (JWT)
+- 重连成功后重新订阅频道（服务端不保留订阅状态）
+```
+
+---
+
+## 错误码汇总
+
+| 模块 | 错误码 | HTTP Status | 说明 |
+|---|---|---|---|
+| AUTH | AUTH_OTP_RATE_LIMITED | 429 | 验证码发送频率限制 |
+| AUTH | AUTH_OTP_EXPIRED | 400 | 验证码已过期 |
+| AUTH | AUTH_OTP_INVALID | 400 | 验证码不正确 |
+| AUTH | AUTH_OTP_EMAIL_INVALID | 400 | 邮箱格式不正确 |
+| AUTH | AUTH_REGISTER_EMAIL_EXISTS | 409 | 邮箱已注册 |
+| AUTH | AUTH_PASSWORD_TOO_WEAK | 400 | 密码不符合要求 |
+| AUTH | AUTH_LOGIN_FAILED | 401 | 用户名或密码错误 |
+| AUTH | AUTH_ACCOUNT_LOCKED | 423 | 账号已锁定 |
+| AUTH | AUTH_TOKEN_EXPIRED | 401 | Token已过期 |
+| AUTH | AUTH_REFRESH_TOKEN_EXPIRED | 401 | Refresh Token已过期 |
+| AUTH | AUTH_REFRESH_TOKEN_INVALID | 401 | Refresh Token无效 |
+| USER | USER_BALANCE_EXCEED_LIMIT | 400 | 初始资金超过上限 |
+| MARKET | MARKET_STOCK_NOT_FOUND | 404 | 股票代码不存在 |
+| MARKET | MARKET_DATA_UNAVAILABLE | 503 | 行情数据暂不可用 |
+| MARKET | MARKET_BATCH_EXCEED_LIMIT | 400 | 批量查询超限 |
+| MARKET | MARKET_KLINE_DATE_INVALID | 400 | 日期范围不合法 |
+| TRADE | TRADE_ORDER_INSUFFICIENT_FUND | 400 | 可用资金不足 |
+| TRADE | TRADE_ORDER_PRICE_LIMIT | 400 | 委托价格超出涨跌停 |
+| TRADE | TRADE_ORDER_QUANTITY_INVALID | 400 | 数量非100整数倍 |
+| TRADE | TRADE_ORDER_TIME_CLOSED | 400 | 非交易时间 |
+| TRADE | TRADE_ORDER_INSUFFICIENT_POSITION | 400 | 可用持仓不足 |
+| TRADE | TRADE_ORDER_T1_RESTRICTED | 400 | T+1限制 |
+| TRADE | TRADE_ORDER_DUPLICATE | 409 | 重复委托 |
+| TRADE | TRADE_ORDER_NOT_FOUND | 404 | 委托不存在 |
+| TRADE | TRADE_ORDER_CANCEL_FAILED | 400 | 不可撤单 |
+| WATCHLIST | WATCHLIST_EXCEED_LIMIT | 400 | 自选股超限 |
+| GLOBAL | RATE_LIMIT_EXCEEDED | 429 | 请求频率限制 |
+| GLOBAL | WS_CONNECTION_LIMIT | 503 | WebSocket连接数达上限 |
+| GLOBAL | INTERNAL_ERROR | 500 | 内部错误 |
+| GLOBAL | PARAM_INVALID | 400 | 参数不合法 |

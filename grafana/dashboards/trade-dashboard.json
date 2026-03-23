@@ -1,0 +1,7 @@
+{
+  "annotations": { "list": [] },
+  "title": "Trade Dashboard — Stock Simulation",
+  "description": "交易监控: 下单TPS、撮合延迟、乐观锁重试率、MQ消费速率、DLQ",
+  "panels": [],
+  "_comment": "TODO: 面板 — 下单TPS、撮合P99、乐观锁冲突率、MQ消费延迟、死信队列长度、资金冻结/解冻流水"
+}

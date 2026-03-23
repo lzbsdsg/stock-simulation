@@ -1,0 +1,7 @@
+{
+  "annotations": { "list": [] },
+  "title": "JVM Dashboard — Stock Simulation",
+  "description": "JVM 监控: 堆内存、GC、线程、类加载",
+  "panels": [],
+  "_comment": "TODO: 导入 Grafana JVM Micrometer dashboard (ID: 4701) 或自定义面板"
+}

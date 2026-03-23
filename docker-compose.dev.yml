@@ -1,0 +1,318 @@
+# docker-compose.dev.yml — 开发环境完整生产级编排
+# 用法: docker compose -f docker-compose.dev.yml up -d
+# 架构: PG 1主2从 + Redis 3主3从集群 + RabbitMQ + Nginx
+
+services:
+  # ============================================================
+  # PostgreSQL 主从复制集群 (1主2从)
+  # ============================================================
+  
+  pg-master:
+    image: ${PG_IMAGE:-swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/bitnami/postgresql:16}
+    container_name: stock-pg-master
+    environment:
+      - POSTGRESQL_POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRESQL_USERNAME=stock_app
+      - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRESQL_DATABASE=stock_simulation
+      - POSTGRESQL_REPLICATION_MODE=master
+      - POSTGRESQL_REPLICATION_USER=repl_user
+      - POSTGRESQL_REPLICATION_PASSWORD=${POSTGRES_REPLICATION_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg-master-data:/bitnami/postgresql
+    networks:
+      - stock-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stock_app -d stock_simulation"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  pg-slave1:
+    image: ${PG_IMAGE:-swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/bitnami/postgresql:16}
+    container_name: stock-pg-slave1
+    environment:
+      - POSTGRESQL_POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRESQL_USERNAME=stock_app
+      - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRESQL_REPLICATION_MODE=slave
+      - POSTGRESQL_MASTER_HOST=pg-master
+      - POSTGRESQL_MASTER_PORT_NUMBER=5432
+      - POSTGRESQL_REPLICATION_USER=repl_user
+      - POSTGRESQL_REPLICATION_PASSWORD=${POSTGRES_REPLICATION_PASSWORD}
+    ports:
+      - "5433:5432"
+    depends_on:
+      pg-master:
+        condition: service_healthy
+    volumes:
+      - pg-slave1-data:/bitnami/postgresql
+    networks:
+      - stock-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stock_app -d stock_simulation"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  pg-slave2:
+    image: ${PG_IMAGE:-swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/bitnami/postgresql:16}
+    container_name: stock-pg-slave2
+    environment:
+      - POSTGRESQL_POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRESQL_USERNAME=stock_app
+      - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRESQL_REPLICATION_MODE=slave
+      - POSTGRESQL_MASTER_HOST=pg-master
+      - POSTGRESQL_MASTER_PORT_NUMBER=5432
+      - POSTGRESQL_REPLICATION_USER=repl_user
+      - POSTGRESQL_REPLICATION_PASSWORD=${POSTGRES_REPLICATION_PASSWORD}
+    ports:
+      - "5434:5432"
+    depends_on:
+      pg-master:
+        condition: service_healthy
+    volumes:
+      - pg-slave2-data:/bitnami/postgresql
+    networks:
+      - stock-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stock_app -d stock_simulation"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # ============================================================
+  # Redis Cluster (3主3从) - 使用官方镜像
+  # ============================================================
+  
+  redis-node-1:
+    image: redis:7-alpine
+    container_name: stock-redis-1
+    command: >
+      sh -c "sed 's/__REDIS_PASSWORD__/'\"$${REDIS_PASSWORD}\"'/g' /usr/local/etc/redis/redis.conf.template > /tmp/redis.conf && redis-server /tmp/redis.conf"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    ports:
+      - "7000:7000"
+      - "17000:17000"
+    volumes:
+      - ./redis/redis-node-1.conf:/usr/local/etc/redis/redis.conf.template:ro
+      - redis-node-1-data:/data
+    networks:
+      - stock-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "7000", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis-node-2:
+    image: redis:7-alpine
+    container_name: stock-redis-2
+    command: >
+      sh -c "sed 's/__REDIS_PASSWORD__/'\"$${REDIS_PASSWORD}\"'/g' /usr/local/etc/redis/redis.conf.template > /tmp/redis.conf && redis-server /tmp/redis.conf"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    ports:
+      - "7001:7001"
+      - "17001:17001"
+    volumes:
+      - ./redis/redis-node-2.conf:/usr/local/etc/redis/redis.conf.template:ro
+      - redis-node-2-data:/data
+    networks:
+      - stock-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "7001", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis-node-3:
+    image: redis:7-alpine
+    container_name: stock-redis-3
+    command: >
+      sh -c "sed 's/__REDIS_PASSWORD__/'\"$${REDIS_PASSWORD}\"'/g' /usr/local/etc/redis/redis.conf.template > /tmp/redis.conf && redis-server /tmp/redis.conf"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    ports:
+      - "7002:7002"
+      - "17002:17002"
+    volumes:
+      - ./redis/redis-node-3.conf:/usr/local/etc/redis/redis.conf.template:ro
+      - redis-node-3-data:/data
+    networks:
+      - stock-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "7002", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis-node-4:
+    image: redis:7-alpine
+    container_name: stock-redis-4
+    command: >
+      sh -c "sed 's/__REDIS_PASSWORD__/'\"$${REDIS_PASSWORD}\"'/g' /usr/local/etc/redis/redis.conf.template > /tmp/redis.conf && redis-server /tmp/redis.conf"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    ports:
+      - "7003:7003"
+      - "17003:17003"
+    volumes:
+      - ./redis/redis-node-4.conf:/usr/local/etc/redis/redis.conf.template:ro
+      - redis-node-4-data:/data
+    networks:
+      - stock-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "7003", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis-node-5:
+    image: redis:7-alpine
+    container_name: stock-redis-5
+    command: >
+      sh -c "sed 's/__REDIS_PASSWORD__/'\"$${REDIS_PASSWORD}\"'/g' /usr/local/etc/redis/redis.conf.template > /tmp/redis.conf && redis-server /tmp/redis.conf"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    ports:
+      - "7004:7004"
+      - "17004:17004"
+    volumes:
+      - ./redis/redis-node-5.conf:/usr/local/etc/redis/redis.conf.template:ro
+      - redis-node-5-data:/data
+    networks:
+      - stock-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "7004", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis-node-6:
+    image: redis:7-alpine
+    container_name: stock-redis-6
+    command: >
+      sh -c "sed 's/__REDIS_PASSWORD__/'\"$${REDIS_PASSWORD}\"'/g' /usr/local/etc/redis/redis.conf.template > /tmp/redis.conf && redis-server /tmp/redis.conf"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    ports:
+      - "7005:7005"
+      - "17005:17005"
+    volumes:
+      - ./redis/redis-node-6.conf:/usr/local/etc/redis/redis.conf.template:ro
+      - redis-node-6-data:/data
+    networks:
+      - stock-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "7005", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # Redis 集群初始化器（一次性任务）
+  redis-cluster-init:
+    image: redis:7-alpine
+    container_name: stock-redis-init
+    command:
+      - sh
+      - -c
+      - |
+        sleep 10
+        echo 'yes' | redis-cli -a ${REDIS_PASSWORD} --cluster create \
+          redis-node-1:7000 \
+          redis-node-2:7001 \
+          redis-node-3:7002 \
+          redis-node-4:7003 \
+          redis-node-5:7004 \
+          redis-node-6:7005 \
+          --cluster-replicas 1
+    depends_on:
+      redis-node-1:
+        condition: service_healthy
+      redis-node-2:
+        condition: service_healthy
+      redis-node-3:
+        condition: service_healthy
+      redis-node-4:
+        condition: service_healthy
+      redis-node-5:
+        condition: service_healthy
+      redis-node-6:
+        condition: service_healthy
+    networks:
+      - stock-network
+
+  # ============================================================
+  # RabbitMQ
+  # ============================================================
+  
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: stock-rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=stock_app
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - stock-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # ============================================================
+  # Nginx
+  # ============================================================
+  
+  nginx:
+    image: nginx:alpine
+    container_name: stock-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - pg-master
+      - redis-node-1
+      - rabbitmq
+    networks:
+      - stock-network
+
+networks:
+  stock-network:
+    driver: bridge
+
+volumes:
+  pg-master-data:
+  pg-slave1-data:
+  pg-slave2-data:
+  redis-node-1-data:
+  redis-node-2-data:
+  redis-node-3-data:
+  redis-node-4-data:
+  redis-node-5-data:
+  redis-node-6-data:
+  rabbitmq-data:
+
+
+
