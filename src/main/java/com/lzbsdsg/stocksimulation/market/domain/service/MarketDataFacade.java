@@ -1,10 +1,15 @@
 package com.lzbsdsg.stocksimulation.market.domain.service;
 
+import com.lzbsdsg.stocksimulation.common.exception.BizException;
+import com.lzbsdsg.stocksimulation.common.result.ErrorCode;
 import com.lzbsdsg.stocksimulation.market.domain.entity.KLinePeriod;
 import com.lzbsdsg.stocksimulation.market.domain.entity.KLinePoint;
 import com.lzbsdsg.stocksimulation.market.domain.entity.QuoteSnapshot;
 import com.lzbsdsg.stocksimulation.market.domain.gateway.MarketDataProvider;
+import com.lzbsdsg.stocksimulation.market.infrastructure.gateway.MarketCacheGateway;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,59 +26,89 @@ import org.springframework.stereotype.Service;
 public class MarketDataFacade {
 
   private final List<MarketDataProvider> providers;
-
-  // TODO: 注入 MarketCacheGateway
+  private final MarketCacheGateway marketCacheGateway;
 
   /** 获取单只股票行情（先缓存 → Provider → 降级） */
   public QuoteSnapshot getQuote(String stockCode) {
-    // TODO: 1. 查 Redis 缓存
-    // TODO: 2. 缓存未命中，遍历 providers（按优先级），调用 getQuote
-    // TODO: 3. 写入缓存 TTL=5s
-    // TODO: 4. 所有 Provider 失败 → 返回最近一次缓存（降级）或抛异常
-    for (MarketDataProvider provider : providers) {
-      if (provider.isAvailable()) {
-        try {
-          return provider.getQuote(stockCode);
-        } catch (Exception e) {
-          log.warn(
-              "Provider {} getQuote failed for {}: {}",
-              provider.getClass().getSimpleName(),
-              stockCode,
-              e.getMessage());
-        }
+    String normalizedCode = normalizeStockCode(stockCode);
+    MarketCacheGateway.CacheResult<QuoteSnapshot> cacheResult = marketCacheGateway.getQuote(normalizedCode);
+    if (cacheResult.hit()) {
+      marketCacheGateway.setCacheStatusHeader(cacheResult.status());
+      return cacheResult.value();
+    }
+
+    boolean acquiredLock = marketCacheGateway.tryAcquireLoadLock(normalizedCode);
+    if (!acquiredLock) {
+      sleepSilently(80);
+      MarketCacheGateway.CacheResult<QuoteSnapshot> lockWaitResult = marketCacheGateway.getQuote(normalizedCode);
+      if (lockWaitResult.hit()) {
+        marketCacheGateway.setCacheStatusHeader(lockWaitResult.status());
+        return lockWaitResult.value();
       }
     }
-    throw new com.lzbsdsg.stocksimulation.common.exception.BizException(
-        com.lzbsdsg.stocksimulation.common.result.ErrorCode.MARKET_DATA_UNAVAILABLE);
+
+    try {
+      for (MarketDataProvider provider : providers) {
+        if (provider.isAvailable()) {
+          try {
+            QuoteSnapshot quote = provider.getQuote(normalizedCode);
+            if (quote != null) {
+              marketCacheGateway.cacheQuote(normalizedCode, quote);
+              marketCacheGateway.setCacheStatusHeader(MarketCacheGateway.MISS);
+              return quote;
+            }
+          } catch (Exception e) {
+            log.warn(
+                "Provider {} getQuote failed for {}: {}",
+                provider.getClass().getSimpleName(),
+                normalizedCode,
+                e.getMessage());
+          }
+        }
+      }
+    } finally {
+      if (acquiredLock) {
+        marketCacheGateway.releaseLoadLock(normalizedCode);
+      }
+    }
+
+    QuoteSnapshot staleQuote = marketCacheGateway.getStaleQuote(normalizedCode);
+    if (staleQuote != null) {
+      marketCacheGateway.setCacheStatusHeader(MarketCacheGateway.STALE);
+      return staleQuote;
+    }
+
+    marketCacheGateway.cacheNullQuote(normalizedCode);
+    marketCacheGateway.setCacheStatusHeader(MarketCacheGateway.MISS);
+    throw new BizException(ErrorCode.MARKET_DATA_UNAVAILABLE);
   }
 
   /** 批量获取行情 */
   public List<QuoteSnapshot> batchGetQuotes(List<String> stockCodes) {
-    // TODO: 批量缓存查询 + 降级
-    for (MarketDataProvider provider : providers) {
-      if (provider.isAvailable()) {
-        try {
-          return provider.batchGetQuotes(stockCodes);
-        } catch (Exception e) {
-          log.warn(
-              "Provider {} batchGetQuotes failed: {}",
-              provider.getClass().getSimpleName(),
-              e.getMessage());
-        }
-      }
+    List<QuoteSnapshot> quotes = new ArrayList<>();
+    for (String stockCode : stockCodes) {
+      quotes.add(getQuote(stockCode));
     }
-    throw new com.lzbsdsg.stocksimulation.common.exception.BizException(
-        com.lzbsdsg.stocksimulation.common.result.ErrorCode.MARKET_DATA_UNAVAILABLE);
+    return quotes;
   }
 
   /** 获取K线 */
   public List<KLinePoint> getKLine(
       String stockCode, KLinePeriod period, LocalDate from, LocalDate to) {
-    // TODO: K线缓存 TTL=60s
+    String key = buildKLineCacheKey(stockCode, period, from, to);
+    List<KLinePoint> cached = marketCacheGateway.getCachedKLine(key);
+    if (cached != null) {
+      marketCacheGateway.setCacheStatusHeader(MarketCacheGateway.HIT_L2);
+      return cached;
+    }
+
     for (MarketDataProvider provider : providers) {
       if (provider.isAvailable()) {
         try {
-          return provider.getKLine(stockCode, period, from, to);
+          List<KLinePoint> points = provider.getKLine(stockCode, period, from, to);
+          marketCacheGateway.cacheKLine(key, points);
+          marketCacheGateway.setCacheStatusHeader(MarketCacheGateway.MISS);
+          return points;
         } catch (Exception e) {
           log.warn(
               "Provider {} getKLine failed for {}: {}",
@@ -83,7 +118,30 @@ public class MarketDataFacade {
         }
       }
     }
-    throw new com.lzbsdsg.stocksimulation.common.exception.BizException(
-        com.lzbsdsg.stocksimulation.common.result.ErrorCode.MARKET_DATA_UNAVAILABLE);
+    throw new BizException(ErrorCode.MARKET_DATA_UNAVAILABLE);
+  }
+
+  private String normalizeStockCode(String stockCode) {
+    return stockCode == null ? "" : stockCode.trim().toLowerCase();
+  }
+
+  private String buildKLineCacheKey(
+      String stockCode, KLinePeriod period, LocalDate from, LocalDate to) {
+    DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE;
+    return normalizeStockCode(stockCode)
+        + ":"
+        + period.name()
+        + ":"
+        + from.format(formatter)
+        + ":"
+        + to.format(formatter);
+  }
+
+  private void sleepSilently(long millis) {
+    try {
+      Thread.sleep(millis);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
   }
 }

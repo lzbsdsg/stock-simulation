@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
 /** 行情控制器 */
@@ -29,8 +30,11 @@ public class MarketController {
 
   @Operation(summary = "批量获取股票行情")
   @GetMapping("/quotes")
-  public Result<List<QuoteVO>> batchGetQuotes(@RequestParam List<String> stockCodes) {
-    return Result.success(marketApplicationService.batchGetQuotes(stockCodes));
+  public Result<List<QuoteVO>> batchGetQuotes(
+      @RequestParam(name = "codes", required = false) List<String> codes,
+      @RequestParam(name = "stockCodes", required = false) List<String> stockCodes) {
+    List<String> effectiveCodes = CollectionUtils.isEmpty(codes) ? stockCodes : codes;
+    return Result.success(marketApplicationService.batchGetQuotes(effectiveCodes));
   }
 
   @Operation(summary = "获取K线数据")
