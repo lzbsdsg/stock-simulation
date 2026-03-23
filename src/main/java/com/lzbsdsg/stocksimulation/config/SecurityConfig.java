@@ -8,13 +8,18 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /** Spring Security 6 配置 */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-  // TODO: 注入 JwtAuthenticationFilter
+  private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+  public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+  }
 
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -33,7 +38,7 @@ public class SecurityConfig {
                     .anyRequest()
                     .authenticated());
 
-    // TODO: 添加 JwtAuthenticationFilter 到 UsernamePasswordAuthenticationFilter 之前
+    http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
     return http.build();
   }

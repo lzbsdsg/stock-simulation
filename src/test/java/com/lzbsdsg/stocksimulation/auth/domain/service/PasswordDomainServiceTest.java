@@ -1,10 +1,48 @@
 package com.lzbsdsg.stocksimulation.auth.domain.service;
 
-/** 密码领域服务单元测试。 覆盖：BCrypt加密、校验成功、校验失败、密码策略(大小写+数字+8位)。 */
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.lzbsdsg.stocksimulation.auth.domain.entity.User;
+import java.time.Instant;
+import org.junit.jupiter.api.Test;
+
+/** 密码领域服务单元测试。 */
 public class PasswordDomainServiceTest {
-  // TODO: @Test void should_encrypt_with_bcrypt_cost_12()
-  // TODO: @Test void should_verify_correct_password()
-  // TODO: @Test void should_reject_wrong_password()
-  // TODO: @Test void should_reject_password_without_uppercase()
-  // TODO: @Test void should_reject_password_shorter_than_8()
+
+  private final PasswordDomainService passwordDomainService = new PasswordDomainService();
+
+  @Test
+  void should_accept_strong_password() {
+    assertTrue(passwordDomainService.isPasswordStrong("Strong123"));
+  }
+
+  @Test
+  void should_reject_password_without_uppercase() {
+    assertFalse(passwordDomainService.isPasswordStrong("strong123"));
+  }
+
+  @Test
+  void should_reject_password_without_lowercase() {
+    assertFalse(passwordDomainService.isPasswordStrong("STRONG123"));
+  }
+
+  @Test
+  void should_reject_password_without_digit() {
+    assertFalse(passwordDomainService.isPasswordStrong("StrongPwd"));
+  }
+
+  @Test
+  void should_lock_account_after_five_failures() {
+    assertTrue(passwordDomainService.shouldLockAccount(5));
+    assertFalse(passwordDomainService.shouldLockAccount(4));
+  }
+
+  @Test
+  void should_detect_account_locked_state() {
+    User user = new User();
+    user.setStatus("LOCKED");
+    user.setLockedUntil(Instant.now().plusSeconds(1800));
+    assertTrue(passwordDomainService.isAccountLocked(user));
+  }
 }

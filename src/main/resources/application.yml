@@ -108,6 +108,8 @@ springdoc:
     path: /swagger-ui.html
     tags-sorter: alpha
     operations-sorter: alpha
+    persist-authorization: true
+    try-it-out-enabled: true
 
 # ---- Actuator ----
 management:

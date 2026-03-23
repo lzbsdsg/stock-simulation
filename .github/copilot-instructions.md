@@ -296,11 +296,24 @@ public interface MarketDataProvider {
 ./mvnw spotless:check
 ```
 
+Windows PowerShell 等价命令：
+
+```powershell
+.\mvnw.cmd spotless:check
+```
+
 若失败，执行：
 
 ```bash
 ./mvnw spotless:apply
 ./mvnw spotless:check
+```
+
+Windows PowerShell 等价命令：
+
+```powershell
+.\mvnw.cmd spotless:apply
+.\mvnw.cmd spotless:check
 ```
 
 仅当 `spotless:check` 通过后，才允许进入测试与提交步骤。
@@ -310,6 +323,14 @@ public interface MarketDataProvider {
 - 生成或修改 Java 代码后，Copilot 必须优先保证 Spotless 可通过。
 - 对长链式调用、长参数列表、缩进层级，优先采用可被 googleJavaFormat 接受的换行布局。
 - 发现 `spotless-maven-plugin:check` 报错时，优先修复格式，再处理业务问题。
+
+### 7.4 IDE 红色告警残留处理（必须执行）
+
+- 若命令行 `spotless:check` 已通过，但 VS Code 仍显示 Spotless 或 Java 红色告警，按以下顺序处理：
+- 关闭并重新打开问题文件。
+- 执行 `Java: Clean Java Language Server Workspace`。
+- 执行 `Developer: Reload Window`。
+- 仅以命令行 `spotless:check` 最终结果作为提交门禁判断。
 
 ### 6.4 接口限流
 

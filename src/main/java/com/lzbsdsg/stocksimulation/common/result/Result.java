@@ -1,6 +1,8 @@
 package com.lzbsdsg.stocksimulation.common.result;
 
-import java.time.Instant;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 /**
  * 统一响应封装
@@ -13,10 +15,14 @@ public class Result<T> {
   private String message;
   private T data;
   private String traceId;
-  private Instant timestamp;
+
+  @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Shanghai")
+  private LocalDateTime timestamp;
+
+  private static final ZoneId ZONE_ID_SHANGHAI = ZoneId.of("Asia/Shanghai");
 
   public Result() {
-    this.timestamp = Instant.now();
+    this.timestamp = LocalDateTime.now(ZONE_ID_SHANGHAI);
   }
 
   public static <T> Result<T> success(T data) {
@@ -79,11 +85,11 @@ public class Result<T> {
     this.traceId = traceId;
   }
 
-  public Instant getTimestamp() {
+  public LocalDateTime getTimestamp() {
     return timestamp;
   }
 
-  public void setTimestamp(Instant timestamp) {
+  public void setTimestamp(LocalDateTime timestamp) {
     this.timestamp = timestamp;
   }
 }

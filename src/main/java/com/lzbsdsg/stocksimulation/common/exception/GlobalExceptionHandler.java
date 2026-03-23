@@ -5,10 +5,13 @@ import com.lzbsdsg.stocksimulation.common.result.Result;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.NoHandlerFoundException;
@@ -41,6 +44,14 @@ public class GlobalExceptionHandler {
     return ResponseEntity.badRequest().body(result);
   }
 
+  /** 数据唯一约束/主键冲突异常 */
+  @ExceptionHandler({DuplicateKeyException.class, DataIntegrityViolationException.class})
+  public ResponseEntity<Result<Void>> handleDataConflict(Exception ex) {
+    log.warn("Data conflict: {}", ex.getMessage());
+    Result<Void> result = Result.fail(ErrorCode.CONFLICT.getCode(), "数据冲突，请检查是否重复提交");
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(result);
+  }
+
   /** 静态资源未找到异常（例如 /v3/api-docs/ 尾斜杠） */
   @ExceptionHandler(NoResourceFoundException.class)
   public ResponseEntity<Result<Void>> handleNoResourceFoundException(NoResourceFoundException ex) {
@@ -57,6 +68,20 @@ public class GlobalExceptionHandler {
     Result<Void> result =
         Result.fail(ErrorCode.NOT_FOUND.getCode(), ErrorCode.NOT_FOUND.getMessage());
     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result);
+  }
+
+  /** 请求头缺失异常（例如登出缺少 Authorization） */
+  @ExceptionHandler(MissingRequestHeaderException.class)
+  public ResponseEntity<Result<Void>> handleMissingRequestHeaderException(
+      MissingRequestHeaderException ex) {
+    if ("Authorization".equalsIgnoreCase(ex.getHeaderName())) {
+      log.warn("Missing Authorization header");
+      Result<Void> result = Result.fail(ErrorCode.UNAUTHORIZED);
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(result);
+    }
+    log.warn("Missing required header: {}", ex.getHeaderName());
+    Result<Void> result = Result.fail(ErrorCode.BAD_REQUEST.getCode(), ex.getMessage());
+    return ResponseEntity.badRequest().body(result);
   }
 
   /** 未知异常 */

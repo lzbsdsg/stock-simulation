@@ -1,7 +1,13 @@
 package com.lzbsdsg.stocksimulation.user.application;
 
+import com.lzbsdsg.stocksimulation.common.exception.BizException;
+import com.lzbsdsg.stocksimulation.common.result.ErrorCode;
+import com.lzbsdsg.stocksimulation.user.domain.entity.Account;
+import com.lzbsdsg.stocksimulation.user.domain.repository.AccountRepository;
+import com.lzbsdsg.stocksimulation.user.domain.service.AccountDomainService;
 import java.math.BigDecimal;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 账户应用服务
@@ -11,11 +17,29 @@ import org.springframework.stereotype.Service;
 @Service
 public class AccountApplicationService {
 
-  // TODO: 注入 AccountRepository, AccountDomainService
+  private final AccountRepository accountRepository;
+  private final AccountDomainService accountDomainService;
+
+  public AccountApplicationService(AccountRepository accountRepository) {
+    this.accountRepository = accountRepository;
+    this.accountDomainService = new AccountDomainService();
+  }
 
   /** 创建资金账户（注册时调用） */
+  @Transactional
   public void createAccount(Long userId, BigDecimal initialBalance) {
-    // TODO: 创建 Account 实体 → 存储
+    if (!accountDomainService.isValidInitialBalance(initialBalance)) {
+      throw new BizException(ErrorCode.USER_INITIAL_BALANCE_INVALID);
+    }
+    if (accountRepository.findByUserId(userId).isPresent()) {
+      return;
+    }
+    Account account = new Account();
+    account.setUserId(userId);
+    account.setInitialBalance(initialBalance);
+    account.setAvailableBalance(initialBalance);
+    account.setFrozenBalance(BigDecimal.ZERO);
+    accountRepository.save(account);
   }
 
   /** 冻结资金（买入下单时调用） */

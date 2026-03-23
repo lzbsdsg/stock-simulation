@@ -3,6 +3,7 @@ package com.lzbsdsg.stocksimulation.auth.controller;
 import com.lzbsdsg.stocksimulation.auth.application.AuthApplicationService;
 import com.lzbsdsg.stocksimulation.auth.application.command.*;
 import com.lzbsdsg.stocksimulation.auth.application.dto.TokenDTO;
+import com.lzbsdsg.stocksimulation.common.annotation.RateLimit;
 import com.lzbsdsg.stocksimulation.common.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,6 +23,7 @@ public class AuthController {
   }
 
   @Operation(summary = "发送邮箱验证码")
+  @RateLimit(limit = 10, window = 60, key = "auth:otp:send")
   @PostMapping("/otp/send")
   public Result<Void> sendOtp(@Valid @RequestBody SendOtpCommand command) {
     authApplicationService.sendOtp(command);
@@ -58,7 +60,8 @@ public class AuthController {
 
   @Operation(summary = "登出")
   @PostMapping("/logout")
-  public Result<Void> logout(@RequestHeader("Authorization") String authorization) {
+  public Result<Void> logout(
+      @RequestHeader(value = "Authorization", required = false) String authorization) {
     authApplicationService.logout(authorization);
     return Result.success();
   }

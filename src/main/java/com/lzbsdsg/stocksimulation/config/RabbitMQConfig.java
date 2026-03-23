@@ -18,10 +18,18 @@ public class RabbitMQConfig {
   public static final String MATCH_ROUTING_KEY = "trade.match";
   public static final String NOTIFICATION_QUEUE = "trade.notification.queue";
   public static final String NOTIFICATION_ROUTING_KEY = "trade.notification";
+  public static final String EMAIL_EXCHANGE = "email.exchange";
+  public static final String EMAIL_QUEUE = "email.send.queue";
+  public static final String EMAIL_ROUTING_KEY = "email.send";
 
   @Bean
   public DirectExchange tradeExchange() {
     return new DirectExchange(TRADE_EXCHANGE, true, false);
+  }
+
+  @Bean
+  public DirectExchange emailExchange() {
+    return new DirectExchange(EMAIL_EXCHANGE, true, false);
   }
 
   @Bean
@@ -35,6 +43,11 @@ public class RabbitMQConfig {
   }
 
   @Bean
+  public Queue emailQueue() {
+    return new Queue(EMAIL_QUEUE, true);
+  }
+
+  @Bean
   public Binding matchBinding(Queue matchQueue, DirectExchange tradeExchange) {
     return BindingBuilder.bind(matchQueue).to(tradeExchange).with(MATCH_ROUTING_KEY);
   }
@@ -42,6 +55,11 @@ public class RabbitMQConfig {
   @Bean
   public Binding notificationBinding(Queue notificationQueue, DirectExchange tradeExchange) {
     return BindingBuilder.bind(notificationQueue).to(tradeExchange).with(NOTIFICATION_ROUTING_KEY);
+  }
+
+  @Bean
+  public Binding emailBinding(Queue emailQueue, DirectExchange emailExchange) {
+    return BindingBuilder.bind(emailQueue).to(emailExchange).with(EMAIL_ROUTING_KEY);
   }
 
   @Bean
