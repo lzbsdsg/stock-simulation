@@ -6,6 +6,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lzbsdsg.stocksimulation.config.CaffeineConfig;
 import com.lzbsdsg.stocksimulation.market.domain.entity.QuoteSnapshot;
 import com.lzbsdsg.stocksimulation.market.infrastructure.websocket.MarketWebSocketHandler;
@@ -28,8 +29,9 @@ class MarketPubSubListenerTest {
     RedisSerializer<Object> serializer = org.mockito.Mockito.mock(RedisSerializer.class);
     RedisTemplate<String, Object> redisTemplate = org.mockito.Mockito.mock(RedisTemplate.class);
     doReturn(serializer).when(redisTemplate).getValueSerializer();
+    ObjectMapper objectMapper = new ObjectMapper();
     MarketPubSubListener listener =
-      new MarketPubSubListener(cacheManager, websocketHandler, redisTemplate);
+      new MarketPubSubListener(cacheManager, websocketHandler, redisTemplate, objectMapper);
 
     QuoteSnapshot quote = new QuoteSnapshot();
     quote.setStockCode("sh600519");
@@ -56,8 +58,9 @@ class MarketPubSubListenerTest {
     RedisSerializer<Object> serializer = org.mockito.Mockito.mock(RedisSerializer.class);
     RedisTemplate<String, Object> redisTemplate = org.mockito.Mockito.mock(RedisTemplate.class);
     doReturn(serializer).when(redisTemplate).getValueSerializer();
+    ObjectMapper objectMapper = new ObjectMapper();
     MarketPubSubListener listener =
-      new MarketPubSubListener(cacheManager, websocketHandler, redisTemplate);
+      new MarketPubSubListener(cacheManager, websocketHandler, redisTemplate, objectMapper);
 
     Message message =
         new DefaultMessage(

@@ -64,12 +64,20 @@ groups:
 
       # ---- WebSocket ----
       - alert: HighWsConnections
-        expr: ws_connections_active > 8000
+        expr: ws_active_connections > 8000
         for: 1m
         labels:
           severity: warning
         annotations:
           summary: "WS 连接数 > 8000/实例（接近上限 10000）"
+
+      - alert: WsPushDroppedHigh
+        expr: rate(ws_push_dropped_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "WS 背压丢弃速率持续偏高（>10 msg/s）"
 
       # ---- MQ ----
       - alert: DLQMessages

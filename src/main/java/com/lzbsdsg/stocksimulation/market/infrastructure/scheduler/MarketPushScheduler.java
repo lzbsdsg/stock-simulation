@@ -1,6 +1,5 @@
 package com.lzbsdsg.stocksimulation.market.infrastructure.scheduler;
 
-import com.lzbsdsg.stocksimulation.market.domain.service.MarketDataFacade;
 import com.lzbsdsg.stocksimulation.market.infrastructure.websocket.MarketWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,18 +16,12 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class MarketPushScheduler {
 
-  private final MarketDataFacade marketDataFacade;
   private final MarketWebSocketHandler webSocketHandler;
 
-  // TODO: 注入 WatchlistApplicationService 或 Redis 中订阅列表获取活跃股票代码
-
-  /** 每 3 秒推送一次实时行情 */
-  @Scheduled(fixedRate = 3000)
-  public void pushRealTimeQuotes() {
-    // TODO: 判断是否在交易时间段内
-    // TODO: 获取所有活跃订阅的股票代码列表
-    // TODO: 批量拉取行情
-    // TODO: 逐只推送给 WebSocket 订阅者
-    log.trace("MarketPushScheduler triggered — not yet implemented");
+  /** 定时派发行情推送任务，具体节流/背压策略由 MarketWebSocketHandler 统一处理。 */
+  @Scheduled(fixedRateString = "${market.websocket.dispatch-interval-ms:500}")
+  public void dispatchQueuedQuotes() {
+    webSocketHandler.drainQueue();
+    log.trace("MarketPushScheduler dispatched queued quotes");
   }
 }

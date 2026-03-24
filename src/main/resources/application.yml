@@ -104,6 +104,14 @@ trade:
 market:
   ingest:
     latency-sample-enabled: ${MARKET_INGEST_LATENCY_SAMPLE_ENABLED:false}
+  websocket:
+    max-connections: ${MARKET_WS_MAX_CONNECTIONS:10000}
+    backpressure-queue-depth: ${MARKET_WS_BACKPRESSURE_QUEUE_DEPTH:100}
+    payload-bytes-limit: ${MARKET_WS_PAYLOAD_BYTES_LIMIT:65536}
+    push-interval-ms: ${MARKET_WS_PUSH_INTERVAL_MS:3000}
+    degraded-push-interval-ms: ${MARKET_WS_DEGRADED_PUSH_INTERVAL_MS:10000}
+    degrade-lag-threshold-ms: ${MARKET_WS_DEGRADE_LAG_THRESHOLD_MS:5000}
+    dispatch-interval-ms: ${MARKET_WS_DISPATCH_INTERVAL_MS:500}
 
 # ---- SpringDoc ----
 springdoc:

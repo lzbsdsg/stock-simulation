@@ -1,5 +1,7 @@
 package com.lzbsdsg.stocksimulation.config;
 
+import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
@@ -9,7 +11,11 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 /** WebSocket 配置 (STOMP over SockJS) */
 @Configuration
 @EnableWebSocketMessageBroker
+@RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+  private final WebSocketJwtHandshakeInterceptor webSocketJwtHandshakeInterceptor;
+  private final WebSocketStompInterceptor webSocketStompInterceptor;
 
   @Override
   public void configureMessageBroker(MessageBrokerRegistry config) {
@@ -22,9 +28,16 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
   }
 
   @Override
-  public void registerStompEndpoints(StompEndpointRegistry registry) {
-    registry.addEndpoint("/ws/market").setAllowedOriginPatterns("*").withSockJS();
+  public void configureClientInboundChannel(ChannelRegistration registration) {
+    registration.interceptors(webSocketStompInterceptor);
   }
 
-  // TODO: 配置 WebSocket 握手认证（JWT校验）
+  @Override
+  public void registerStompEndpoints(StompEndpointRegistry registry) {
+    registry
+        .addEndpoint("/ws/market")
+        .addInterceptors(webSocketJwtHandshakeInterceptor)
+        .setAllowedOriginPatterns("*")
+        .withSockJS();
+  }
 }
