@@ -17,6 +17,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
@@ -201,7 +202,21 @@ public class MarketDataFacade {
   }
 
   private String normalizeStockCode(String stockCode) {
-    return stockCode == null ? "" : stockCode.trim().toLowerCase();
+    if (stockCode == null) {
+      return "";
+    }
+
+    String code = stockCode.trim().toLowerCase(Locale.ROOT);
+    if (code.startsWith("sh") || code.startsWith("sz")) {
+      return code;
+    }
+    if (code.matches("^6\\d{5}$")) {
+      return "sh" + code;
+    }
+    if (code.matches("^[03]\\d{5}$")) {
+      return "sz" + code;
+    }
+    return code;
   }
 
   private String buildKLineCacheKey(

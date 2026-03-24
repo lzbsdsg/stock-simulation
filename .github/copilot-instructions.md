@@ -8,6 +8,12 @@
 
 ## 一、技术栈默认假设（全局上下文）
 
+### 1.1 Windows 命令约定（强制）
+
+- Windows 环境下所有命令示例统一使用 `cmd` 语法。
+- 默认终端为 `cmd`，示例使用 `mvnw.cmd`、`set VAR=value && ...`、`call ...` 风格。
+- 文档中不再提供 PowerShell 等价命令，避免多终端口径不一致。
+
 | 层次 | 技术 | 版本 |
 |---|---|---|
 | 语言 | Java | 21 LTS |
@@ -292,28 +298,15 @@ public interface MarketDataProvider {
 
 在仓库根目录执行：
 
-```bash
-./mvnw spotless:check
-```
-
-Windows PowerShell 等价命令：
-
-```powershell
-.\mvnw.cmd spotless:check
+```cmd
+call .\mvnw.cmd spotless:check
 ```
 
 若失败，执行：
 
-```bash
-./mvnw spotless:apply
-./mvnw spotless:check
-```
-
-Windows PowerShell 等价命令：
-
-```powershell
-.\mvnw.cmd spotless:apply
-.\mvnw.cmd spotless:check
+```cmd
+call .\mvnw.cmd spotless:apply
+call .\mvnw.cmd spotless:check
 ```
 
 仅当 `spotless:check` 通过后，才允许进入测试与提交步骤。

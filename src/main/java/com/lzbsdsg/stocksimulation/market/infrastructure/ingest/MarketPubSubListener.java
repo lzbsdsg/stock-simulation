@@ -1,10 +1,12 @@
 package com.lzbsdsg.stocksimulation.market.infrastructure.ingest;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lzbsdsg.stocksimulation.config.CaffeineConfig;
 import com.lzbsdsg.stocksimulation.market.domain.entity.QuoteSnapshot;
 import com.lzbsdsg.stocksimulation.market.infrastructure.websocket.MarketWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.redis.connection.Message;
@@ -28,13 +30,22 @@ public class MarketPubSubListener implements MessageListener {
   private final CacheManager cacheManager;
   private final MarketWebSocketHandler marketWebSocketHandler;
   private final RedisTemplate<String, Object> redisTemplate;
+  private final ObjectMapper objectMapper;
   private final StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
+
+  @Value("${market.ingest.latency-sample-enabled:false}")
+  private boolean latencySampleEnabled;
 
   @Override
   public void onMessage(Message message, byte[] pattern) {
     try {
       Object value = redisTemplate.getValueSerializer().deserialize(message.getBody());
-      if (!(value instanceof QuoteSnapshot quote)) {
+      QuoteSnapshot quote;
+      if (value instanceof QuoteSnapshot typedQuote) {
+        quote = typedQuote;
+      } else if (value != null) {
+        quote = objectMapper.convertValue(value, QuoteSnapshot.class);
+      } else {
         return;
       }
       if (quote.getStockCode() == null || quote.getStockCode().isBlank()) {
@@ -46,6 +57,22 @@ public class MarketPubSubListener implements MessageListener {
       if (quoteCache != null) {
         quoteCache.put(stockCode, quote);
       }
+
+      if (latencySampleEnabled) {
+        Object publishTsValue =
+            redisTemplate.opsForValue().get(MarketIngestService.PUB_TS_KEY_PREFIX + stockCode);
+        if (publishTsValue != null) {
+          long publishTs;
+          if (publishTsValue instanceof Number number) {
+            publishTs = number.longValue();
+          } else {
+            publishTs = Long.parseLong(String.valueOf(publishTsValue));
+          }
+          long delayMs = System.currentTimeMillis() - publishTs;
+          log.info("market.pubsub.fanout.delay stockCode={} delayMs={}", stockCode, delayMs);
+        }
+      }
+
       marketWebSocketHandler.pushQuote(stockCode, quote);
     } catch (Exception ex) {
       String channel = stringRedisSerializer.deserialize(message.getChannel());

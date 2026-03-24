@@ -119,8 +119,10 @@ set SERVER_PORT=8081 && mvnw.cmd spring-boot:run
 ```
 
 ```cmd
-:: 查看 leader 锁（按实际 Redis 密码替换）
-redis-cli -p 7000 -a <REDIS_PASSWORD> GET market:ingest:leader
+：使用 docker compose.dev 的 Redis 容器内 redis-cli（无需本机安装）
+docker compose -f docker-compose.dev.yml exec redis-node-1 redis-cli -p 7000 -a <REDIS_PASSWORD> GET market:ingest:leader
+
+
 ```
 
 预期：存在且仅一个 token；实例故障后约 10s 可被其他实例接管。
@@ -140,6 +142,58 @@ GET /api/v1/market/search?keyword=茅台
 - 通过测试桩或网络隔离让主 Provider 连续失败，观察断路器状态迁移与 fallback 指标。
 - 全部 Provider 失败且存在 stale 时，返回 stale 且 X-Cache-Status=STALE。
 
+### 5.4 本轮联调验收记录（2026-03-24）
+
+1. 双实例在线与单 Leader 稳定
+- 观测到 8080 与 8081 同时监听。
+- 连续读取 `market:ingest:leader`，Token 稳定为同一值：`7c78b808-5534-446e-9b49-b6c7b72ca1e5`。
+
+2. 故障切换验证
+- 停掉其中一个实例后，Leader Token 从 `f45e55a4-ef57-47c9-b64e-1c6658eded11` 切换为 `7c78b808-5534-446e-9b49-b6c7b72ca1e5`。
+- 切换后连续多次读取保持稳定，确认接管成功。
+
+3. 关键测试回归
+- 执行与 Iteration 5 相关的 6 个测试文件，结果：26 通过，0 失败。
+
+4. 当前状态
+- 选主、续期、故障接管：通过。
+- 断路器与批量回源优化：通过（测试通过）。
+- Pub/Sub 扇出 <100ms：需补充量化采样证据（见 5.5）。
+
+### 5.5 Pub/Sub 扇出时延采样（补证据）
+
+目的：量化“选主实例拉取后，非选主实例 L1 更新延迟 <100ms”。
+
+建议做法：
+- 在 `MarketIngestService` 发布广播前打印毫秒时间戳与 stockCode。
+- 在 `MarketPubSubListener` 收到广播并写入 L1 后打印毫秒时间戳与 stockCode。
+- 两端日志按同一 stockCode 对齐，计算 `listener_ts - publish_ts`。
+- 采样至少 200 条，统计 p50 / p95 / p99。
+
+启用方式：
+- 启动实例时设置环境变量：`MARKET_INGEST_LATENCY_SAMPLE_ENABLED=true`。
+- 日志关键字：`market.pubsub.fanout.delay`。
+
+示例统计（CMD）：
+- 在 `cmd` 终端中先导出日志，再用 `findstr` 筛选关键行（`market.pubsub.fanout.delay`）。
+- 从筛选结果提取 `delayMs=xxx` 后统计分位值（p50/p95/p99）。
+- 可直接使用统计脚本：
+
+```cmd
+cd /d d:\StockSimulation\stock-simulation
+D:\Miniconda3_310\envs\lab7\python.exe tools\measure_fanout_latency.py logs\app8081-latency.log
+```
+
+本次采样结果（2026-03-24）：
+- `count=1300`
+- `p50=3ms`
+- `p95=5ms`
+- `p99=9ms`
+- `max=41ms`
+
+通过阈值：
+- p95 < 100ms，且 p99 无持续性尖峰（偶发尖峰需给出原因）。
+
 ## 6. Iteration 5 通过结论
 
 当前代码与测试结果表明，Iteration 5 目标能力已落地：
@@ -147,6 +201,6 @@ GET /api/v1/market/search?keyword=茅台
 - 已具备主节点拉取 + Pub/Sub 广播 + 多实例本地缓存扇出
 - 已具备断路器状态机降级与 fallback 指标
 - 已具备 batchGetQuotes 的“仅 MISS 回源”优化
-- 已有单元/集成/API 回归测试证据（38/38 通过）
+- 已有单元/集成/API 回归测试证据（历史 38/38 通过；本轮关键回归 26/26 通过）
 
-在联调环境按第 5 节执行双实例验收脚本并通过后，可判定该模块满足迭代5交付标准并可正常工作。
+在联调环境补齐第 5.5 节的时延量化采样并达标后，可判定该模块满足迭代5交付标准并可正常工作。

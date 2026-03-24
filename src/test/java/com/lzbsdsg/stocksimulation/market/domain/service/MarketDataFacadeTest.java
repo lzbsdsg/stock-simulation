@@ -154,6 +154,26 @@ class MarketDataFacadeTest {
     verify(primaryProvider, never()).batchGetQuotes(List.of("sh600519", "sz000001"));
   }
 
+  @Test
+  void should_batch_get_quotes_with_plain_six_digit_codes() {
+    QuoteSnapshot loaded1 = quote("sz000001", "平安银行", "12.34");
+    QuoteSnapshot loaded2 = quote("sz000004", "国华网安", "8.76");
+
+    when(marketCacheGateway.getQuote("sz000001")).thenReturn(MarketCacheGateway.CacheResult.miss());
+    when(marketCacheGateway.getQuote("sz000004")).thenReturn(MarketCacheGateway.CacheResult.miss());
+    when(primaryProvider.batchGetQuotes(List.of("sz000001", "sz000004")))
+        .thenReturn(List.of(loaded1, loaded2));
+
+    List<QuoteSnapshot> result = marketDataFacade.batchGetQuotes(List.of("000001", "000004"));
+
+    assertEquals(2, result.size());
+    assertEquals("sz000001", result.get(0).getStockCode());
+    assertEquals("sz000004", result.get(1).getStockCode());
+    verify(primaryProvider).batchGetQuotes(List.of("sz000001", "sz000004"));
+    verify(marketCacheGateway).cacheQuote("sz000001", loaded1);
+    verify(marketCacheGateway).cacheQuote("sz000004", loaded2);
+  }
+
   private QuoteSnapshot quote(String code, String name, String price) {
     QuoteSnapshot snapshot = new QuoteSnapshot();
     snapshot.setStockCode(code);

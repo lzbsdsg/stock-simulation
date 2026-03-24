@@ -100,6 +100,11 @@ trade:
     gem-star-limit-rate: 0.20
     commission-rate: 0.0003
 
+# ---- 行情采样开关 ----
+market:
+  ingest:
+    latency-sample-enabled: ${MARKET_INGEST_LATENCY_SAMPLE_ENABLED:false}
+
 # ---- SpringDoc ----
 springdoc:
   api-docs:
@@ -134,3 +139,5 @@ logging:
     root: INFO
     com.lzbsdsg.stocksimulation: DEBUG
     org.springframework.security: DEBUG
+    com.lzbsdsg.stocksimulation.market.infrastructure.websocket.MarketWebSocketHandler: INFO
+    org.springframework.web.SimpLogging: INFO

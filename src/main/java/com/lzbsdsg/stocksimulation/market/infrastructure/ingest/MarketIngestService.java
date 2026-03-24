@@ -11,6 +11,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,7 @@ public class MarketIngestService {
 
   static final String INGEST_LEADER_KEY = "market:ingest:leader";
   static final String BROADCAST_CHANNEL = "market:quote:broadcast";
+  static final String PUB_TS_KEY_PREFIX = "market:ingest:pubts:";
   static final Duration LEADER_LOCK_TTL = Duration.ofSeconds(10);
   private static final int INGEST_BATCH_SIZE = 50;
 
@@ -38,6 +40,9 @@ public class MarketIngestService {
   private final StockInfoRepository stockInfoRepository;
   private final MarketCacheGateway marketCacheGateway;
   private final RedisTemplate<String, Object> redisTemplate;
+
+  @Value("${market.ingest.latency-sample-enabled:false}")
+  private boolean latencySampleEnabled;
 
   private volatile String leaderToken;
 
@@ -59,6 +64,12 @@ public class MarketIngestService {
       }
       String normalizedCode = quote.getStockCode().trim().toLowerCase();
       marketCacheGateway.cacheQuote(normalizedCode, quote);
+      if (latencySampleEnabled) {
+        long publishTs = System.currentTimeMillis();
+        redisTemplate
+            .opsForValue()
+            .set(PUB_TS_KEY_PREFIX + normalizedCode, publishTs, 30, TimeUnit.SECONDS);
+      }
       redisTemplate.convertAndSend(BROADCAST_CHANNEL, quote);
     }
   }
