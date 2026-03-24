@@ -18,7 +18,7 @@ public class IdempotencyGateway {
 
   private final RedisTemplate<String, Object> redisTemplate;
 
-  private static final String IDEMPOTENCY_KEY_PREFIX = "trade:idempotent:";
+  private static final String IDEMPOTENCY_KEY_PREFIX = "idempotent:order:";
   private static final long TTL_MINUTES = 5;
 
   /**

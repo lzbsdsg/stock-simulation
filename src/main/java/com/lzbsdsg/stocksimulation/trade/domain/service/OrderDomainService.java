@@ -22,10 +22,19 @@ public class OrderDomainService {
 
   /** 校验是否在交易时间内 */
   public boolean isWithinTradingHours(LocalTime now) {
-    return (now.isAfter(MORNING_OPEN) && now.isBefore(MORNING_CLOSE))
-        || (now.isAfter(AFTERNOON_OPEN) && now.isBefore(AFTERNOON_CLOSE))
-        || now.equals(MORNING_OPEN)
-        || now.equals(AFTERNOON_OPEN);
+    return isWithinTradingHours(
+        now, MORNING_OPEN, MORNING_CLOSE, AFTERNOON_OPEN, AFTERNOON_CLOSE);
+  }
+
+  /** 校验是否在交易时间内（自定义时段） */
+  public boolean isWithinTradingHours(
+      LocalTime now,
+      LocalTime morningOpen,
+      LocalTime morningClose,
+      LocalTime afternoonOpen,
+      LocalTime afternoonClose) {
+    return !now.isBefore(morningOpen) && !now.isAfter(morningClose)
+        || !now.isBefore(afternoonOpen) && !now.isAfter(afternoonClose);
   }
 
   /** 校验委托数量是否为100的整数倍 */

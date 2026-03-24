@@ -1,9 +1,9 @@
 package com.lzbsdsg.stocksimulation.trade.controller;
 
+import com.lzbsdsg.stocksimulation.common.annotation.RateLimit;
 import com.lzbsdsg.stocksimulation.common.result.PageResult;
 import com.lzbsdsg.stocksimulation.common.result.Result;
 import com.lzbsdsg.stocksimulation.trade.application.TradeApplicationService;
-import com.lzbsdsg.stocksimulation.trade.application.command.CancelOrderCommand;
 import com.lzbsdsg.stocksimulation.trade.application.command.PlaceOrderCommand;
 import com.lzbsdsg.stocksimulation.trade.application.vo.OrderVO;
 import com.lzbsdsg.stocksimulation.trade.application.vo.TradeVO;
@@ -23,30 +23,26 @@ public class OrderController {
   private final TradeApplicationService tradeApplicationService;
 
   @Operation(summary = "下单（买入/卖出）")
-  @PostMapping("/order")
+  @PostMapping("/orders")
+  @RateLimit(limit = 10, window = 60, key = "trade:order:place")
   public Result<OrderVO> placeOrder(@Valid @RequestBody PlaceOrderCommand command) {
     return Result.success(tradeApplicationService.placeOrder(command));
   }
 
   @Operation(summary = "撤单")
-  @PostMapping("/order/cancel")
-  public Result<Void> cancelOrder(@Valid @RequestBody CancelOrderCommand command) {
-    tradeApplicationService.cancelOrder(command);
+  @DeleteMapping("/orders/{orderId}")
+  @RateLimit(limit = 10, window = 60, key = "trade:order:cancel")
+  public Result<Void> cancelOrder(@PathVariable Long orderId) {
+    tradeApplicationService.cancelOrder(orderId);
     return Result.success(null);
   }
 
-  @Operation(summary = "查询当日委托")
-  @GetMapping("/orders/today")
-  public Result<PageResult<OrderVO>> getTodayOrders(
+  @Operation(summary = "查询委托列表")
+  @GetMapping("/orders")
+  public Result<PageResult<OrderVO>> getOrders(
+      @RequestParam(defaultValue = "today") String scope,
       @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size) {
-    return Result.success(tradeApplicationService.getTodayOrders(page, size));
-  }
-
-  @Operation(summary = "查询历史委托")
-  @GetMapping("/orders/history")
-  public Result<PageResult<OrderVO>> getHistoryOrders(
-      @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size) {
-    return Result.success(tradeApplicationService.getHistoryOrders(page, size));
+    return Result.success(tradeApplicationService.getOrders(scope, page, size));
   }
 
   @Operation(summary = "查询成交记录")

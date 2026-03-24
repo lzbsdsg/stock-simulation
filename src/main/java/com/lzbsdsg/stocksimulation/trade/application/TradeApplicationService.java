@@ -1,14 +1,54 @@
 package com.lzbsdsg.stocksimulation.trade.application;
 
+import com.lzbsdsg.stocksimulation.common.annotation.ReadOnly;
+import com.lzbsdsg.stocksimulation.common.exception.BizException;
+import com.lzbsdsg.stocksimulation.common.result.ErrorCode;
 import com.lzbsdsg.stocksimulation.common.result.PageResult;
+import com.lzbsdsg.stocksimulation.config.CaffeineConfig;
+import com.lzbsdsg.stocksimulation.config.TradeRuleConfig;
+import com.lzbsdsg.stocksimulation.market.domain.entity.QuoteSnapshot;
+import com.lzbsdsg.stocksimulation.market.domain.repository.StockInfoRepository;
+import com.lzbsdsg.stocksimulation.market.domain.service.MarketDataFacade;
+import com.lzbsdsg.stocksimulation.portfolio.domain.entity.FundFlow;
+import com.lzbsdsg.stocksimulation.portfolio.domain.entity.Position;
+import com.lzbsdsg.stocksimulation.portfolio.domain.repository.FundFlowRepository;
+import com.lzbsdsg.stocksimulation.portfolio.domain.repository.PositionRepository;
 import com.lzbsdsg.stocksimulation.trade.application.command.CancelOrderCommand;
 import com.lzbsdsg.stocksimulation.trade.application.command.PlaceOrderCommand;
 import com.lzbsdsg.stocksimulation.trade.application.vo.OrderVO;
 import com.lzbsdsg.stocksimulation.trade.application.vo.TradeVO;
+import com.lzbsdsg.stocksimulation.trade.domain.entity.Order;
+import com.lzbsdsg.stocksimulation.trade.domain.entity.OrderSide;
+import com.lzbsdsg.stocksimulation.trade.domain.entity.OrderStatus;
+import com.lzbsdsg.stocksimulation.trade.domain.entity.OrderType;
+import com.lzbsdsg.stocksimulation.trade.domain.entity.Trade;
+import com.lzbsdsg.stocksimulation.trade.domain.repository.OrderRepository;
+import com.lzbsdsg.stocksimulation.trade.domain.repository.TradeRepository;
+import com.lzbsdsg.stocksimulation.trade.domain.service.FeeCalculator;
+import com.lzbsdsg.stocksimulation.trade.domain.service.OrderDomainService;
+import com.lzbsdsg.stocksimulation.trade.infrastructure.gateway.IdempotencyGateway;
+import com.lzbsdsg.stocksimulation.trade.infrastructure.mq.OrderMessageProducer;
+import com.lzbsdsg.stocksimulation.user.application.AccountApplicationService;
+import com.lzbsdsg.stocksimulation.user.domain.entity.Account;
+import com.lzbsdsg.stocksimulation.user.domain.repository.AccountRepository;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.util.List;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * 交易应用服务
@@ -20,7 +60,28 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class TradeApplicationService {
 
-  // TODO: 注入 OrderDomainService, MatchEngine, AccountApplicationService, OrderRepository 等
+  private static final int MIN_PAGE = 1;
+  private static final int DEFAULT_SIZE = 20;
+  private static final int MAX_PAGE_SIZE = 200;
+  private static final long TX_TARGET_MS = 50L;
+  private static final String TRADE_WINDOW_CACHE_KEY = "trade:window";
+  private static final ZoneId ZONE_SHANGHAI = ZoneId.of("Asia/Shanghai");
+
+  private final OrderRepository orderRepository;
+  private final TradeRepository tradeRepository;
+  private final IdempotencyGateway idempotencyGateway;
+  private final OrderMessageProducer orderMessageProducer;
+  private final MarketDataFacade marketDataFacade;
+  private final StockInfoRepository stockInfoRepository;
+  private final AccountApplicationService accountApplicationService;
+  private final AccountRepository accountRepository;
+  private final FundFlowRepository fundFlowRepository;
+  private final PositionRepository positionRepository;
+  private final CacheManager cacheManager;
+  private final TradeRuleConfig tradeRuleConfig;
+
+  private final OrderDomainService orderDomainService = new OrderDomainService();
+  private final FeeCalculator feeCalculator = new FeeCalculator();
 
   /**
    * 下单（买入/卖出）
@@ -30,32 +91,421 @@ public class TradeApplicationService {
    */
   @Transactional
   public OrderVO placeOrder(PlaceOrderCommand command) {
-    // TODO: 实现下单流程
-    throw new UnsupportedOperationException("placeOrder not implemented");
+    long startNano = System.nanoTime();
+    Long userId = currentUserId();
+
+    if (!idempotencyGateway.tryAcquire(command.clientOrderId())) {
+      throw new BizException(ErrorCode.TRADE_ORDER_DUPLICATE);
+    }
+
+    OrderSide side = parseOrderSide(command.side());
+    OrderType orderType = parseOrderType(command.orderType());
+    validateTradingWindow();
+    validateQuantity(command.quantity());
+
+    QuoteSnapshot quote = marketDataFacade.getQuote(command.stockCode());
+    BigDecimal price = resolveOrderPrice(command, orderType, quote);
+    if (!orderDomainService.isPriceWithinLimit(price, quote)) {
+      throw new BizException(ErrorCode.TRADE_ORDER_PRICE_LIMIT);
+    }
+
+    Order order = buildPendingOrder(userId, command, side, orderType, price, quote);
+    if (side == OrderSide.BUY) {
+      BigDecimal freezeAmount =
+          orderDomainService.calculateFreezeAmount(
+              price, command.quantity(), feeCalculator.estimateBuyCommissionRate());
+      accountApplicationService.freezeBalance(userId, freezeAmount);
+      order.setFrozenAmount(freezeAmount);
+      orderRepository.save(order);
+      recordFundFlow(
+          userId,
+          FundFlow.FundFlowType.FREEZE,
+          freezeAmount.negate(),
+          order.getId(),
+          "BUY order freeze");
+    } else {
+      freezeSellPosition(userId, order.getStockCode(), command.quantity());
+      order.setFrozenAmount(BigDecimal.ZERO);
+      orderRepository.save(order);
+    }
+
+    publishMatchMessageAfterCommit(order.getId());
+    logTransactionCost("placeOrder", userId, order.getId(), startNano);
+    return toOrderVO(order);
   }
 
   /** 撤单 */
   @Transactional
   public void cancelOrder(CancelOrderCommand command) {
-    // TODO: 实现撤单流程
-    throw new UnsupportedOperationException("cancelOrder not implemented");
+    cancelOrder(command.orderId());
+  }
+
+  /** 撤单（按订单ID） */
+  @Transactional
+  public void cancelOrder(Long orderId) {
+    long startNano = System.nanoTime();
+    Long userId = currentUserId();
+
+    Order order =
+        orderRepository
+            .findById(orderId)
+            .orElseThrow(() -> new BizException(ErrorCode.TRADE_ORDER_NOT_FOUND));
+    if (!userId.equals(order.getUserId())) {
+      throw new BizException(ErrorCode.TRADE_ORDER_NOT_OWN);
+    }
+    if (!order.isCancellable()) {
+      throw new BizException(ErrorCode.TRADE_ORDER_CANNOT_CANCEL);
+    }
+
+    int remainingQuantity = Math.max(order.remainingQuantity(), 0);
+    order.cancel();
+    if (!orderRepository.updateWithVersion(order)) {
+      throw new BizException(ErrorCode.TRADE_OPTIMISTIC_LOCK_CONFLICT);
+    }
+
+    if (order.getSide() == OrderSide.BUY && hasPositiveAmount(order.getFrozenAmount())) {
+      accountApplicationService.unfreezeBalance(userId, order.getFrozenAmount());
+      recordFundFlow(
+          userId,
+          FundFlow.FundFlowType.UNFREEZE,
+          order.getFrozenAmount(),
+          order.getId(),
+          "Cancel BUY order");
+    }
+    if (order.getSide() == OrderSide.SELL && remainingQuantity > 0) {
+      unfreezeSellPosition(userId, order.getStockCode(), remainingQuantity);
+    }
+
+    logTransactionCost("cancelOrder", userId, order.getId(), startNano);
   }
 
   /** 查询当日委托 */
+  @ReadOnly
   public PageResult<OrderVO> getTodayOrders(int page, int size) {
-    // TODO: 查询当日委托列表
-    throw new UnsupportedOperationException("getTodayOrders not implemented");
+    return getOrders("today", page, size);
   }
 
   /** 查询历史委托 */
+  @ReadOnly
   public PageResult<OrderVO> getHistoryOrders(int page, int size) {
-    // TODO: 查询历史委托列表
-    throw new UnsupportedOperationException("getHistoryOrders not implemented");
+    return getOrders("history", page, size);
+  }
+
+  /** 查询委托列表 */
+  @ReadOnly
+  public PageResult<OrderVO> getOrders(String scope, int page, int size) {
+    Long userId = currentUserId();
+    int safePage = sanitizePage(page);
+    int safeSize = sanitizeSize(size);
+    LocalDateTime now = LocalDateTime.now(ZONE_SHANGHAI);
+    LocalDateTime startOfToday = now.toLocalDate().atStartOfDay();
+
+    LocalDateTime from;
+    LocalDateTime to;
+    String normalizedScope = scope == null ? "today" : scope.trim().toLowerCase(Locale.ROOT);
+    switch (normalizedScope) {
+      case "history" -> {
+        from = LocalDate.of(1970, 1, 1).atStartOfDay();
+        to = startOfToday.minusNanos(1);
+      }
+      case "all" -> {
+        from = LocalDate.of(1970, 1, 1).atStartOfDay();
+        to = now;
+      }
+      default -> {
+        from = startOfToday;
+        to = now;
+      }
+    }
+
+    List<OrderVO> records =
+        orderRepository
+            .findByUserIdAndCreatedAtBetween(userId, from, to, safePage, safeSize)
+            .stream()
+            .map(this::toOrderVO)
+            .toList();
+    long total = orderRepository.countByUserIdAndCreatedAtBetween(userId, from, to);
+    return new PageResult<>(records, total, safePage, safeSize);
   }
 
   /** 查询成交记录 */
+  @ReadOnly
   public PageResult<TradeVO> getTrades(int page, int size) {
-    // TODO: 查询成交列表
-    throw new UnsupportedOperationException("getTrades not implemented");
+    Long userId = currentUserId();
+    int safePage = sanitizePage(page);
+    int safeSize = sanitizeSize(size);
+    List<TradeVO> records =
+        tradeRepository.findByUserId(userId, safePage, safeSize).stream().map(this::toTradeVO).toList();
+    long total = tradeRepository.countByUserId(userId);
+    return new PageResult<>(records, total, safePage, safeSize);
   }
+
+  private void validateTradingWindow() {
+    TradingWindow window = loadTradingWindow();
+    LocalTime now = LocalTime.now(ZONE_SHANGHAI);
+    if (!orderDomainService.isWithinTradingHours(
+        now,
+        window.morningOpen(),
+        window.morningClose(),
+        window.afternoonOpen(),
+        window.afternoonClose())) {
+      throw new BizException(ErrorCode.TRADE_ORDER_MARKET_CLOSED);
+    }
+  }
+
+  private void validateQuantity(Integer quantity) {
+    if (quantity == null || !orderDomainService.isValidQuantity(quantity)) {
+      throw new BizException(ErrorCode.TRADE_ORDER_QUANTITY_INVALID);
+    }
+  }
+
+  private BigDecimal resolveOrderPrice(
+      PlaceOrderCommand command, OrderType orderType, QuoteSnapshot quote) {
+    if (orderType == OrderType.LIMIT) {
+      if (command.price() == null) {
+        throw new BizException(ErrorCode.BAD_REQUEST, "限价单必须提供 price");
+      }
+      return command.price();
+    }
+    if (quote.getCurrentPrice() == null) {
+      throw new BizException(ErrorCode.MARKET_DATA_UNAVAILABLE);
+    }
+    return quote.getCurrentPrice();
+  }
+
+  private Order buildPendingOrder(
+      Long userId,
+      PlaceOrderCommand command,
+      OrderSide side,
+      OrderType orderType,
+      BigDecimal price,
+      QuoteSnapshot quote) {
+    LocalDateTime now = LocalDateTime.now(ZONE_SHANGHAI);
+    Order order = new Order();
+    order.setUserId(userId);
+    order.setClientOrderId(command.clientOrderId());
+    order.setStockCode(resolveStockCode(command.stockCode(), quote));
+    order.setStockName(resolveStockName(command.stockCode(), quote));
+    order.setSide(side);
+    order.setOrderType(orderType);
+    order.setStatus(OrderStatus.PENDING);
+    order.setPrice(price);
+    order.setQuantity(command.quantity());
+    order.setFilledQuantity(0);
+    order.setFilledAmount(BigDecimal.ZERO);
+    order.setCommission(BigDecimal.ZERO);
+    order.setVersion(0);
+    order.setCreatedAt(now);
+    order.setUpdatedAt(now);
+    return order;
+  }
+
+  private String resolveStockCode(String requestedCode, QuoteSnapshot quote) {
+    if (quote.getStockCode() != null && !quote.getStockCode().isBlank()) {
+      return quote.getStockCode().trim().toLowerCase(Locale.ROOT);
+    }
+    return requestedCode == null ? "" : requestedCode.trim().toLowerCase(Locale.ROOT);
+  }
+
+  private String resolveStockName(String requestedCode, QuoteSnapshot quote) {
+    if (quote.getStockName() != null && !quote.getStockName().isBlank()) {
+      return quote.getStockName();
+    }
+    String stockCode = resolveStockCode(requestedCode, quote);
+    return stockInfoRepository.findByStockCode(stockCode).map(s -> s.getStockName()).orElse(stockCode);
+  }
+
+  private void freezeSellPosition(Long userId, String stockCode, int quantity) {
+    Position position =
+        positionRepository
+            .findByUserIdAndStockCodeForUpdate(userId, stockCode)
+            .orElseThrow(() -> new BizException(ErrorCode.TRADE_ORDER_INSUFFICIENT_POSITION));
+    if (!hasEnoughAvailable(position, quantity)) {
+      throw new BizException(ErrorCode.TRADE_ORDER_INSUFFICIENT_POSITION);
+    }
+    LocalDate today = LocalDate.now(ZONE_SHANGHAI);
+    if (position.getFrozenUntil() != null && !today.isAfter(position.getFrozenUntil())) {
+      throw new BizException(ErrorCode.TRADE_ORDER_T_PLUS_1);
+    }
+
+    position.setAvailableQuantity(position.getAvailableQuantity() - quantity);
+    position.setFrozenQuantity(position.getFrozenQuantity() + quantity);
+    if (!positionRepository.updateWithVersion(position)) {
+      throw new BizException(ErrorCode.TRADE_OPTIMISTIC_LOCK_CONFLICT);
+    }
+  }
+
+  private void unfreezeSellPosition(Long userId, String stockCode, int quantity) {
+    Position position =
+        positionRepository
+            .findByUserIdAndStockCodeForUpdate(userId, stockCode)
+            .orElseThrow(() -> new BizException(ErrorCode.TRADE_ORDER_INSUFFICIENT_POSITION));
+    int frozen = position.getFrozenQuantity() == null ? 0 : position.getFrozenQuantity();
+    int available = position.getAvailableQuantity() == null ? 0 : position.getAvailableQuantity();
+    if (frozen < quantity) {
+      throw new BizException(ErrorCode.BAD_REQUEST, "冻结持仓不足，无法撤单解冻");
+    }
+
+    position.setFrozenQuantity(frozen - quantity);
+    position.setAvailableQuantity(available + quantity);
+    if (!positionRepository.updateWithVersion(position)) {
+      throw new BizException(ErrorCode.TRADE_OPTIMISTIC_LOCK_CONFLICT);
+    }
+  }
+
+  private void recordFundFlow(
+      Long userId, FundFlow.FundFlowType type, BigDecimal amount, Long orderId, String remark) {
+    Account account =
+        accountRepository
+            .findByUserId(userId)
+            .orElseThrow(() -> new BizException(ErrorCode.USER_ACCOUNT_NOT_FOUND));
+    FundFlow flow = new FundFlow();
+    flow.setUserId(userId);
+    flow.setFlowType(type);
+    flow.setAmount(amount);
+    flow.setBalanceAfter(account.getAvailableBalance());
+    flow.setOrderId(orderId);
+    flow.setRemark(remark);
+    flow.setCreatedAt(LocalDateTime.now(ZONE_SHANGHAI));
+    fundFlowRepository.save(flow);
+  }
+
+  private void publishMatchMessageAfterCommit(Long orderId) {
+    if (TransactionSynchronizationManager.isActualTransactionActive()) {
+      TransactionSynchronizationManager.registerSynchronization(
+          new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+              orderMessageProducer.sendMatchMessage(orderId);
+            }
+          });
+      return;
+    }
+    orderMessageProducer.sendMatchMessage(orderId);
+  }
+
+  private void logTransactionCost(String action, Long userId, Long orderId, long startNano) {
+    long elapsedMs = (System.nanoTime() - startNano) / 1_000_000;
+    if (elapsedMs > TX_TARGET_MS) {
+      log.warn(
+          "trade.{}.slow userId={} orderId={} elapsedMs={} targetMs={}",
+          action,
+          userId,
+          orderId,
+          elapsedMs,
+          TX_TARGET_MS);
+      return;
+    }
+    log.info("trade.{}.ok userId={} orderId={} elapsedMs={}", action, userId, orderId, elapsedMs);
+  }
+
+  private Long currentUserId() {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication == null
+        || authentication instanceof AnonymousAuthenticationToken
+        || authentication.getPrincipal() == null) {
+      throw new BizException(ErrorCode.UNAUTHORIZED);
+    }
+    try {
+      return Long.parseLong(String.valueOf(authentication.getPrincipal()));
+    } catch (NumberFormatException ex) {
+      throw new BizException(ErrorCode.UNAUTHORIZED);
+    }
+  }
+
+  private OrderSide parseOrderSide(String side) {
+    try {
+      return OrderSide.valueOf(side.trim().toUpperCase(Locale.ROOT));
+    } catch (Exception ex) {
+      throw new BizException(ErrorCode.BAD_REQUEST, "不支持的交易方向: " + side);
+    }
+  }
+
+  private OrderType parseOrderType(String orderType) {
+    try {
+      return OrderType.valueOf(orderType.trim().toUpperCase(Locale.ROOT));
+    } catch (Exception ex) {
+      throw new BizException(ErrorCode.BAD_REQUEST, "不支持的订单类型: " + orderType);
+    }
+  }
+
+  private boolean hasEnoughAvailable(Position position, int quantity) {
+    Integer available = position.getAvailableQuantity();
+    return available != null && available >= quantity;
+  }
+
+  private boolean hasPositiveAmount(BigDecimal amount) {
+    return amount != null && amount.compareTo(BigDecimal.ZERO) > 0;
+  }
+
+  private int sanitizePage(int page) {
+    return page < MIN_PAGE ? MIN_PAGE : page;
+  }
+
+  private int sanitizeSize(int size) {
+    if (size <= 0) {
+      return DEFAULT_SIZE;
+    }
+    return Math.min(size, MAX_PAGE_SIZE);
+  }
+
+  private TradingWindow loadTradingWindow() {
+    Cache cache = cacheManager.getCache(CaffeineConfig.CACHE_CONFIG);
+    if (cache == null) {
+      return buildWindowFromConfig();
+    }
+    TradingWindow cached = cache.get(TRADE_WINDOW_CACHE_KEY, TradingWindow.class);
+    if (cached != null) {
+      return cached;
+    }
+    TradingWindow window = buildWindowFromConfig();
+    cache.put(TRADE_WINDOW_CACHE_KEY, window);
+    return window;
+  }
+
+  private TradingWindow buildWindowFromConfig() {
+    return new TradingWindow(
+        tradeRuleConfig.getMorningStart(),
+        tradeRuleConfig.getMorningEnd(),
+        tradeRuleConfig.getAfternoonStart(),
+        tradeRuleConfig.getAfternoonEnd());
+  }
+
+  private OrderVO toOrderVO(Order order) {
+    return new OrderVO(
+        order.getId(),
+        order.getClientOrderId(),
+        order.getStockCode(),
+        order.getStockName(),
+        order.getSide().name(),
+        order.getOrderType().name(),
+        order.getStatus().name(),
+        order.getPrice(),
+        order.getQuantity(),
+        order.getFilledQuantity(),
+        order.getFilledAmount(),
+        order.getCommission(),
+        order.getCreatedAt(),
+        order.getUpdatedAt());
+  }
+
+  private TradeVO toTradeVO(Trade trade) {
+    return new TradeVO(
+        trade.getId(),
+        trade.getOrderId(),
+        trade.getStockCode(),
+        trade.getStockName(),
+        trade.getSide().name(),
+        trade.getTradePrice(),
+        trade.getTradeQuantity(),
+        trade.getTradeAmount(),
+        trade.getCommission(),
+        trade.getTradedAt());
+  }
+
+  private record TradingWindow(
+      LocalTime morningOpen,
+      LocalTime morningClose,
+      LocalTime afternoonOpen,
+      LocalTime afternoonClose) {}
 }
