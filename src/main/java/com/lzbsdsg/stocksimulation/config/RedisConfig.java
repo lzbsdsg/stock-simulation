@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.lzbsdsg.stocksimulation.common.cache.CacheInvalidateListener;
+import com.lzbsdsg.stocksimulation.market.infrastructure.ingest.MarketPubSubListener;
 import io.lettuce.core.internal.HostAndPort;
 import io.lettuce.core.resource.ClientResources;
 import io.lettuce.core.resource.DefaultClientResources;
@@ -78,10 +79,13 @@ public class RedisConfig {
 
   @Bean
   public RedisMessageListenerContainer redisMessageListenerContainer(
-      RedisConnectionFactory connectionFactory, CacheInvalidateListener cacheInvalidateListener) {
+      RedisConnectionFactory connectionFactory,
+      CacheInvalidateListener cacheInvalidateListener,
+      MarketPubSubListener marketPubSubListener) {
     RedisMessageListenerContainer container = new RedisMessageListenerContainer();
     container.setConnectionFactory(connectionFactory);
     container.addMessageListener(cacheInvalidateListener, new PatternTopic("cache:invalidate:*"));
+    container.addMessageListener(marketPubSubListener, new PatternTopic("market:quote:broadcast"));
     return container;
   }
 }

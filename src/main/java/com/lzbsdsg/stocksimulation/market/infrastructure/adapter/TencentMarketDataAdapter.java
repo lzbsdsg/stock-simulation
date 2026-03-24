@@ -178,6 +178,11 @@ public class TencentMarketDataAdapter implements MarketDataProvider {
               .uri(URI.create(url))
               .timeout(Duration.ofSeconds(2))
               .header("Accept", "text/plain")
+            .header(
+              "User-Agent",
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+            .header("Referer", "https://gu.qq.com")
+            .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
               .GET()
               .build();
       HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());

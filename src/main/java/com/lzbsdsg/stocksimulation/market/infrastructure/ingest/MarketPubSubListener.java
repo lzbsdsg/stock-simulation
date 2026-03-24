@@ -1,5 +1,18 @@
 package com.lzbsdsg.stocksimulation.market.infrastructure.ingest;
 
+import com.lzbsdsg.stocksimulation.config.CaffeineConfig;
+import com.lzbsdsg.stocksimulation.market.domain.entity.QuoteSnapshot;
+import com.lzbsdsg.stocksimulation.market.infrastructure.websocket.MarketWebSocketHandler;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.data.redis.connection.Message;
+import org.springframework.data.redis.connection.MessageListener;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
+import org.springframework.stereotype.Component;
+
 /**
  * 行情 Pub/Sub 订阅监听器。 所有 App 实例订阅 Redis channel: market:quote:broadcast
  *
@@ -7,8 +20,36 @@ package com.lzbsdsg.stocksimulation.market.infrastructure.ingest;
  *
  * <p>注意： - 序列化异常应捕获并忽略（日志记录），不影响其他消息处理 - 更新 L1 缓存时使用 putIfAbsent 语义，避免覆盖更新的数据
  */
-public class MarketPubSubListener {
-  // TODO: implements MessageListener
-  // TODO: 注入 CaffeineCacheManager, MarketWebSocketHandler
-  // TODO: onMessage() → 更新 L1 → 推送 WS
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class MarketPubSubListener implements MessageListener {
+
+  private final CacheManager cacheManager;
+  private final MarketWebSocketHandler marketWebSocketHandler;
+  private final RedisTemplate<String, Object> redisTemplate;
+  private final StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
+
+  @Override
+  public void onMessage(Message message, byte[] pattern) {
+    try {
+      Object value = redisTemplate.getValueSerializer().deserialize(message.getBody());
+      if (!(value instanceof QuoteSnapshot quote)) {
+        return;
+      }
+      if (quote.getStockCode() == null || quote.getStockCode().isBlank()) {
+        return;
+      }
+
+      String stockCode = quote.getStockCode().trim().toLowerCase();
+      Cache quoteCache = cacheManager.getCache(CaffeineConfig.CACHE_QUOTE);
+      if (quoteCache != null) {
+        quoteCache.put(stockCode, quote);
+      }
+      marketWebSocketHandler.pushQuote(stockCode, quote);
+    } catch (Exception ex) {
+      String channel = stringRedisSerializer.deserialize(message.getChannel());
+      log.warn("Ignore malformed pub/sub message on channel {}: {}", channel, ex.getMessage());
+    }
+  }
 }

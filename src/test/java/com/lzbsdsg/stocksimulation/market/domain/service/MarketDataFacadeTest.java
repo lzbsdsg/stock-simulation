@@ -55,7 +55,6 @@ class MarketDataFacadeTest {
     QuoteSnapshot fromProvider = quote("sh600519", "贵州茅台", "1700.01");
     when(marketCacheGateway.getQuote("sh600519")).thenReturn(MarketCacheGateway.CacheResult.miss());
     when(marketCacheGateway.tryAcquireLoadLock("sh600519")).thenReturn(true);
-    when(primaryProvider.isAvailable()).thenReturn(true);
     when(primaryProvider.getQuote("sh600519")).thenReturn(fromProvider);
 
     QuoteSnapshot result = marketDataFacade.getQuote("sh600519");
@@ -70,9 +69,7 @@ class MarketDataFacadeTest {
     QuoteSnapshot fromBackup = quote("sz000001", "平安银行", "12.34");
     when(marketCacheGateway.getQuote("sz000001")).thenReturn(MarketCacheGateway.CacheResult.miss());
     when(marketCacheGateway.tryAcquireLoadLock("sz000001")).thenReturn(true);
-    when(primaryProvider.isAvailable()).thenReturn(true);
     when(primaryProvider.getQuote("sz000001")).thenThrow(new RuntimeException("timeout"));
-    when(backupProvider.isAvailable()).thenReturn(true);
     when(backupProvider.getQuote("sz000001")).thenReturn(fromBackup);
 
     QuoteSnapshot result = marketDataFacade.getQuote("sz000001");
@@ -86,9 +83,7 @@ class MarketDataFacadeTest {
     QuoteSnapshot stale = quote("sh600519", "贵州茅台", "1688.00");
     when(marketCacheGateway.getQuote("sh600519")).thenReturn(MarketCacheGateway.CacheResult.miss());
     when(marketCacheGateway.tryAcquireLoadLock("sh600519")).thenReturn(true);
-    when(primaryProvider.isAvailable()).thenReturn(true);
     when(primaryProvider.getQuote("sh600519")).thenThrow(new RuntimeException("error"));
-    when(backupProvider.isAvailable()).thenReturn(false);
     when(marketCacheGateway.getStaleQuote("sh600519")).thenReturn(stale);
 
     QuoteSnapshot result = marketDataFacade.getQuote("sh600519");
@@ -101,8 +96,8 @@ class MarketDataFacadeTest {
   void should_cache_null_value_to_prevent_penetration_when_all_failed() {
     when(marketCacheGateway.getQuote("sh999999")).thenReturn(MarketCacheGateway.CacheResult.miss());
     when(marketCacheGateway.tryAcquireLoadLock("sh999999")).thenReturn(true);
-    when(primaryProvider.isAvailable()).thenReturn(false);
-    when(backupProvider.isAvailable()).thenReturn(false);
+    when(primaryProvider.getQuote("sh999999")).thenThrow(new RuntimeException("unavailable"));
+    when(backupProvider.getQuote("sh999999")).thenThrow(new RuntimeException("unavailable"));
     when(marketCacheGateway.getStaleQuote("sh999999")).thenReturn(null);
 
     assertThrows(BizException.class, () -> marketDataFacade.getQuote("sh999999"));
@@ -124,6 +119,39 @@ class MarketDataFacadeTest {
 
     assertEquals(1, result.size());
     verify(primaryProvider, never()).getKLine("sh600519", KLinePeriod.DAILY, LocalDate.parse("2026-03-01"), LocalDate.parse("2026-03-02"));
+  }
+
+  @Test
+  void should_batch_get_quotes_with_partial_cache_hit() {
+    QuoteSnapshot hit = quote("sh600519", "贵州茅台", "1688.88");
+    QuoteSnapshot loaded = quote("sz000001", "平安银行", "12.34");
+    when(marketCacheGateway.getQuote("sh600519"))
+        .thenReturn(MarketCacheGateway.CacheResult.hit(hit, MarketCacheGateway.HIT_L1));
+    when(marketCacheGateway.getQuote("sz000001")).thenReturn(MarketCacheGateway.CacheResult.miss());
+    when(primaryProvider.batchGetQuotes(List.of("sz000001"))).thenReturn(List.of(loaded));
+
+    List<QuoteSnapshot> result = marketDataFacade.batchGetQuotes(List.of("sh600519", "sz000001"));
+
+    assertEquals(2, result.size());
+    assertEquals("sh600519", result.get(0).getStockCode());
+    assertEquals("sz000001", result.get(1).getStockCode());
+    verify(primaryProvider).batchGetQuotes(List.of("sz000001"));
+    verify(marketCacheGateway).cacheQuote("sz000001", loaded);
+  }
+
+  @Test
+  void should_batch_get_quotes_without_provider_when_all_cache_hit() {
+    QuoteSnapshot quote1 = quote("sh600519", "贵州茅台", "1688.88");
+    QuoteSnapshot quote2 = quote("sz000001", "平安银行", "12.34");
+    when(marketCacheGateway.getQuote("sh600519"))
+        .thenReturn(MarketCacheGateway.CacheResult.hit(quote1, MarketCacheGateway.HIT_L1));
+    when(marketCacheGateway.getQuote("sz000001"))
+        .thenReturn(MarketCacheGateway.CacheResult.hit(quote2, MarketCacheGateway.HIT_L2));
+
+    List<QuoteSnapshot> result = marketDataFacade.batchGetQuotes(List.of("sh600519", "sz000001"));
+
+    assertEquals(2, result.size());
+    verify(primaryProvider, never()).batchGetQuotes(List.of("sh600519", "sz000001"));
   }
 
   private QuoteSnapshot quote(String code, String name, String price) {
