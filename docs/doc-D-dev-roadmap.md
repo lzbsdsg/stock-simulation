@@ -496,21 +496,21 @@ Week 20  ████ Beta 发布 + 文档收尾
 **目标**：完成认证页面 + 行情页面 + K线图 + WS实时推送
 
 **前端任务**：
-- [ ] **Layout**: AuthLayout（居中卡片）, DefaultLayout（Header+Sidebar+Content）
-- [ ] **Auth Pages**: LoginPage, RegisterPage, ForgotPasswordPage
-- [ ] **Auth Store**: useAuthStore（login/logout/refreshToken）
-- [ ] **Axios 拦截器**: 401 自动 refresh → 重试原请求；解析 X-RateLimit-* 头
-- [ ] **Router**: 路由守卫（未登录→/login）
-- [ ] **Market Pages**: MarketPage（行情列表）, StockDetailPage（K线+交易面板）
-- [ ] **Market Components**: StockSearch, QuoteCard, KLineChart, MarketOverview
-- [ ] **Market Store**: useMarketStore（quotes + WS 连接管理）
-- [ ] **useWebSocket Composable**:
+- [x] **Layout**: AuthLayout（居中卡片）, DefaultLayout（Header+Sidebar+Content）
+- [x] **Auth Pages**: LoginPage, RegisterPage, ForgotPasswordPage
+- [x] **Auth Store**: useAuthStore（login/logout/refreshToken）
+- [x] **Axios 拦截器**: 401 自动 refresh → 重试原请求；解析 X-RateLimit-* 头
+- [x] **Router**: 路由守卫（未登录→/login）
+- [x] **Market Pages**: MarketPage（行情列表）, StockDetailPage（K线+交易面板）
+- [x] **Market Components**: StockSearch, QuoteCard, KLineChart, MarketOverview
+- [x] **Market Store**: useMarketStore（quotes + WS 连接管理）
+- [x] **useWebSocket Composable**:
   - STOMP over SockJS 连接
   - JWT 鉴权
   - 自动重连 + 指数退避 (1s→2s→4s→8s→16s→30s max)
   - 背压检测: 推送延迟 > 5s → 降级显示频率
   - 检查 `X-Cache-Status` 头判断数据新鲜度
-- [ ] **ECharts**: K线图渲染 + MA均线 + 成交量 + dataZoom
+- [x] **ECharts**: K线图渲染 + MA均线 + 成交量 + dataZoom
 
 **验收标准**：
 - 注册→登录跳转 Dashboard

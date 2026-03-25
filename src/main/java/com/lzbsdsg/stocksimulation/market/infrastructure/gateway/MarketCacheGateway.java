@@ -4,8 +4,12 @@ import com.lzbsdsg.stocksimulation.config.CaffeineConfig;
 import com.lzbsdsg.stocksimulation.market.domain.entity.KLinePoint;
 import com.lzbsdsg.stocksimulation.market.domain.entity.QuoteSnapshot;
 import jakarta.servlet.http.HttpServletResponse;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
@@ -135,11 +139,19 @@ public class MarketCacheGateway {
 
   @SuppressWarnings("unchecked")
   public List<KLinePoint> getCachedKLine(String key) {
-    Object cached = redisTemplate.opsForValue().get(KLINE_KEY_PREFIX + key);
+    String redisKey = KLINE_KEY_PREFIX + key;
+    Object cached = redisTemplate.opsForValue().get(redisKey);
     if (cached == null) {
       return null;
     }
-    return (List<KLinePoint>) cached;
+    try {
+      return toKLinePointList(cached);
+    } catch (Exception ex) {
+      // 兼容历史缓存结构（例如 LinkedHashMap 列表）导致的反序列化问题，降级为 miss 并清理脏缓存。
+      log.warn("Invalid kline cache format for key={}, fallback to miss: {}", redisKey, ex.getMessage());
+      redisTemplate.delete(redisKey);
+      return null;
+    }
   }
 
   public void setCacheStatusHeader(String status) {
@@ -175,6 +187,80 @@ public class MarketCacheGateway {
       return quoteSnapshot;
     }
     return null;
+  }
+
+  private List<KLinePoint> toKLinePointList(Object cached) {
+    if (!(cached instanceof List<?> rawList)) {
+      throw new IllegalStateException("kline cache is not a list");
+    }
+
+    List<KLinePoint> converted = new ArrayList<>(rawList.size());
+    for (Object item : rawList) {
+      if (item instanceof KLinePoint kLinePoint) {
+        converted.add(kLinePoint);
+        continue;
+      }
+      if (item instanceof Map<?, ?> mapItem) {
+        converted.add(fromMap(mapItem));
+        continue;
+      }
+      throw new IllegalStateException("kline item type unsupported: " + item.getClass().getName());
+    }
+    return converted;
+  }
+
+  private KLinePoint fromMap(Map<?, ?> mapItem) {
+    KLinePoint point = new KLinePoint();
+    point.setDate(parseLocalDate(mapItem.get("date")));
+    point.setOpen(parseBigDecimal(mapItem.get("open")));
+    point.setClose(parseBigDecimal(mapItem.get("close")));
+    point.setHigh(parseBigDecimal(mapItem.get("high")));
+    point.setLow(parseBigDecimal(mapItem.get("low")));
+    point.setVolume(parseLong(mapItem.get("volume")));
+    point.setAmount(parseBigDecimal(mapItem.get("amount")));
+    return point;
+  }
+
+  private LocalDate parseLocalDate(Object value) {
+    if (value == null) {
+      return null;
+    }
+    if (value instanceof LocalDate localDate) {
+      return localDate;
+    }
+    String text = String.valueOf(value).trim();
+    if (text.isBlank()) {
+      return null;
+    }
+    return LocalDate.parse(text);
+  }
+
+  private BigDecimal parseBigDecimal(Object value) {
+    if (value == null) {
+      return null;
+    }
+    if (value instanceof BigDecimal bigDecimal) {
+      return bigDecimal;
+    }
+    String text = String.valueOf(value).trim();
+    if (text.isBlank()) {
+      return null;
+    }
+    return new BigDecimal(text);
+  }
+
+  private Long parseLong(Object value) {
+    if (value == null) {
+      return 0L;
+    }
+    if (value instanceof Number number) {
+      return number.longValue();
+    }
+    String text = String.valueOf(value).trim();
+    if (text.isBlank()) {
+      return 0L;
+    }
+    return Long.parseLong(text);
   }
 
   public record CacheResult<T>(T value, String status, boolean hit, boolean nullValue) {

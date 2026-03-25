@@ -1,6 +1,7 @@
 package com.lzbsdsg.stocksimulation.market.infrastructure.gateway;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -9,9 +10,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.lzbsdsg.stocksimulation.config.CaffeineConfig;
+import com.lzbsdsg.stocksimulation.market.domain.entity.KLinePoint;
 import com.lzbsdsg.stocksimulation.market.domain.entity.QuoteSnapshot;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.cache.CacheManager;
@@ -74,5 +79,29 @@ class MarketCacheGatewayIntegrationTest {
     boolean acquired = marketCacheGateway.tryAcquireLoadLock("sh600519");
 
     assertTrue(acquired);
+  }
+
+  @Test
+  void should_convert_legacy_kline_cache_map_to_domain_points() {
+    when(valueOperations.get("market:kline:sh600519:DAILY:2025-09-26:2026-03-25"))
+        .thenReturn(
+            List.of(
+                Map.of(
+                    "date", "2026-03-25",
+                    "open", "1700.00",
+                    "close", "1710.00",
+                    "high", "1720.00",
+                    "low", "1690.00",
+                    "volume", "123456",
+                    "amount", "210000000.50")));
+
+    List<KLinePoint> result =
+        marketCacheGateway.getCachedKLine("sh600519:DAILY:2025-09-26:2026-03-25");
+
+    assertNotNull(result);
+    assertEquals(1, result.size());
+    assertEquals(LocalDate.parse("2026-03-25"), result.get(0).getDate());
+    assertEquals(new BigDecimal("1710.00"), result.get(0).getClose());
+    assertEquals(123456L, result.get(0).getVolume());
   }
 }

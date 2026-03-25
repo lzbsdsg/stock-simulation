@@ -1,3 +1,5 @@
+﻿export type CacheStatus = 'HIT-L1' | 'HIT-L2' | 'MISS' | 'STALE' | 'UNKNOWN'
+
 export interface RateLimitInfo {
   limit?: number
   remaining?: number
@@ -10,4 +12,18 @@ export interface ApiResponse<T> {
   data: T
   traceId?: string
   timestamp?: string
+}
+
+export class ApiRequestError extends Error {
+  code: number
+  httpStatus: number
+  traceId?: string
+
+  constructor(message: string, code: number, httpStatus: number, traceId?: string) {
+    super(message)
+    this.name = 'ApiRequestError'
+    this.code = code
+    this.httpStatus = httpStatus
+    this.traceId = traceId
+  }
 }
