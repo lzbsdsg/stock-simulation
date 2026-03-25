@@ -35,12 +35,16 @@ import com.lzbsdsg.stocksimulation.user.application.AccountApplicationService;
 import com.lzbsdsg.stocksimulation.user.domain.entity.Account;
 import com.lzbsdsg.stocksimulation.user.domain.repository.AccountRepository;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
@@ -50,6 +54,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 /** 交易应用服务单元测试。 */
 @ExtendWith(MockitoExtension.class)
 class TradeApplicationServiceTest {
+
+  private static final ZoneId ZONE_SHANGHAI = ZoneId.of("Asia/Shanghai");
 
   @Mock private OrderRepository orderRepository;
   @Mock private TradeRepository tradeRepository;
@@ -354,6 +360,36 @@ class TradeApplicationServiceTest {
 
     assertEquals(ErrorCode.TRADE_OPTIMISTIC_LOCK_CONFLICT, ex.getErrorCode());
     verify(tradeRepository, never()).save(any());
+  }
+
+  @Test
+  void should_archive_closed_orders_with_given_retention_and_batch_size() {
+    when(orderRepository.archiveClosedOrdersWithoutTrades(any(LocalDateTime.class), eq(300)))
+        .thenReturn(12);
+
+    int archived = tradeApplicationService.archiveClosedOrders(14, 300);
+
+    assertEquals(12, archived);
+    ArgumentCaptor<LocalDateTime> cutoffCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
+    verify(orderRepository).archiveClosedOrdersWithoutTrades(cutoffCaptor.capture(), eq(300));
+    LocalDateTime cutoff = cutoffCaptor.getValue();
+    assertEquals(LocalDate.now(ZONE_SHANGHAI).minusDays(14), cutoff.toLocalDate());
+    assertEquals(LocalTime.MIN, cutoff.toLocalTime());
+  }
+
+  @Test
+  void should_fallback_to_default_archive_parameters_when_input_invalid() {
+    when(orderRepository.archiveClosedOrdersWithoutTrades(any(LocalDateTime.class), eq(500)))
+        .thenReturn(3);
+
+    int archived = tradeApplicationService.archiveClosedOrders(0, 0);
+
+    assertEquals(3, archived);
+    ArgumentCaptor<LocalDateTime> cutoffCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
+    verify(orderRepository).archiveClosedOrdersWithoutTrades(cutoffCaptor.capture(), eq(500));
+    LocalDateTime cutoff = cutoffCaptor.getValue();
+    assertEquals(LocalDate.now(ZONE_SHANGHAI).minusDays(1), cutoff.toLocalDate());
+    assertEquals(LocalTime.MIN, cutoff.toLocalTime());
   }
 
   private QuoteSnapshot mockQuote(String code, String name) {

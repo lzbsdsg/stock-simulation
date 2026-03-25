@@ -9,6 +9,7 @@
 - 乐观锁冲突重试（指数退避）与重试失败入 DLQ
 - 成交事件 `trade.filled` 发布（fanout）
 - 收盘结算任务（过期待成交 + T+1 冻结日期修正）
+- 历史委托归档任务（主表保留窗口 + 归档表长期保留）
 
 ## 2. 本次完成项
 
@@ -63,6 +64,24 @@
   - 卖出成交持仓更新（扣冻结、减总仓）
   - 下一交易日计算（跳过周末）
 
+### 2.6 历史委托归档（增补）
+
+- 新增 Flyway 迁移：`V20260325_001__create_trade_order_archive_table.sql`
+  - 新表 `t_trade_order_archive`，按 `order_id` 唯一存储归档订单
+  - 保留原订单关键字段 + `archived_at`
+- 新增 `OrderArchiveMapper`：
+  - 历史查询：主表 `t_trade_order` + 归档表 `t_trade_order_archive` 合并分页
+  - 归档搬迁：批量迁移 `CANCELLED/EXPIRED/REJECTED` 且无成交明细订单
+- `OrderRepositoryImpl`：
+  - 历史委托查询与计数改为“主表+归档表”统一视图，避免归档后历史查询丢数据
+  - 新增 `archiveClosedOrdersWithoutTrades(...)` 归档入口
+- `TradeApplicationService`：
+  - 新增 `archiveClosedOrders(retainDays, batchSize)` 归档编排
+- `TradeSettlementScheduler`：
+  - 新增归档调度 `archiveOrders`（默认 cron: `0 30 3 * * *`）
+  - Redis 分布式锁防重 + 分批循环执行
+  - 可配置：`trade.settlement.archive-retain-days`、`trade.settlement.archive-batch-size`
+
 ## 3. 关键变更文件
 
 - `src/main/java/com/lzbsdsg/stocksimulation/trade/application/TradeApplicationService.java`
@@ -70,6 +89,8 @@
 - `src/main/java/com/lzbsdsg/stocksimulation/trade/infrastructure/mq/OrderMessageProducer.java`
 - `src/main/java/com/lzbsdsg/stocksimulation/trade/infrastructure/mq/TradeFilledEvent.java`
 - `src/main/java/com/lzbsdsg/stocksimulation/trade/infrastructure/scheduler/TradeSettlementScheduler.java`
+- `src/main/java/com/lzbsdsg/stocksimulation/trade/infrastructure/persistence/OrderArchiveMapper.java`
+- `src/main/resources/db/migration/V20260325_001__create_trade_order_archive_table.sql`
 - `src/main/java/com/lzbsdsg/stocksimulation/config/RabbitMQConfig.java`
 - `src/main/java/com/lzbsdsg/stocksimulation/notification/application/NotificationApplicationService.java`
 - `src/main/java/com/lzbsdsg/stocksimulation/notification/infrastructure/mq/TradePushConsumer.java`
@@ -82,16 +103,16 @@
 
 ```cmd
 cd /d d:\StockSimulation\stock-simulation
-mvnw.cmd clean "-Dtest=OrderControllerApiTest,TradeApplicationServiceTest,MatchEngineTest,MatchConsumerTest,PositionDomainServiceTest" test
+mvnw.cmd "-Dtest=TradeApplicationServiceTest,TradeSettlementSchedulerTest" test
 ```
 
-结果：`Tests run: 29, Failures: 0, Errors: 0, Skipped: 0`
+结果：`Tests run: 16, Failures: 0, Errors: 0, Skipped: 0`
 
 ### 4.2 Spotless（本次改动文件）
 
 ```cmd
 cd /d d:\StockSimulation\stock-simulation
-mvnw.cmd spotless:check "-DspotlessFiles=src/main/java/com/lzbsdsg/stocksimulation/config/RabbitMQConfig.java,src/main/java/com/lzbsdsg/stocksimulation/notification/application/NotificationApplicationService.java,src/main/java/com/lzbsdsg/stocksimulation/notification/infrastructure/mq/TradePushConsumer.java,src/main/java/com/lzbsdsg/stocksimulation/portfolio/domain/repository/PositionRepository.java,src/main/java/com/lzbsdsg/stocksimulation/portfolio/domain/service/PositionDomainService.java,src/main/java/com/lzbsdsg/stocksimulation/portfolio/infrastructure/persistence/PositionMapper.java,src/main/java/com/lzbsdsg/stocksimulation/portfolio/infrastructure/persistence/PositionRepositoryImpl.java,src/main/java/com/lzbsdsg/stocksimulation/trade/application/TradeApplicationService.java,src/main/java/com/lzbsdsg/stocksimulation/trade/domain/service/MatchEngine.java,src/main/java/com/lzbsdsg/stocksimulation/trade/infrastructure/mq/MatchConsumer.java,src/main/java/com/lzbsdsg/stocksimulation/trade/infrastructure/mq/OrderMessageProducer.java,src/main/java/com/lzbsdsg/stocksimulation/trade/infrastructure/mq/TradeFilledEvent.java,src/main/java/com/lzbsdsg/stocksimulation/trade/infrastructure/scheduler/TradeSettlementScheduler.java,src/test/java/com/lzbsdsg/stocksimulation/portfolio/domain/service/PositionDomainServiceTest.java,src/test/java/com/lzbsdsg/stocksimulation/trade/application/TradeApplicationServiceTest.java,src/test/java/com/lzbsdsg/stocksimulation/trade/domain/service/MatchEngineTest.java,src/test/java/com/lzbsdsg/stocksimulation/trade/infrastructure/mq/MatchConsumerTest.java"
+mvnw.cmd spotless:check "-DspotlessFiles=src/main/java/com/lzbsdsg/stocksimulation/trade/application/TradeApplicationService.java,src/main/java/com/lzbsdsg/stocksimulation/trade/domain/repository/OrderRepository.java,src/main/java/com/lzbsdsg/stocksimulation/trade/infrastructure/persistence/OrderArchiveMapper.java,src/main/java/com/lzbsdsg/stocksimulation/trade/infrastructure/persistence/OrderRepositoryImpl.java,src/main/java/com/lzbsdsg/stocksimulation/trade/infrastructure/scheduler/TradeSettlementScheduler.java,src/test/java/com/lzbsdsg/stocksimulation/trade/application/TradeApplicationServiceTest.java,src/test/java/com/lzbsdsg/stocksimulation/trade/infrastructure/scheduler/TradeSettlementSchedulerTest.java"
 ```
 
 结果：通过。
@@ -111,10 +132,13 @@ mvnw.cmd spotless:check "-DspotlessFiles=src/main/java/com/lzbsdsg/stocksimulati
 3. 调度任务
 - 收盘任务执行后：待成交订单可过期，持仓冻结日期可修正
 - 分布式锁生效（同一日期仅一个实例执行）
+- 归档任务执行后：符合条件订单从 `t_trade_order` 迁移到 `t_trade_order_archive`
+- `GET /api/v1/trade/orders?scope=history` 在归档后仍可查到迁移订单
 
 4. 稳定性与性能（本迭代）
 - 冒烟压测期间无连接拒绝/大面积 5xx
 - MQ 消费链路在低并发下稳定处理，不出现异常中断
+- 归档批处理不阻塞线上交易接口（独立凌晨 cron + 批量处理）
 
 ## 6. 具体验收方法（可执行）
 
@@ -172,6 +196,26 @@ k6 run -e BASE_URL=http://localhost:8080 -e TOKEN=<accessToken> -e STOCK_CODE=sh
 - `hard_failure_rate < 1%`
 - 下单/查单请求可持续返回（触发 429 视为限流生效，不计功能失败）
 
+### 6.6 归档验收（新增）
+
+1. 启动服务后，准备 1 条可归档样本订单（`status=CANCELLED/EXPIRED/REJECTED` 且无成交记录）。
+2. 将该订单 `updated_at` 调整到保留窗口外（例如 8 天前）。
+3. 临时将归档 cron 调整为快速触发：
+
+```yaml
+trade:
+  settlement:
+    archive-cron: "*/30 * * * * *"
+    archive-retain-days: 7
+    archive-batch-size: 100
+```
+
+4. 观察日志：`trade.archive.done date=... archivedOrders=...`
+5. 验证数据库：
+   - `t_trade_order` 中样本订单消失
+   - `t_trade_order_archive` 中出现同 `order_id` 数据
+6. 调用 `GET /api/v1/trade/orders?scope=history&page=1&size=20`，确认可查到该订单。
+
 ## 7. Iteration 8 通过结论
 
-Iteration 8 交易模块核心能力已完成并可运行：MQ 异步撮合、成交结算、重试+DLQ、成交事件发布、通知消费、收盘结算任务均已落地，并提供了可执行的测试与验收方法。
+Iteration 8 交易模块核心能力已完成并可运行：MQ 异步撮合、成交结算、重试+DLQ、成交事件发布、通知消费、收盘结算与历史委托归档任务均已落地，并提供了可执行的测试与验收方法。

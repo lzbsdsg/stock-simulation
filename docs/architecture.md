@@ -791,12 +791,16 @@ stock-simulation-web/
 1. 15:00 定时任务触发（Quartz, 分布式锁防重复执行）
 2. 过期订单处理：分批查询 PENDING 订单(每批200) → EXPIRED → 解冻资金
 3. T+1 冻结更新：分批更新持仓 frozen_until
-4. 资产快照：分批处理用户(每批500)
+4. 历史订单归档：03:30 分批迁移终态订单(每批500)
+   a. 条件：CANCELLED/EXPIRED/REJECTED 且无成交明细
+   b. 搬迁：t_trade_order → t_trade_order_archive
+   c. 查询：历史委托统一合并主表 + 归档表
+5. 资产快照：分批处理用户(每批500)
    a. 查询用户账户 + 持仓
    b. 批量获取行情（batchGetQuotes, 缓存优先）
    c. 计算总资产、收益率
    d. 批量INSERT AssetSnapshot（幂等：UNIQUE(user_id, snapshot_date)）
-5. 全程异步执行，不阻塞 Web 请求线程
+6. 全程异步执行，不阻塞 Web 请求线程
 ```
 
 ---
@@ -812,6 +816,7 @@ stock-simulation-web/
 | `t_user_login_log` | auth | 登录日志 | 异步写入 |
 | `t_market_stock_info` | market | 股票基础信息 | Caffeine 缓存 |
 | `t_trade_order` | trade | 委托订单 | 乐观锁 + 幂等键 |
+| `t_trade_order_archive` | trade | 历史委托归档 | 批处理迁移 + 合并查询 |
 | `t_trade_deal` | trade | 成交记录 | 按月分区 |
 | `t_trade_fee_config` | trade | 手续费配置 | Caffeine 缓存 |
 | `t_portfolio_position` | portfolio | 持仓明细 | FOR UPDATE + 乐观锁 |

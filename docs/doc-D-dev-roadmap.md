@@ -426,6 +426,10 @@ Week 20  ████ Beta 发布 + 文档收尾
 - [ ] **Scheduler**: 收盘结算 (15:00, @Scheduled + 分布式锁防重):
   - 分批过期 PENDING 订单 (每批200)
   - 分批更新今日买入持仓 frozen_until
+- [ ] **Archive**: 历史委托归档 (03:30, @Scheduled + 分布式锁防重):
+  - 归档范围：`CANCELLED/EXPIRED/REJECTED` 且无成交明细的订单
+  - 保留策略：主表保留近 N 天（默认 7 天），超期批量迁移至 `t_trade_order_archive`
+  - 查询兼容：历史委托查询需合并主表 + 归档表，避免功能回退
 
 **测试**：
 - [ ] MatchEngineTest (6条)
@@ -441,6 +445,7 @@ Week 20  ████ Beta 发布 + 文档收尾
 - 乐观锁冲突重试成功（日志可见重试次数）
 - 10 线程并发撮合同一用户 → 全部成功（乐观锁重试）
 - 收盘时 PENDING 订单自动过期
+- 归档任务执行后，历史委托在归档表可查，`GET /api/v1/trade/orders?scope=history` 结果不丢失
 
 ---
 

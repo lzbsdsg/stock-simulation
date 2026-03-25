@@ -99,6 +99,11 @@ trade:
     st-limit-rate: 0.05
     gem-star-limit-rate: 0.20
     commission-rate: 0.0003
+  settlement:
+    close-cron: "0 0 15 * * MON-FRI"
+    archive-cron: "0 30 3 * * *"
+    archive-retain-days: 7
+    archive-batch-size: 500
 
 # ---- 行情采样开关 ----
 market:

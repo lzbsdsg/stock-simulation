@@ -22,6 +22,8 @@ public interface OrderRepository {
 
   List<Order> findPendingOrders();
 
+  int archiveClosedOrdersWithoutTrades(LocalDateTime cutoff, int batchSize);
+
   void save(Order order);
 
   boolean updateWithVersion(Order order);

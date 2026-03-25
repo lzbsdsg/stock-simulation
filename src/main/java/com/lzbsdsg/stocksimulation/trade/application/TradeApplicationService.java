@@ -66,6 +66,8 @@ public class TradeApplicationService {
   private static final int MIN_PAGE = 1;
   private static final int DEFAULT_SIZE = 20;
   private static final int MAX_PAGE_SIZE = 200;
+  private static final int DEFAULT_ARCHIVE_BATCH_SIZE = 500;
+  private static final int MIN_ARCHIVE_RETAIN_DAYS = 1;
   private static final long TX_TARGET_MS = 50L;
   private static final String TRADE_WINDOW_CACHE_KEY = "trade:window";
   private static final ZoneId ZONE_SHANGHAI = ZoneId.of("Asia/Shanghai");
@@ -379,6 +381,15 @@ public class TradeApplicationService {
     LocalDate today = LocalDate.now(ZONE_SHANGHAI);
     LocalDate nextTradingDate = positionDomainService.nextTradingDate(today);
     return positionRepository.markTodayBoughtPositionsFrozenUntil(today, nextTradingDate);
+  }
+
+  /** 归档已完结且无成交明细的历史订单，返回本批次归档数量。 */
+  @Transactional
+  public int archiveClosedOrders(int retainDays, int batchSize) {
+    int safeRetainDays = Math.max(retainDays, MIN_ARCHIVE_RETAIN_DAYS);
+    int safeBatchSize = batchSize <= 0 ? DEFAULT_ARCHIVE_BATCH_SIZE : batchSize;
+    LocalDateTime cutoff = LocalDate.now(ZONE_SHANGHAI).minusDays(safeRetainDays).atStartOfDay();
+    return orderRepository.archiveClosedOrdersWithoutTrades(cutoff, safeBatchSize);
   }
 
   private void validateTradingWindow() {

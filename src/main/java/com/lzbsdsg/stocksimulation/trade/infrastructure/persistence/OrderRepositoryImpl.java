@@ -1,11 +1,14 @@
 package com.lzbsdsg.stocksimulation.trade.infrastructure.persistence;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.lzbsdsg.stocksimulation.trade.domain.entity.*;
+import com.lzbsdsg.stocksimulation.trade.domain.entity.Order;
+import com.lzbsdsg.stocksimulation.trade.domain.entity.OrderSide;
+import com.lzbsdsg.stocksimulation.trade.domain.entity.OrderStatus;
+import com.lzbsdsg.stocksimulation.trade.domain.entity.OrderType;
 import java.time.ZoneId;
 import com.lzbsdsg.stocksimulation.trade.domain.repository.OrderRepository;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -20,6 +23,7 @@ public class OrderRepositoryImpl implements OrderRepository {
   private static final ZoneId ZONE_SHANGHAI = ZoneId.of("Asia/Shanghai");
 
   private final OrderMapper orderMapper;
+  private final OrderArchiveMapper orderArchiveMapper;
 
   @Override
   public Optional<Order> findById(Long orderId) {
@@ -38,14 +42,14 @@ public class OrderRepositoryImpl implements OrderRepository {
   @Override
   public List<Order> findByUserIdAndCreatedAtBetween(
       Long userId, LocalDateTime from, LocalDateTime to, int page, int size) {
-    Page<OrderDO> p =
-        orderMapper.selectPage(
-            new Page<>(page, size),
-            new LambdaQueryWrapper<OrderDO>()
-                .eq(OrderDO::getUserId, userId)
-                .between(OrderDO::getCreatedAt, from, to)
-                .orderByDesc(OrderDO::getCreatedAt));
-    return p.getRecords().stream().map(this::toDomain).collect(Collectors.toList());
+    long offset = Math.max(page - 1L, 0L) * size;
+    OffsetDateTime fromOffset = from.atZone(ZONE_SHANGHAI).toOffsetDateTime();
+    OffsetDateTime toOffset = to.atZone(ZONE_SHANGHAI).toOffsetDateTime();
+    return orderArchiveMapper
+        .selectHistoryByUserIdAndCreatedAtBetween(userId, fromOffset, toOffset, size, offset)
+        .stream()
+        .map(this::toDomain)
+        .collect(Collectors.toList());
   }
 
   @Override
@@ -60,10 +64,9 @@ public class OrderRepositoryImpl implements OrderRepository {
 
   @Override
   public long countByUserIdAndCreatedAtBetween(Long userId, LocalDateTime from, LocalDateTime to) {
-    return orderMapper.selectCount(
-        new LambdaQueryWrapper<OrderDO>()
-            .eq(OrderDO::getUserId, userId)
-            .between(OrderDO::getCreatedAt, from, to));
+    OffsetDateTime fromOffset = from.atZone(ZONE_SHANGHAI).toOffsetDateTime();
+    OffsetDateTime toOffset = to.atZone(ZONE_SHANGHAI).toOffsetDateTime();
+    return orderArchiveMapper.countHistoryByUserIdAndCreatedAtBetween(userId, fromOffset, toOffset);
   }
 
   @Override
@@ -76,6 +79,12 @@ public class OrderRepositoryImpl implements OrderRepository {
                     OrderStatus.PENDING.name(),
                     OrderStatus.PARTIAL_FILLED.name()));
     return list.stream().map(this::toDomain).collect(Collectors.toList());
+  }
+
+  @Override
+  public int archiveClosedOrdersWithoutTrades(LocalDateTime cutoff, int batchSize) {
+    OffsetDateTime cutoffOffset = cutoff.atZone(ZONE_SHANGHAI).toOffsetDateTime();
+    return orderArchiveMapper.archiveClosedOrdersWithoutTrades(cutoffOffset, batchSize);
   }
 
   @Override

@@ -212,14 +212,18 @@
 1. 15:00 定时任务触发（Quartz, 分布式锁防重复执行）
 2. 过期订单：分批查询PENDING订单(每批200) → EXPIRED → 解冻资金/持仓
 3. T+1 更新：分批更新今日买入持仓，frozen_until = 下一交易日15:00
-4. 资产快照：分批处理用户(每批500)
+4. 历史归档：03:30 分批归档终态订单（每批500，主表保留近7天）
+   a. 仅归档 `CANCELLED/EXPIRED/REJECTED` 且无成交明细订单
+   b. 搬迁至 `t_trade_order_archive` 后从主表删除
+   c. 历史查询统一合并主表+归档表
+5. 资产快照：分批处理用户(每批500)
    a. 查询用户账户 + 持仓
    b. 批量获取行情（batchGetQuotes, L1→L2→Provider）
    c. 计算总资产 = 可用资金 + 冻结资金 + 持仓市值(按收盘价)
    d. 收益率 = (总资产 - 初始资金) / 初始资金 × 100%
    e. 批量INSERT AssetSnapshot
-5. 快照幂等：UNIQUE(user_id, snapshot_date)
-6. 全程异步执行，不阻塞 Web 请求线程
+6. 快照幂等：UNIQUE(user_id, snapshot_date)
+7. 全程异步执行，不阻塞 Web 请求线程
 ```
 
 ---
@@ -806,6 +810,7 @@ stock-simulation-web/
 t_user 1──1 t_user_account
 t_user 1──N t_user_login_log
 t_user 1──N t_trade_order
+t_trade_order 1──0..1 t_trade_order_archive (按保留策略归档)
 t_user 1──N t_portfolio_position
 t_user 1──N t_portfolio_fund_flow       (按月分区)
 t_user 1──N t_portfolio_asset_snapshot  (按月分区)
