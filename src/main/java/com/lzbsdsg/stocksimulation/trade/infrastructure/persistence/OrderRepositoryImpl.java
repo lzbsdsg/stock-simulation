@@ -3,6 +3,7 @@ package com.lzbsdsg.stocksimulation.trade.infrastructure.persistence;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.lzbsdsg.stocksimulation.trade.domain.entity.*;
+import java.time.ZoneId;
 import com.lzbsdsg.stocksimulation.trade.domain.repository.OrderRepository;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -15,6 +16,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 @RequiredArgsConstructor
 public class OrderRepositoryImpl implements OrderRepository {
+
+  private static final ZoneId ZONE_SHANGHAI = ZoneId.of("Asia/Shanghai");
 
   private final OrderMapper orderMapper;
 
@@ -98,9 +101,9 @@ public class OrderRepositoryImpl implements OrderRepository {
     o.setClientOrderId(d.getClientOrderId());
     o.setStockCode(d.getStockCode());
     o.setStockName(d.getStockName());
-    o.setSide(OrderSide.valueOf(d.getSide()));
-    o.setOrderType(OrderType.valueOf(d.getOrderType()));
-    o.setStatus(OrderStatus.valueOf(d.getStatus()));
+    o.setSide(enumFromDb(OrderSide.class, d.getSide()));
+    o.setOrderType(enumFromDb(OrderType.class, d.getOrderType()));
+    o.setStatus(enumFromDb(OrderStatus.class, d.getStatus()));
     o.setPrice(d.getPrice());
     o.setQuantity(d.getQuantity());
     o.setFilledQuantity(d.getFilledQuantity());
@@ -108,8 +111,10 @@ public class OrderRepositoryImpl implements OrderRepository {
     o.setCommission(d.getCommission());
     o.setFrozenAmount(d.getFrozenAmount());
     o.setVersion(d.getVersion());
-    o.setCreatedAt(d.getCreatedAt());
-    o.setUpdatedAt(d.getUpdatedAt());
+    o.setCreatedAt(
+        d.getCreatedAt() == null ? null : d.getCreatedAt().atZoneSameInstant(ZONE_SHANGHAI).toLocalDateTime());
+    o.setUpdatedAt(
+        d.getUpdatedAt() == null ? null : d.getUpdatedAt().atZoneSameInstant(ZONE_SHANGHAI).toLocalDateTime());
     return o;
   }
 
@@ -120,9 +125,9 @@ public class OrderRepositoryImpl implements OrderRepository {
     d.setClientOrderId(o.getClientOrderId());
     d.setStockCode(o.getStockCode());
     d.setStockName(o.getStockName());
-    d.setSide(o.getSide().name());
-    d.setOrderType(o.getOrderType().name());
-    d.setStatus(o.getStatus().name());
+    d.setSide(enumToDb(o.getSide()));
+    d.setOrderType(enumToDb(o.getOrderType()));
+    d.setStatus(enumToDb(o.getStatus()));
     d.setPrice(o.getPrice());
     d.setQuantity(o.getQuantity());
     d.setFilledQuantity(o.getFilledQuantity());
@@ -130,8 +135,23 @@ public class OrderRepositoryImpl implements OrderRepository {
     d.setCommission(o.getCommission());
     d.setFrozenAmount(o.getFrozenAmount());
     d.setVersion(o.getVersion());
-    d.setCreatedAt(o.getCreatedAt());
-    d.setUpdatedAt(o.getUpdatedAt());
+    d.setCreatedAt(o.getCreatedAt() == null ? null : o.getCreatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
+    d.setUpdatedAt(o.getUpdatedAt() == null ? null : o.getUpdatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
     return d;
+  }
+
+  private <E extends Enum<E>> E enumFromDb(Class<E> enumType, String rawValue) {
+    if (rawValue == null || rawValue.isBlank()) {
+      return null;
+    }
+    try {
+      return Enum.valueOf(enumType, rawValue);
+    } catch (IllegalArgumentException ex) {
+      return null;
+    }
+  }
+
+  private String enumToDb(Enum<?> value) {
+    return value == null ? null : value.name();
   }
 }

@@ -6,7 +6,6 @@ import com.lzbsdsg.stocksimulation.user.domain.entity.Account;
 import com.lzbsdsg.stocksimulation.user.domain.repository.AccountRepository;
 import com.lzbsdsg.stocksimulation.user.domain.service.AccountDomainService;
 import java.math.BigDecimal;
-import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -128,7 +127,7 @@ public class AccountApplicationService {
         return;
       }
     }
-    throw new OptimisticLockingFailureException("账户更新发生乐观锁冲突，请重试");
+    throw new BizException(ErrorCode.TRADE_OPTIMISTIC_LOCK_CONFLICT);
   }
 
   private void validatePositiveAmount(BigDecimal amount) {

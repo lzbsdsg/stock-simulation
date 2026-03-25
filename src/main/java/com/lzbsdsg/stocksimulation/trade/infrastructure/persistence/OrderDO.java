@@ -2,7 +2,7 @@ package com.lzbsdsg.stocksimulation.trade.infrastructure.persistence;
 
 import com.baomidou.mybatisplus.annotation.*;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import lombok.Data;
 
 /** 委托订单 DO */
@@ -44,7 +44,7 @@ public class OrderDO {
 
   @Version private Integer version;
 
-  private LocalDateTime createdAt;
+  private OffsetDateTime createdAt;
 
-  private LocalDateTime updatedAt;
+  private OffsetDateTime updatedAt;
 }

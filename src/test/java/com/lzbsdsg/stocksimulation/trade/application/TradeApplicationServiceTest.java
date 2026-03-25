@@ -224,6 +224,52 @@ class TradeApplicationServiceTest {
   }
 
   @Test
+  void should_reject_cancel_when_order_snapshot_invalid() {
+    Order order = new Order();
+    order.setId(9102L);
+    order.setUserId(1001L);
+    order.setStatus(OrderStatus.PENDING);
+    order.setQuantity(100);
+    order.setFilledQuantity(0);
+    when(orderRepository.findById(9102L)).thenReturn(Optional.of(order));
+
+    BizException ex =
+        assertThrows(
+            BizException.class, () -> tradeApplicationService.cancelOrder(new CancelOrderCommand(9102L)));
+
+    assertEquals(ErrorCode.TRADE_ORDER_CANNOT_CANCEL, ex.getErrorCode());
+    verify(orderRepository, never()).updateWithVersion(any(Order.class));
+  }
+
+  @Test
+  void should_convert_unexpected_cancel_error_to_optimistic_lock_conflict() {
+    Order order = new Order();
+    order.setId(9103L);
+    order.setUserId(1001L);
+    order.setSide(OrderSide.BUY);
+    order.setOrderType(OrderType.LIMIT);
+    order.setStatus(OrderStatus.PENDING);
+    order.setStockCode("sh600519");
+    order.setQuantity(100);
+    order.setFilledQuantity(0);
+    order.setFrozenAmount(new BigDecimal("1000.32"));
+    when(orderRepository.findById(9103L)).thenReturn(Optional.of(order));
+    when(orderRepository.updateWithVersion(any(Order.class))).thenReturn(true);
+    doAnswer(
+            invocation -> {
+              throw new RuntimeException("unexpected");
+            })
+        .when(accountApplicationService)
+        .unfreezeBalance(1001L, new BigDecimal("1000.32"));
+
+    BizException ex =
+        assertThrows(
+            BizException.class, () -> tradeApplicationService.cancelOrder(new CancelOrderCommand(9103L)));
+
+    assertEquals(ErrorCode.TRADE_OPTIMISTIC_LOCK_CONFLICT, ex.getErrorCode());
+  }
+
+  @Test
   void should_match_buy_order_and_settle_account_position() {
     Order order = pendingOrder(9201L, OrderSide.BUY, new BigDecimal("10.00"), 100, new BigDecimal("1005.00"));
     when(orderRepository.findById(9201L)).thenReturn(Optional.of(order));

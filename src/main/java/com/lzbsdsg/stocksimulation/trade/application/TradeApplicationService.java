@@ -164,38 +164,55 @@ public class TradeApplicationService {
   public void cancelOrder(Long orderId) {
     long startNano = System.nanoTime();
     Long userId = currentUserId();
+    try {
+      Order order =
+          orderRepository
+              .findById(orderId)
+              .orElseThrow(() -> new BizException(ErrorCode.TRADE_ORDER_NOT_FOUND));
+      if (!userId.equals(order.getUserId())) {
+        throw new BizException(ErrorCode.TRADE_ORDER_NOT_OWN);
+      }
+      validateOrderCancelableSnapshot(order);
+      if (!order.isCancellable()) {
+        throw new BizException(ErrorCode.TRADE_ORDER_CANNOT_CANCEL);
+      }
 
-    Order order =
-        orderRepository
-            .findById(orderId)
-            .orElseThrow(() -> new BizException(ErrorCode.TRADE_ORDER_NOT_FOUND));
-    if (!userId.equals(order.getUserId())) {
-      throw new BizException(ErrorCode.TRADE_ORDER_NOT_OWN);
-    }
-    if (!order.isCancellable()) {
-      throw new BizException(ErrorCode.TRADE_ORDER_CANNOT_CANCEL);
-    }
+      int remainingQuantity = Math.max(order.remainingQuantity(), 0);
+      order.cancel();
+      if (!orderRepository.updateWithVersion(order)) {
+        throw new BizException(ErrorCode.TRADE_OPTIMISTIC_LOCK_CONFLICT);
+      }
 
-    int remainingQuantity = Math.max(order.remainingQuantity(), 0);
-    order.cancel();
-    if (!orderRepository.updateWithVersion(order)) {
+      if (order.getSide() == OrderSide.BUY && hasPositiveAmount(order.getFrozenAmount())) {
+        accountApplicationService.unfreezeBalance(userId, order.getFrozenAmount());
+        recordFundFlow(
+            userId,
+            FundFlow.FundFlowType.UNFREEZE,
+            order.getFrozenAmount(),
+            order.getId(),
+            "Cancel BUY order");
+      }
+      if (order.getSide() == OrderSide.SELL && remainingQuantity > 0) {
+        unfreezeSellPosition(userId, order.getStockCode(), remainingQuantity);
+      }
+
+      logTransactionCost("cancelOrder", userId, order.getId(), startNano);
+    } catch (BizException ex) {
+      throw ex;
+    } catch (RuntimeException ex) {
+      log.error("trade.cancelOrder.unexpected userId={} orderId={}", userId, orderId, ex);
       throw new BizException(ErrorCode.TRADE_OPTIMISTIC_LOCK_CONFLICT);
     }
+  }
 
-    if (order.getSide() == OrderSide.BUY && hasPositiveAmount(order.getFrozenAmount())) {
-      accountApplicationService.unfreezeBalance(userId, order.getFrozenAmount());
-      recordFundFlow(
-          userId,
-          FundFlow.FundFlowType.UNFREEZE,
-          order.getFrozenAmount(),
-          order.getId(),
-          "Cancel BUY order");
+  private void validateOrderCancelableSnapshot(Order order) {
+    if (order.getStatus() == null || order.getSide() == null || order.getQuantity() == null) {
+      throw new BizException(ErrorCode.TRADE_ORDER_CANNOT_CANCEL);
     }
-    if (order.getSide() == OrderSide.SELL && remainingQuantity > 0) {
-      unfreezeSellPosition(userId, order.getStockCode(), remainingQuantity);
+    if (order.getSide() == OrderSide.SELL
+        && (order.getStockCode() == null || order.getStockCode().isBlank())) {
+      throw new BizException(ErrorCode.TRADE_ORDER_CANNOT_CANCEL);
     }
-
-    logTransactionCost("cancelOrder", userId, order.getId(), startNano);
   }
 
   /** 查询当日委托 */

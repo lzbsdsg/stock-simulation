@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -49,6 +50,15 @@ public class GlobalExceptionHandler {
   public ResponseEntity<Result<Void>> handleDataConflict(Exception ex) {
     log.warn("Data conflict: {}", ex.getMessage());
     Result<Void> result = Result.fail(ErrorCode.CONFLICT.getCode(), "数据冲突，请检查是否重复提交");
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(result);
+  }
+
+  /** 乐观锁冲突异常（并发更新） */
+  @ExceptionHandler(OptimisticLockingFailureException.class)
+  public ResponseEntity<Result<Void>> handleOptimisticLockingFailureException(
+      OptimisticLockingFailureException ex) {
+    log.warn("Optimistic lock conflict: {}", ex.getMessage());
+    Result<Void> result = Result.fail(ErrorCode.TRADE_OPTIMISTIC_LOCK_CONFLICT);
     return ResponseEntity.status(HttpStatus.CONFLICT).body(result);
   }
 

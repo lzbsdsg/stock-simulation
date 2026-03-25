@@ -2,6 +2,7 @@ package com.lzbsdsg.stocksimulation.trade.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -11,6 +12,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lzbsdsg.stocksimulation.auth.infrastructure.gateway.JwtTokenProvider;
+import com.lzbsdsg.stocksimulation.common.exception.BizException;
+import com.lzbsdsg.stocksimulation.common.result.ErrorCode;
 import com.lzbsdsg.stocksimulation.common.result.PageResult;
 import com.lzbsdsg.stocksimulation.trade.application.TradeApplicationService;
 import com.lzbsdsg.stocksimulation.trade.application.command.PlaceOrderCommand;
@@ -111,6 +114,18 @@ class OrderControllerApiTest {
         .perform(delete("/api/v1/trade/orders/10001"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.code").value(200));
+  }
+
+  @Test
+  void should_return_not_found_when_cancel_order_not_exists() throws Exception {
+    doThrow(new BizException(ErrorCode.TRADE_ORDER_NOT_FOUND))
+        .when(tradeApplicationService)
+        .cancelOrder(1L);
+
+    mockMvc
+        .perform(delete("/api/v1/trade/orders/1"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value(40008));
   }
 
   @Test
