@@ -84,16 +84,16 @@ mybatis-plus:
 # ---- JWT ----
 jwt:
   secret: ${JWT_SECRET}
-  access-token-expiration: 1800000     # 30 分钟 (ms)
+  access-token-expiration: 28800000    # 8 小时 (ms)
   refresh-token-expiration: 604800000  # 7 天 (ms)
 
 # ---- 交易规则 ----
 trade:
   rule:
-    morning-open: "09:30"
-    morning-close: "11:30"
-    afternoon-open: "13:00"
-    afternoon-close: "15:00"
+    morning-start: "09:30"
+    morning-end: "11:30"
+    afternoon-start: "13:00"
+    afternoon-end: "15:00"
     min-quantity: 100
     normal-limit-rate: 0.10
     st-limit-rate: 0.05

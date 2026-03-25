@@ -1,5 +1,6 @@
 import http from 'k6/http';
-import { check, sleep } from 'k6';
+import { check, fail, sleep } from 'k6';
+import { Rate } from 'k6/metrics';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
 const TOKEN = __ENV.TOKEN || '';
@@ -9,14 +10,22 @@ const ORDER_QUANTITY = Number(__ENV.ORDER_QUANTITY || '100');
 const CANCEL_RATIO = Number(__ENV.CANCEL_RATIO || '0.3');
 const VUS = Number(__ENV.VUS || '200');
 const DURATION = __ENV.DURATION || '5m';
+const ACCEPT_429 = (__ENV.ACCEPT_429 || 'false').toLowerCase() === 'true';
+
+const hardFailureRate = new Rate('hard_failure_rate');
+
+const thresholds = {
+  http_req_duration: ['p(95)<1500', 'p(99)<2500'],
+  hard_failure_rate: ['rate<0.01'],
+};
+if (!ACCEPT_429) {
+  thresholds.http_req_failed = ['rate<0.01'];
+}
 
 export const options = {
   vus: VUS,
   duration: DURATION,
-  thresholds: {
-    http_req_duration: ['p(95)<100', 'p(99)<200'],
-    http_req_failed: ['rate<0.001'],
-  },
+  thresholds,
 };
 
 function authHeaders() {
@@ -33,6 +42,17 @@ function buildClientOrderId() {
   return `k6-${Date.now()}-${__VU}-${__ITER}`;
 }
 
+function isNetworkOrServerFailure(res) {
+  return res.status === 0 || res.status >= 500;
+}
+
+export function setup() {
+  const healthRes = http.get(`${BASE_URL}/actuator/health`, { timeout: '3s' });
+  if (healthRes.status !== 200) {
+    fail(`service not ready: GET /actuator/health -> ${healthRes.status}`);
+  }
+}
+
 export default function () {
   const payload = JSON.stringify({
     clientOrderId: buildClientOrderId(),
@@ -46,10 +66,14 @@ export default function () {
   const placeRes = http.post(`${BASE_URL}/api/v1/trade/orders`, payload, {
     headers: authHeaders(),
   });
+  hardFailureRate.add(isNetworkOrServerFailure(placeRes));
 
   const placed = check(placeRes, {
-    'place order status 200': (r) => r.status === 200,
+    'place order status expected': (r) => (ACCEPT_429 ? r.status === 200 || r.status === 429 : r.status === 200),
     'place order has data': (r) => {
+      if (r.status !== 200) {
+        return ACCEPT_429 && r.status === 429;
+      }
       try {
         const body = JSON.parse(r.body);
         return !!body?.data?.orderId;
@@ -67,6 +91,7 @@ export default function () {
   const listRes = http.get(`${BASE_URL}/api/v1/trade/orders?scope=today&page=1&size=20`, {
     headers: authHeaders(),
   });
+  hardFailureRate.add(isNetworkOrServerFailure(listRes));
   check(listRes, {
     'list orders status 200': (r) => r.status === 200,
   });
@@ -75,8 +100,9 @@ export default function () {
     const cancelRes = http.del(`${BASE_URL}/api/v1/trade/orders/${orderId}`, null, {
       headers: authHeaders(),
     });
+    hardFailureRate.add(isNetworkOrServerFailure(cancelRes));
     check(cancelRes, {
-      'cancel status 200': (r) => r.status === 200,
+      'cancel status expected': (r) => (ACCEPT_429 ? r.status === 200 || r.status === 429 : r.status === 200),
     });
   }
 

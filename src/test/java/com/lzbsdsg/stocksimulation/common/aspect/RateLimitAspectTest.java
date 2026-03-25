@@ -10,11 +10,10 @@ import static org.mockito.Mockito.when;
 
 import com.lzbsdsg.stocksimulation.common.annotation.RateLimit;
 import com.lzbsdsg.stocksimulation.common.exception.BizException;
-import java.lang.reflect.Method;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.Signature;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,7 +28,6 @@ class RateLimitAspectTest {
   private StringRedisTemplate stringRedisTemplate;
   private RateLimitAspect rateLimitAspect;
   private ProceedingJoinPoint joinPoint;
-  private RateLimit rateLimit;
   private MockHttpServletResponse response;
 
   @BeforeEach
@@ -37,12 +35,11 @@ class RateLimitAspectTest {
     stringRedisTemplate = mock(StringRedisTemplate.class);
     rateLimitAspect = new RateLimitAspect(stringRedisTemplate);
     joinPoint = mock(ProceedingJoinPoint.class);
-    Signature signature = mock(Signature.class);
+    MethodSignature signature = mock(MethodSignature.class);
     when(joinPoint.getSignature()).thenReturn(signature);
     when(signature.toShortString()).thenReturn("Dummy.limitMethod()");
-
-    Method method = Dummy.class.getDeclaredMethod("limitMethod");
-    rateLimit = method.getAnnotation(RateLimit.class);
+    when(signature.getMethod()).thenReturn(Dummy.class.getDeclaredMethod("limitMethod"));
+    when(joinPoint.getTarget()).thenReturn(new Dummy());
 
     MockHttpServletRequest request = new MockHttpServletRequest();
     request.setRemoteAddr("127.0.0.1");
@@ -62,7 +59,7 @@ class RateLimitAspectTest {
         .thenReturn(List.of(1L, 9L, 60L));
     when(joinPoint.proceed()).thenReturn("ok");
 
-    Object result = rateLimitAspect.around(joinPoint, rateLimit);
+    Object result = rateLimitAspect.around(joinPoint);
 
     assertEquals("ok", result);
     assertEquals("10", response.getHeader("X-RateLimit-Limit"));
@@ -75,7 +72,7 @@ class RateLimitAspectTest {
             any(), anyList(), anyString(), anyString(), anyString(), anyString()))
         .thenReturn(List.of(0L, 0L, 60L));
 
-    assertThrows(BizException.class, () -> rateLimitAspect.around(joinPoint, rateLimit));
+    assertThrows(BizException.class, () -> rateLimitAspect.around(joinPoint));
     assertEquals("0", response.getHeader("X-RateLimit-Remaining"));
   }
 
@@ -87,9 +84,9 @@ class RateLimitAspectTest {
         .thenReturn(List.of(1L, 9L, 60L));
     when(joinPoint.proceed()).thenReturn("ok-after-reset");
 
-    assertThrows(BizException.class, () -> rateLimitAspect.around(joinPoint, rateLimit));
+    assertThrows(BizException.class, () -> rateLimitAspect.around(joinPoint));
 
-    Object second = rateLimitAspect.around(joinPoint, rateLimit);
+    Object second = rateLimitAspect.around(joinPoint);
     assertEquals("ok-after-reset", second);
   }
 

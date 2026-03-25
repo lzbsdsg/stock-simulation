@@ -13,6 +13,7 @@ import com.lzbsdsg.stocksimulation.portfolio.domain.entity.FundFlow;
 import com.lzbsdsg.stocksimulation.portfolio.domain.entity.Position;
 import com.lzbsdsg.stocksimulation.portfolio.domain.repository.FundFlowRepository;
 import com.lzbsdsg.stocksimulation.portfolio.domain.repository.PositionRepository;
+import com.lzbsdsg.stocksimulation.portfolio.domain.service.PositionDomainService;
 import com.lzbsdsg.stocksimulation.trade.application.command.CancelOrderCommand;
 import com.lzbsdsg.stocksimulation.trade.application.command.PlaceOrderCommand;
 import com.lzbsdsg.stocksimulation.trade.application.vo.OrderVO;
@@ -25,9 +26,11 @@ import com.lzbsdsg.stocksimulation.trade.domain.entity.Trade;
 import com.lzbsdsg.stocksimulation.trade.domain.repository.OrderRepository;
 import com.lzbsdsg.stocksimulation.trade.domain.repository.TradeRepository;
 import com.lzbsdsg.stocksimulation.trade.domain.service.FeeCalculator;
+import com.lzbsdsg.stocksimulation.trade.domain.service.MatchEngine;
 import com.lzbsdsg.stocksimulation.trade.domain.service.OrderDomainService;
 import com.lzbsdsg.stocksimulation.trade.infrastructure.gateway.IdempotencyGateway;
 import com.lzbsdsg.stocksimulation.trade.infrastructure.mq.OrderMessageProducer;
+import com.lzbsdsg.stocksimulation.trade.infrastructure.mq.TradeFilledEvent;
 import com.lzbsdsg.stocksimulation.user.application.AccountApplicationService;
 import com.lzbsdsg.stocksimulation.user.domain.entity.Account;
 import com.lzbsdsg.stocksimulation.user.domain.repository.AccountRepository;
@@ -82,6 +85,15 @@ public class TradeApplicationService {
 
   private final OrderDomainService orderDomainService = new OrderDomainService();
   private final FeeCalculator feeCalculator = new FeeCalculator();
+  private final MatchEngine matchEngine = new MatchEngine();
+  private final PositionDomainService positionDomainService = new PositionDomainService();
+
+  public enum MatchResult {
+    MATCHED,
+    SKIPPED_NOT_FOUND,
+    SKIPPED_ALREADY_DONE,
+    SKIPPED_PRICE_NOT_MATCHED
+  }
 
   /**
    * 下单（买入/卖出）
@@ -93,45 +105,52 @@ public class TradeApplicationService {
   public OrderVO placeOrder(PlaceOrderCommand command) {
     long startNano = System.nanoTime();
     Long userId = currentUserId();
+    String clientOrderId = command.clientOrderId();
 
-    if (!idempotencyGateway.tryAcquire(command.clientOrderId())) {
+    if (!idempotencyGateway.tryAcquire(clientOrderId)) {
       throw new BizException(ErrorCode.TRADE_ORDER_DUPLICATE);
     }
 
-    OrderSide side = parseOrderSide(command.side());
-    OrderType orderType = parseOrderType(command.orderType());
-    validateTradingWindow();
-    validateQuantity(command.quantity());
+    try {
+      OrderSide side = parseOrderSide(command.side());
+      OrderType orderType = parseOrderType(command.orderType());
+      validateTradingWindow();
+      validateQuantity(command.quantity());
 
-    QuoteSnapshot quote = marketDataFacade.getQuote(command.stockCode());
-    BigDecimal price = resolveOrderPrice(command, orderType, quote);
-    if (!orderDomainService.isPriceWithinLimit(price, quote)) {
-      throw new BizException(ErrorCode.TRADE_ORDER_PRICE_LIMIT);
+      QuoteSnapshot quote = marketDataFacade.getQuote(command.stockCode());
+      BigDecimal price = resolveOrderPrice(command, orderType, quote);
+      if (!orderDomainService.isPriceWithinLimit(price, quote)) {
+        throw new BizException(ErrorCode.TRADE_ORDER_PRICE_LIMIT);
+      }
+
+      Order order = buildPendingOrder(userId, command, side, orderType, price, quote);
+      if (side == OrderSide.BUY) {
+        BigDecimal freezeAmount =
+            orderDomainService.calculateFreezeAmount(
+                price, command.quantity(), feeCalculator.estimateBuyCommissionRate());
+        accountApplicationService.freezeBalance(userId, freezeAmount);
+        order.setFrozenAmount(freezeAmount);
+        orderRepository.save(order);
+        recordFundFlow(
+            userId,
+            FundFlow.FundFlowType.FREEZE,
+            freezeAmount.negate(),
+            order.getId(),
+            "BUY order freeze");
+      } else {
+        freezeSellPosition(userId, order.getStockCode(), command.quantity());
+        order.setFrozenAmount(BigDecimal.ZERO);
+        orderRepository.save(order);
+      }
+
+      publishMatchMessageAfterCommit(order.getId());
+      logTransactionCost("placeOrder", userId, order.getId(), startNano);
+      return toOrderVO(order);
+    } catch (RuntimeException ex) {
+      // 下单失败时释放幂等键，允许用户修正参数后使用同一个 clientOrderId 重提。
+      idempotencyGateway.release(clientOrderId);
+      throw ex;
     }
-
-    Order order = buildPendingOrder(userId, command, side, orderType, price, quote);
-    if (side == OrderSide.BUY) {
-      BigDecimal freezeAmount =
-          orderDomainService.calculateFreezeAmount(
-              price, command.quantity(), feeCalculator.estimateBuyCommissionRate());
-      accountApplicationService.freezeBalance(userId, freezeAmount);
-      order.setFrozenAmount(freezeAmount);
-      orderRepository.save(order);
-      recordFundFlow(
-          userId,
-          FundFlow.FundFlowType.FREEZE,
-          freezeAmount.negate(),
-          order.getId(),
-          "BUY order freeze");
-    } else {
-      freezeSellPosition(userId, order.getStockCode(), command.quantity());
-      order.setFrozenAmount(BigDecimal.ZERO);
-      orderRepository.save(order);
-    }
-
-    publishMatchMessageAfterCommit(order.getId());
-    logTransactionCost("placeOrder", userId, order.getId(), startNano);
-    return toOrderVO(order);
   }
 
   /** 撤单 */
@@ -240,6 +259,111 @@ public class TradeApplicationService {
     return new PageResult<>(records, total, safePage, safeSize);
   }
 
+  /** 撮合单笔订单（由 MQ Consumer 调用） */
+  @Transactional
+  public MatchResult matchOrder(Long orderId) {
+    Order order = orderRepository.findById(orderId).orElse(null);
+    if (order == null) {
+      log.warn("trade.match.skip_not_found orderId={}", orderId);
+      return MatchResult.SKIPPED_NOT_FOUND;
+    }
+    if (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.PARTIAL_FILLED) {
+      log.info("trade.match.idempotent_skip orderId={} status={}", orderId, order.getStatus());
+      return MatchResult.SKIPPED_ALREADY_DONE;
+    }
+
+    QuoteSnapshot quote = marketDataFacade.getQuote(order.getStockCode());
+    if (quote.getCurrentPrice() == null) {
+      throw new BizException(ErrorCode.MARKET_DATA_UNAVAILABLE);
+    }
+    BigDecimal marketPrice = quote.getCurrentPrice();
+    if (!orderDomainService.canMatch(order, marketPrice)) {
+      return MatchResult.SKIPPED_PRICE_NOT_MATCHED;
+    }
+
+    int matchQuantity = order.remainingQuantity();
+    if (matchQuantity <= 0) {
+      return MatchResult.SKIPPED_ALREADY_DONE;
+    }
+
+    BigDecimal tradeAmount = marketPrice.multiply(BigDecimal.valueOf(matchQuantity));
+    BigDecimal fee =
+        order.getSide() == OrderSide.BUY
+            ? feeCalculator.calculateBuyFee(tradeAmount)
+            : feeCalculator.calculateSellFee(tradeAmount);
+
+    Trade trade = matchEngine.tryMatch(order, marketPrice, fee);
+    if (trade == null) {
+      return MatchResult.SKIPPED_PRICE_NOT_MATCHED;
+    }
+
+    if (!orderRepository.updateWithVersion(order)) {
+      throw new BizException(ErrorCode.TRADE_OPTIMISTIC_LOCK_CONFLICT);
+    }
+
+    tradeRepository.save(trade);
+    if (order.getSide() == OrderSide.BUY) {
+      settleBuyMatch(order, trade);
+    } else {
+      settleSellMatch(order, trade);
+    }
+    publishTradeFilledEventAfterCommit(order, trade);
+
+    log.info(
+        "trade.match.ok orderId={} tradeId={} userId={} side={} price={} qty={}",
+        order.getId(),
+        trade.getId(),
+        order.getUserId(),
+        order.getSide(),
+        trade.getTradePrice(),
+        trade.getTradeQuantity());
+    return MatchResult.MATCHED;
+  }
+
+  /** 收盘后批量过期待成交订单（每次最多处理 batchSize 条） */
+  @Transactional
+  public int expirePendingOrdersAtClose(int batchSize) {
+    int safeBatchSize = batchSize <= 0 ? 200 : batchSize;
+    List<Order> pendingOrders = orderRepository.findPendingOrders();
+    int processed = 0;
+
+    for (Order order : pendingOrders) {
+      if (processed >= safeBatchSize) {
+        break;
+      }
+      if (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.PARTIAL_FILLED) {
+        continue;
+      }
+      order.setStatus(OrderStatus.EXPIRED);
+      if (!orderRepository.updateWithVersion(order)) {
+        continue;
+      }
+
+      int remainingQuantity = Math.max(order.remainingQuantity(), 0);
+      if (order.getSide() == OrderSide.BUY && hasPositiveAmount(order.getFrozenAmount())) {
+        accountApplicationService.unfreezeBalance(order.getUserId(), order.getFrozenAmount());
+        recordFundFlow(
+            order.getUserId(),
+            FundFlow.FundFlowType.UNFREEZE,
+            order.getFrozenAmount(),
+            order.getId(),
+            "Close expire BUY order");
+      } else if (order.getSide() == OrderSide.SELL && remainingQuantity > 0) {
+        unfreezeSellPosition(order.getUserId(), order.getStockCode(), remainingQuantity);
+      }
+      processed++;
+    }
+    return processed;
+  }
+
+  /** 收盘后修正当日买入持仓 T+1 冻结日期。 */
+  @Transactional
+  public int markTodayBuyPositionsFrozenUntil() {
+    LocalDate today = LocalDate.now(ZONE_SHANGHAI);
+    LocalDate nextTradingDate = positionDomainService.nextTradingDate(today);
+    return positionRepository.markTodayBoughtPositionsFrozenUntil(today, nextTradingDate);
+  }
+
   private void validateTradingWindow() {
     TradingWindow window = loadTradingWindow();
     LocalTime now = LocalTime.now(ZONE_SHANGHAI);
@@ -335,6 +459,74 @@ public class TradeApplicationService {
     }
   }
 
+  private void settleBuyMatch(Order order, Trade trade) {
+    BigDecimal actualCost = trade.getTradeAmount().add(trade.getCommission());
+    BigDecimal frozenAmount =
+        order.getFrozenAmount() == null ? actualCost : order.getFrozenAmount();
+    accountApplicationService.deductFrozen(order.getUserId(), frozenAmount, actualCost);
+
+    Position position =
+        positionRepository.findByUserIdAndStockCodeForUpdate(order.getUserId(), order.getStockCode()).orElse(null);
+    if (position == null) {
+      position = new Position();
+      position.setUserId(order.getUserId());
+      position.setStockCode(order.getStockCode());
+      position.setStockName(order.getStockName());
+      position.setTotalQuantity(0);
+      position.setAvailableQuantity(0);
+      position.setFrozenQuantity(0);
+      position.setCostPrice(BigDecimal.ZERO);
+      position.setTotalCost(BigDecimal.ZERO);
+      position.setVersion(0);
+      positionDomainService.applyBuyFill(
+          position, trade.getTradeQuantity(), trade.getTradePrice(), LocalDate.now(ZONE_SHANGHAI));
+      positionRepository.save(position);
+    } else {
+      positionDomainService.applyBuyFill(
+          position, trade.getTradeQuantity(), trade.getTradePrice(), LocalDate.now(ZONE_SHANGHAI));
+      position.setStockName(order.getStockName());
+      if (!positionRepository.updateWithVersion(position)) {
+        throw new BizException(ErrorCode.TRADE_OPTIMISTIC_LOCK_CONFLICT);
+      }
+    }
+
+    recordFundFlow(
+        order.getUserId(),
+        FundFlow.FundFlowType.TRADE_BUY,
+        actualCost.negate(),
+        order.getId(),
+        "BUY trade settled");
+  }
+
+  private void settleSellMatch(Order order, Trade trade) {
+    Position position =
+        positionRepository
+            .findByUserIdAndStockCodeForUpdate(order.getUserId(), order.getStockCode())
+            .orElseThrow(() -> new BizException(ErrorCode.TRADE_ORDER_INSUFFICIENT_POSITION));
+    try {
+      positionDomainService.applySellFill(position, trade.getTradeQuantity());
+    } catch (IllegalStateException ex) {
+      throw new BizException(ErrorCode.TRADE_ORDER_INSUFFICIENT_POSITION, ex.getMessage());
+    }
+
+    if (position.isCleared()) {
+      positionRepository.deleteById(position.getId());
+    } else if (!positionRepository.updateWithVersion(position)) {
+      throw new BizException(ErrorCode.TRADE_OPTIMISTIC_LOCK_CONFLICT);
+    }
+
+    BigDecimal netAmount = trade.getTradeAmount().subtract(trade.getCommission());
+    if (netAmount.compareTo(BigDecimal.ZERO) > 0) {
+      accountApplicationService.creditBalance(order.getUserId(), netAmount);
+    }
+    recordFundFlow(
+        order.getUserId(),
+        FundFlow.FundFlowType.TRADE_SELL,
+        netAmount,
+        order.getId(),
+        "SELL trade settled");
+  }
+
   private void unfreezeSellPosition(Long userId, String stockCode, int quantity) {
     Position position =
         positionRepository
@@ -382,6 +574,33 @@ public class TradeApplicationService {
       return;
     }
     orderMessageProducer.sendMatchMessage(orderId);
+  }
+
+  private void publishTradeFilledEventAfterCommit(Order order, Trade trade) {
+    TradeFilledEvent event =
+        new TradeFilledEvent(
+            order.getId(),
+            trade.getId(),
+            order.getUserId(),
+            order.getStockCode(),
+            order.getStockName(),
+            order.getSide().name(),
+            trade.getTradePrice(),
+            trade.getTradeQuantity(),
+            trade.getTradeAmount(),
+            trade.getCommission(),
+            trade.getTradedAt());
+    if (TransactionSynchronizationManager.isActualTransactionActive()) {
+      TransactionSynchronizationManager.registerSynchronization(
+          new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+              orderMessageProducer.sendTradeFilledEvent(event);
+            }
+          });
+      return;
+    }
+    orderMessageProducer.sendTradeFilledEvent(event);
   }
 
   private void logTransactionCost(String action, Long userId, Long orderId, long startNano) {

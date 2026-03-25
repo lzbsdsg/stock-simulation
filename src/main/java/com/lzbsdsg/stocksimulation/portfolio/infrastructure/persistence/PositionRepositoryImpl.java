@@ -3,6 +3,7 @@ package com.lzbsdsg.stocksimulation.portfolio.infrastructure.persistence;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.lzbsdsg.stocksimulation.portfolio.domain.entity.Position;
 import com.lzbsdsg.stocksimulation.portfolio.domain.repository.PositionRepository;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -57,6 +58,11 @@ public class PositionRepositoryImpl implements PositionRepository {
   @Override
   public void deleteById(Long id) {
     positionMapper.deleteById(id);
+  }
+
+  @Override
+  public int markTodayBoughtPositionsFrozenUntil(LocalDate tradeDate, LocalDate frozenUntil) {
+    return positionMapper.markTodayBoughtPositionsFrozenUntil(tradeDate, frozenUntil);
   }
 
   // ---- Converter ----

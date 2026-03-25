@@ -30,6 +30,7 @@ import com.lzbsdsg.stocksimulation.trade.domain.repository.OrderRepository;
 import com.lzbsdsg.stocksimulation.trade.domain.repository.TradeRepository;
 import com.lzbsdsg.stocksimulation.trade.infrastructure.gateway.IdempotencyGateway;
 import com.lzbsdsg.stocksimulation.trade.infrastructure.mq.OrderMessageProducer;
+import com.lzbsdsg.stocksimulation.trade.infrastructure.mq.TradeFilledEvent;
 import com.lzbsdsg.stocksimulation.user.application.AccountApplicationService;
 import com.lzbsdsg.stocksimulation.user.domain.entity.Account;
 import com.lzbsdsg.stocksimulation.user.domain.repository.AccountRepository;
@@ -117,6 +118,7 @@ class TradeApplicationServiceTest {
     verify(accountApplicationService).freezeBalance(eq(1001L), eq(new BigDecimal("1000.32")));
     verify(fundFlowRepository).save(any());
     verify(orderMessageProducer).sendMatchMessage(9001L);
+    verify(idempotencyGateway, never()).release("cid-buy-1");
   }
 
   @Test
@@ -144,6 +146,7 @@ class TradeApplicationServiceTest {
     verify(accountApplicationService, never()).freezeBalance(any(), any());
     verify(positionRepository).updateWithVersion(any(Position.class));
     verify(orderMessageProducer).sendMatchMessage(9002L);
+    verify(idempotencyGateway, never()).release("cid-sell-1");
   }
 
   @Test
@@ -157,6 +160,7 @@ class TradeApplicationServiceTest {
     assertEquals(ErrorCode.TRADE_ORDER_DUPLICATE, ex.getErrorCode());
     verify(orderRepository, never()).save(any(Order.class));
     verify(orderMessageProducer, never()).sendMatchMessage(any());
+    verify(idempotencyGateway, never()).release("cid-dup");
   }
 
   @Test
@@ -178,6 +182,7 @@ class TradeApplicationServiceTest {
     assertEquals(ErrorCode.TRADE_ORDER_INSUFFICIENT_FUND, ex.getErrorCode());
     verify(orderRepository, never()).save(any(Order.class));
     verify(orderMessageProducer, never()).sendMatchMessage(any());
+    verify(idempotencyGateway).release("cid-fund");
   }
 
   @Test
@@ -218,6 +223,93 @@ class TradeApplicationServiceTest {
     verify(orderRepository, never()).updateWithVersion(any(Order.class));
   }
 
+  @Test
+  void should_match_buy_order_and_settle_account_position() {
+    Order order = pendingOrder(9201L, OrderSide.BUY, new BigDecimal("10.00"), 100, new BigDecimal("1005.00"));
+    when(orderRepository.findById(9201L)).thenReturn(Optional.of(order));
+    when(orderRepository.updateWithVersion(any(Order.class))).thenReturn(true);
+    when(marketDataFacade.getQuote("sh600519")).thenReturn(mockQuote("sh600519", "贵州茅台"));
+    when(positionRepository.findByUserIdAndStockCodeForUpdate(1001L, "sh600519"))
+        .thenReturn(Optional.empty());
+    when(accountRepository.findByUserId(1001L)).thenReturn(Optional.of(account("8995.00")));
+    doAnswer(
+            invocation -> {
+              com.lzbsdsg.stocksimulation.trade.domain.entity.Trade trade = invocation.getArgument(0);
+              trade.setId(7001L);
+              return null;
+            })
+        .when(tradeRepository)
+        .save(any());
+
+    TradeApplicationService.MatchResult result = tradeApplicationService.matchOrder(9201L);
+
+    assertEquals(TradeApplicationService.MatchResult.MATCHED, result);
+    verify(accountApplicationService).deductFrozen(1001L, new BigDecimal("1005.00"), new BigDecimal("1005.02"));
+    verify(positionRepository).save(any(Position.class));
+    verify(fundFlowRepository).save(any());
+    verify(orderMessageProducer).sendTradeFilledEvent(any(TradeFilledEvent.class));
+  }
+
+  @Test
+  void should_match_sell_order_and_credit_balance() {
+    Order order = pendingOrder(9202L, OrderSide.SELL, new BigDecimal("10.00"), 100, BigDecimal.ZERO);
+    Position position = position(100, 100);
+    position.setId(6001L);
+    position.setTotalQuantity(200);
+    position.setCostPrice(new BigDecimal("8.00"));
+    position.setTotalCost(new BigDecimal("1600.00"));
+    when(orderRepository.findById(9202L)).thenReturn(Optional.of(order));
+    when(orderRepository.updateWithVersion(any(Order.class))).thenReturn(true);
+    when(marketDataFacade.getQuote("sh600519")).thenReturn(mockQuote("sh600519", "贵州茅台"));
+    when(positionRepository.findByUserIdAndStockCodeForUpdate(1001L, "sh600519"))
+        .thenReturn(Optional.of(position));
+    when(positionRepository.updateWithVersion(any(Position.class))).thenReturn(true);
+    when(accountRepository.findByUserId(1001L)).thenReturn(Optional.of(account("10000.00")));
+    doAnswer(
+            invocation -> {
+              com.lzbsdsg.stocksimulation.trade.domain.entity.Trade trade = invocation.getArgument(0);
+              trade.setId(7002L);
+              return null;
+            })
+        .when(tradeRepository)
+        .save(any());
+
+    TradeApplicationService.MatchResult result = tradeApplicationService.matchOrder(9202L);
+
+    assertEquals(TradeApplicationService.MatchResult.MATCHED, result);
+    verify(accountApplicationService).creditBalance(1001L, new BigDecimal("993.98"));
+    verify(positionRepository).updateWithVersion(any(Position.class));
+    verify(fundFlowRepository).save(any());
+  }
+
+  @Test
+  void should_skip_match_when_price_not_reached() {
+    Order order = pendingOrder(9203L, OrderSide.BUY, new BigDecimal("10.00"), 100, new BigDecimal("1005.00"));
+    when(orderRepository.findById(9203L)).thenReturn(Optional.of(order));
+    QuoteSnapshot quote = mockQuote("sh600519", "贵州茅台");
+    quote.setCurrentPrice(new BigDecimal("10.10"));
+    when(marketDataFacade.getQuote("sh600519")).thenReturn(quote);
+
+    TradeApplicationService.MatchResult result = tradeApplicationService.matchOrder(9203L);
+
+    assertEquals(TradeApplicationService.MatchResult.SKIPPED_PRICE_NOT_MATCHED, result);
+    verify(tradeRepository, never()).save(any());
+    verify(orderRepository, never()).updateWithVersion(any(Order.class));
+  }
+
+  @Test
+  void should_throw_when_match_order_update_conflict() {
+    Order order = pendingOrder(9204L, OrderSide.BUY, new BigDecimal("10.00"), 100, new BigDecimal("1005.00"));
+    when(orderRepository.findById(9204L)).thenReturn(Optional.of(order));
+    when(orderRepository.updateWithVersion(any(Order.class))).thenReturn(false);
+    when(marketDataFacade.getQuote("sh600519")).thenReturn(mockQuote("sh600519", "贵州茅台"));
+
+    BizException ex = assertThrows(BizException.class, () -> tradeApplicationService.matchOrder(9204L));
+
+    assertEquals(ErrorCode.TRADE_OPTIMISTIC_LOCK_CONFLICT, ex.getErrorCode());
+    verify(tradeRepository, never()).save(any());
+  }
+
   private QuoteSnapshot mockQuote(String code, String name) {
     QuoteSnapshot quote = new QuoteSnapshot();
     quote.setStockCode(code);
@@ -245,5 +337,26 @@ class TradeApplicationServiceTest {
     position.setFrozenQuantity(frozenQuantity);
     position.setVersion(0);
     return position;
+  }
+
+  private Order pendingOrder(
+      Long orderId, OrderSide side, BigDecimal price, int quantity, BigDecimal frozenAmount) {
+    Order order = new Order();
+    order.setId(orderId);
+    order.setUserId(1001L);
+    order.setClientOrderId("match-" + orderId);
+    order.setStockCode("sh600519");
+    order.setStockName("贵州茅台");
+    order.setSide(side);
+    order.setOrderType(OrderType.LIMIT);
+    order.setStatus(OrderStatus.PENDING);
+    order.setPrice(price);
+    order.setQuantity(quantity);
+    order.setFilledQuantity(0);
+    order.setFilledAmount(BigDecimal.ZERO);
+    order.setCommission(BigDecimal.ZERO);
+    order.setFrozenAmount(frozenAmount);
+    order.setVersion(0);
+    return order;
   }
 }

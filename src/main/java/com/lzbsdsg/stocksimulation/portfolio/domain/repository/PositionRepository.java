@@ -1,6 +1,7 @@
 package com.lzbsdsg.stocksimulation.portfolio.domain.repository;
 
 import com.lzbsdsg.stocksimulation.portfolio.domain.entity.Position;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,4 +19,6 @@ public interface PositionRepository {
   boolean updateWithVersion(Position position);
 
   void deleteById(Long id);
+
+  int markTodayBoughtPositionsFrozenUntil(LocalDate tradeDate, LocalDate frozenUntil);
 }

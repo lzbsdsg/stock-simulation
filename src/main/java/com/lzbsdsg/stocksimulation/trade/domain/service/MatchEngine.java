@@ -4,7 +4,6 @@ import com.lzbsdsg.stocksimulation.trade.domain.entity.Order;
 import com.lzbsdsg.stocksimulation.trade.domain.entity.OrderSide;
 import com.lzbsdsg.stocksimulation.trade.domain.entity.Trade;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 
 /**
@@ -19,10 +18,10 @@ public class MatchEngine {
    *
    * @param order 待撮合订单
    * @param marketPrice 最新市价
-   * @param commissionRate 手续费率
+   * @param feeAmount 实际手续费金额
    * @return 成交记录，若不能撮合返回 null
    */
-  public Trade tryMatch(Order order, BigDecimal marketPrice, BigDecimal commissionRate) {
+  public Trade tryMatch(Order order, BigDecimal marketPrice, BigDecimal feeAmount) {
     // 判断是否可成交
     if (order.getSide() == OrderSide.BUY && order.getPrice().compareTo(marketPrice) < 0) {
       return null;
@@ -33,10 +32,9 @@ public class MatchEngine {
 
     int matchQty = order.remainingQuantity();
     BigDecimal tradeAmount = marketPrice.multiply(BigDecimal.valueOf(matchQty));
-    BigDecimal fee = tradeAmount.multiply(commissionRate).setScale(2, RoundingMode.HALF_UP);
 
     // 更新订单状态
-    order.fill(matchQty, tradeAmount, fee);
+    order.fill(matchQty, tradeAmount, feeAmount);
 
     // 生成 Trade 记录
     Trade trade = new Trade();
@@ -48,7 +46,7 @@ public class MatchEngine {
     trade.setTradePrice(marketPrice);
     trade.setTradeQuantity(matchQty);
     trade.setTradeAmount(tradeAmount);
-    trade.setCommission(fee);
+    trade.setCommission(feeAmount);
     trade.setTradedAt(LocalDateTime.now());
 
     return trade;

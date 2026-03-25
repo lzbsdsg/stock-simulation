@@ -1,6 +1,5 @@
 package com.lzbsdsg.stocksimulation.common.aspect;
 
-import com.lzbsdsg.stocksimulation.common.annotation.ReadOnly;
 import com.lzbsdsg.stocksimulation.common.util.DataSourceContextHolder;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -20,8 +19,8 @@ import org.springframework.stereotype.Component;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class DataSourceAspect {
 
-  @Around("@annotation(readOnly)")
-  public Object aroundReadOnly(ProceedingJoinPoint joinPoint, ReadOnly readOnly) throws Throwable {
+  @Around("@annotation(com.lzbsdsg.stocksimulation.common.annotation.ReadOnly)")
+  public Object aroundReadOnly(ProceedingJoinPoint joinPoint) throws Throwable {
     DataSourceContextHolder.setReadOnly();
     try {
       return joinPoint.proceed();

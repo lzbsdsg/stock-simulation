@@ -41,7 +41,7 @@ public class JwtTokenProvider {
     this.stringRedisTemplate = stringRedisTemplate;
   }
 
-  /** 签发 Access Token（30min） */
+  /** 签发 Access Token（时长由配置 jwt.access-token-expiration 决定） */
   public String generateAccessToken(Long userId, String email, String role) {
     long exp = Instant.now().toEpochMilli() + accessTokenExpiration;
     String payload =
@@ -56,7 +56,7 @@ public class JwtTokenProvider {
     return sign(payload);
   }
 
-  /** 签发 Refresh Token（7d） */
+  /** 签发 Refresh Token（时长由配置 jwt.refresh-token-expiration 决定） */
   public String generateRefreshToken(Long userId) {
     long exp = Instant.now().toEpochMilli() + refreshTokenExpiration;
     String payload =

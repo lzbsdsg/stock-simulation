@@ -11,8 +11,11 @@ import java.util.List;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.aop.support.AopUtils;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -49,8 +52,13 @@ public class RateLimitAspect {
     this.rateLimitScript = script;
   }
 
-  @Around("@annotation(rateLimit)")
-  public Object around(ProceedingJoinPoint joinPoint, RateLimit rateLimit) throws Throwable {
+  @Around("@annotation(com.lzbsdsg.stocksimulation.common.annotation.RateLimit)")
+  public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
+    RateLimit rateLimit = resolveRateLimit(joinPoint);
+    if (rateLimit == null) {
+      return joinPoint.proceed();
+    }
+
     long capacity = rateLimit.limit() > 0 ? rateLimit.limit() : rateLimit.maxRequests();
     long windowSeconds =
         rateLimit.window() > 0
@@ -136,5 +144,18 @@ public class RateLimitAspect {
     } catch (NumberFormatException ex) {
       return fallback;
     }
+  }
+
+  private RateLimit resolveRateLimit(ProceedingJoinPoint joinPoint) {
+    if (!(joinPoint.getSignature() instanceof MethodSignature methodSignature)) {
+      return null;
+    }
+    Class<?> targetClass = joinPoint.getTarget() != null ? joinPoint.getTarget().getClass() : null;
+    if (targetClass == null) {
+      return null;
+    }
+    java.lang.reflect.Method method =
+        AopUtils.getMostSpecificMethod(methodSignature.getMethod(), targetClass);
+    return AnnotatedElementUtils.findMergedAnnotation(method, RateLimit.class);
   }
 }
