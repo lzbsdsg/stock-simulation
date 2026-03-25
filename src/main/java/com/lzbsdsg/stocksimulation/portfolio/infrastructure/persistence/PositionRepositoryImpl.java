@@ -68,6 +68,11 @@ public class PositionRepositoryImpl implements PositionRepository {
     return positionMapper.markTodayBoughtPositionsFrozenUntil(tradeDate, frozenUntil);
   }
 
+  @Override
+  public int unfreezeDuePositions(LocalDate today) {
+    return positionMapper.unfreezeDuePositions(today);
+  }
+
   // ---- Converter ----
 
   private Position toDomain(PositionDO d) {

@@ -21,4 +21,6 @@ public interface PositionRepository {
   void deleteById(Long id);
 
   int markTodayBoughtPositionsFrozenUntil(LocalDate tradeDate, LocalDate frozenUntil);
+
+  int unfreezeDuePositions(LocalDate today);
 }

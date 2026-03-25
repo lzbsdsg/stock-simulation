@@ -13,4 +13,6 @@ public interface AssetSnapshotRepository {
   Optional<AssetSnapshot> findByUserIdAndDate(Long userId, LocalDate date);
 
   List<AssetSnapshot> findByUserIdBetween(Long userId, LocalDate from, LocalDate to);
+
+  Optional<AssetSnapshot> findLatestBefore(Long userId, LocalDate snapshotDate);
 }

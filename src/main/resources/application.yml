@@ -118,6 +118,13 @@ market:
     degrade-lag-threshold-ms: ${MARKET_WS_DEGRADE_LAG_THRESHOLD_MS:5000}
     dispatch-interval-ms: ${MARKET_WS_DISPATCH_INTERVAL_MS:500}
 
+portfolio:
+  snapshot:
+    daily-cron: "0 15 15 * * MON-FRI"
+    unfreeze-cron: "0 25 9 * * MON-FRI"
+    batch-size: 500
+    lock-ttl-minutes: 30
+
 # ---- SpringDoc ----
 springdoc:
   api-docs:

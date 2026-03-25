@@ -26,4 +26,17 @@ public interface PositionMapper extends BaseMapper<PositionDO> {
       """)
   int markTodayBoughtPositionsFrozenUntil(
       @Param("tradeDate") LocalDate tradeDate, @Param("frozenUntil") LocalDate frozenUntil);
+
+  @Update(
+      """
+      UPDATE t_portfolio_position
+      SET available_quantity = available_quantity + frozen_quantity,
+          frozen_quantity = 0,
+          frozen_until = NULL,
+          updated_at = NOW()
+      WHERE frozen_quantity > 0
+        AND frozen_until IS NOT NULL
+        AND frozen_until <= #{today}
+      """)
+  int unfreezeDuePositions(@Param("today") LocalDate today);
 }

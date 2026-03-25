@@ -2,6 +2,7 @@ package com.lzbsdsg.stocksimulation.user.infrastructure.persistence;
 
 import com.lzbsdsg.stocksimulation.user.domain.entity.Account;
 import com.lzbsdsg.stocksimulation.user.domain.repository.AccountRepository;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -42,6 +43,13 @@ public class AccountRepositoryImpl implements AccountRepository {
     // MyBatis-Plus 乐观锁插件会自动处理 version 字段
     int rows = accountMapper.updateById(accountDO);
     return rows > 0;
+  }
+
+  @Override
+  public List<Long> findUserIdsAfter(Long lastUserId, int limit) {
+    long safeLastUserId = lastUserId == null ? 0L : lastUserId;
+    int safeLimit = limit <= 0 ? 500 : limit;
+    return accountMapper.selectUserIdsAfter(safeLastUserId, safeLimit);
   }
 
   // ---- Converter ----

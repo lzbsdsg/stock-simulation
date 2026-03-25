@@ -117,6 +117,19 @@ mvnw.cmd spotless:check "-DspotlessFiles=src/main/java/com/lzbsdsg/stocksimulati
 
 结果：通过。
 
+### 4.3 并发撮合与乐观锁重试（补充）
+
+```cmd
+cd /d d:\StockSimulation\stock-simulation
+mvnw.cmd "-Dtest=MatchConsumerTest" test
+```
+
+结果：通过。
+
+说明：
+- `MatchConsumerTest.should_retry_when_optimistic_lock_conflict_then_success` 已覆盖“发生乐观锁冲突后自动重试并最终成功”。
+- “10线程并发撮合同一用户”作为集成验收项放在 `6.6`（手工并发验收）执行，避免单测中引入不稳定线程调度噪声。
+
 ## 5. 验收标准（不只测试通过）
 
 1. 接口与业务链路
@@ -139,6 +152,7 @@ mvnw.cmd spotless:check "-DspotlessFiles=src/main/java/com/lzbsdsg/stocksimulati
 - 冒烟压测期间无连接拒绝/大面积 5xx
 - MQ 消费链路在低并发下稳定处理，不出现异常中断
 - 归档批处理不阻塞线上交易接口（独立凌晨 cron + 批量处理）
+- 10 线程并发撮合同一用户时，请求整体可完成；冲突请求可通过乐观锁重试成功或幂等跳过，不出现 500
 
 ## 6. 具体验收方法（可执行）
 
@@ -265,7 +279,28 @@ k6 run -e BASE_URL=http://localhost:8080 -e TOKEN=<accessToken> -e STOCK_CODE=sh
 - `hard_failure_rate < 1%`
 - 下单/查单请求可持续返回（触发 429 视为限流生效，不计功能失败）
 
-### 6.6 归档验收（新增）
+### 6.6 并发撮合验收（10线程，同一用户）
+
+1. 准备同一用户的 10 条可成交订单（建议不同 `clientOrderId`，可同一 `stockCode`）。
+2. 使用并发工具同时触发撮合消费（或快速连续下单后由 MQ 并发消费）：
+
+```cmd
+cd /d d:\StockSimulation\stock-simulation
+k6 run -e BASE_URL=http://localhost:8080 -e TOKEN=<accessToken> -e STOCK_CODE=sh600519 -e ORDER_PRICE=1618.88 -e ORDER_QUANTITY=100 -e VUS=10 -e DURATION=20s -e ACCEPT_429=true k6/trade-load-test.js
+```
+
+3. 在 RabbitMQ UI 观察 `trade.match.queue` 无长期堆积，消费者持续 ACK。
+4. 调用：
+   - `GET /api/v1/trade/orders?scope=today&page=1&size=50`
+   - `GET /api/v1/trade/trades?page=1&size=50`
+
+通过标准：
+- 无 500 / 无连接拒绝；
+- 订单最终状态稳定（`FILLED/CANCELLED/EXPIRED` 中之一，不出现非法中间态）；
+- 可看到成交结果，且资金/持仓无负数、无越界；
+- 发生冲突时，日志可见重试后成功或幂等跳过（不重复成交）。
+
+### 6.7 归档验收（新增）
 
 1. 启动服务后，准备 1 条可归档样本订单（`status=CANCELLED/EXPIRED/REJECTED` 且无成交记录）。
 2. 将该订单 `updated_at` 调整到保留窗口外（例如 8 天前）。

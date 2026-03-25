@@ -1,8 +1,10 @@
 package com.lzbsdsg.stocksimulation.portfolio.controller;
 
+import com.lzbsdsg.stocksimulation.common.annotation.RateLimit;
 import com.lzbsdsg.stocksimulation.common.result.PageResult;
 import com.lzbsdsg.stocksimulation.common.result.Result;
 import com.lzbsdsg.stocksimulation.portfolio.application.PortfolioApplicationService;
+import com.lzbsdsg.stocksimulation.portfolio.application.vo.EquityCurveVO;
 import com.lzbsdsg.stocksimulation.portfolio.application.vo.FundFlowVO;
 import com.lzbsdsg.stocksimulation.portfolio.application.vo.OverviewVO;
 import com.lzbsdsg.stocksimulation.portfolio.application.vo.PositionVO;
@@ -23,20 +25,30 @@ public class PortfolioController {
 
   @Operation(summary = "获取资产总览")
   @GetMapping("/overview")
+  @RateLimit(limit = 100, window = 60, key = "portfolio:overview")
   public Result<OverviewVO> getOverview() {
     return Result.success(portfolioApplicationService.getOverview());
   }
 
   @Operation(summary = "获取持仓列表")
   @GetMapping("/positions")
+  @RateLimit(limit = 100, window = 60, key = "portfolio:positions")
   public Result<List<PositionVO>> getPositions() {
     return Result.success(portfolioApplicationService.getPositions());
   }
 
   @Operation(summary = "获取资金流水")
   @GetMapping("/fund-flows")
+  @RateLimit(limit = 100, window = 60, key = "portfolio:fund-flows")
   public Result<PageResult<FundFlowVO>> getFundFlows(
       @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size) {
     return Result.success(portfolioApplicationService.getFundFlows(page, size));
+  }
+
+  @Operation(summary = "获取收益曲线")
+  @GetMapping("/equity-curve")
+  @RateLimit(limit = 100, window = 60, key = "portfolio:equity-curve")
+  public Result<EquityCurveVO> getEquityCurve(@RequestParam(defaultValue = "30") int days) {
+    return Result.success(portfolioApplicationService.getEquityCurve(days));
   }
 }

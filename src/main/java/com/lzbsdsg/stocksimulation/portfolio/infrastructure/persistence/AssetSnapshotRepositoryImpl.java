@@ -48,6 +48,12 @@ public class AssetSnapshotRepositoryImpl implements AssetSnapshotRepository {
     return list.stream().map(this::toDomain).collect(Collectors.toList());
   }
 
+  @Override
+  public Optional<AssetSnapshot> findLatestBefore(Long userId, LocalDate snapshotDate) {
+    return Optional.ofNullable(assetSnapshotMapper.selectLatestBefore(userId, snapshotDate))
+        .map(this::toDomain);
+  }
+
   // ---- Converter ----
 
   private AssetSnapshot toDomain(AssetSnapshotDO d) {

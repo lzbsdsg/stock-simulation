@@ -9,6 +9,8 @@ import com.lzbsdsg.stocksimulation.user.application.AccountApplicationService;
 import com.lzbsdsg.stocksimulation.user.domain.entity.Account;
 import com.lzbsdsg.stocksimulation.user.domain.repository.AccountRepository;
 import java.math.BigDecimal;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -197,6 +199,17 @@ public class TradeConcurrencyTest {
         store.put(account.getUserId(), next);
         return true;
       }
+    }
+
+    @Override
+    public List<Long> findUserIdsAfter(Long lastUserId, int limit) {
+      long cursor = lastUserId == null ? 0L : lastUserId;
+      int safeLimit = limit <= 0 ? 500 : limit;
+      return store.keySet().stream()
+          .filter(userId -> userId > cursor)
+          .sorted(Comparator.naturalOrder())
+          .limit(safeLimit)
+          .toList();
     }
 
     private Account copy(Account source) {
