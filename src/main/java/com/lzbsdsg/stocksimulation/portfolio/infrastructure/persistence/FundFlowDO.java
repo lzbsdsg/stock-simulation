@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import lombok.Data;
 
 /** 资金流水 DO */
@@ -28,5 +28,5 @@ public class FundFlowDO {
 
   private String remark;
 
-  private LocalDateTime createdAt;
+  private OffsetDateTime createdAt;
 }

@@ -3,7 +3,7 @@ package com.lzbsdsg.stocksimulation.notification.infrastructure.persistence;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import lombok.Data;
 
 /** 通知消息 DO */
@@ -24,5 +24,5 @@ public class NotificationDO {
 
   private Boolean read;
 
-  private LocalDateTime createdAt;
+  private OffsetDateTime createdAt;
 }

@@ -154,7 +154,7 @@ Authorization: Bearer <accessToken>
   "stockCode": "sh600519",
   "side": "BUY",
   "orderType": "LIMIT",
-  "price": 1408.88,
+  "price": 1418.88,
   "quantity": 100
 }
 ```

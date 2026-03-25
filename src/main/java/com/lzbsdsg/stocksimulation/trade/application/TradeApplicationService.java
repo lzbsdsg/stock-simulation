@@ -472,12 +472,12 @@ public class TradeApplicationService {
         positionRepository
             .findByUserIdAndStockCodeForUpdate(userId, stockCode)
             .orElseThrow(() -> new BizException(ErrorCode.TRADE_ORDER_INSUFFICIENT_POSITION));
-    if (!hasEnoughAvailable(position, quantity)) {
-      throw new BizException(ErrorCode.TRADE_ORDER_INSUFFICIENT_POSITION);
-    }
     LocalDate today = LocalDate.now(ZONE_SHANGHAI);
     if (position.getFrozenUntil() != null && !today.isAfter(position.getFrozenUntil())) {
       throw new BizException(ErrorCode.TRADE_ORDER_T_PLUS_1);
+    }
+    if (!hasEnoughAvailable(position, quantity)) {
+      throw new BizException(ErrorCode.TRADE_ORDER_INSUFFICIENT_POSITION);
     }
 
     position.setAvailableQuantity(position.getAvailableQuantity() - quantity);

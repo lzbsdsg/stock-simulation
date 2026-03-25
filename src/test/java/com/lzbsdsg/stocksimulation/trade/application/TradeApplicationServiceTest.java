@@ -156,6 +156,28 @@ class TradeApplicationServiceTest {
   }
 
   @Test
+  void should_return_t_plus_1_error_before_insufficient_position_when_sell_blocked_by_t1() {
+    when(idempotencyGateway.tryAcquire("cid-sell-t1")).thenReturn(true);
+    when(marketDataFacade.getQuote("sh600519")).thenReturn(mockQuote("sh600519", "贵州茅台"));
+    Position position = position(0, 100);
+    position.setFrozenUntil(LocalDate.now(ZONE_SHANGHAI));
+    when(positionRepository.findByUserIdAndStockCodeForUpdate(1001L, "sh600519"))
+        .thenReturn(Optional.of(position));
+
+    PlaceOrderCommand command =
+        new PlaceOrderCommand(
+            "cid-sell-t1", "sh600519", "SELL", "LIMIT", new BigDecimal("10.00"), 100);
+
+    BizException ex = assertThrows(BizException.class, () -> tradeApplicationService.placeOrder(command));
+
+    assertEquals(ErrorCode.TRADE_ORDER_T_PLUS_1, ex.getErrorCode());
+    verify(positionRepository, never()).updateWithVersion(any(Position.class));
+    verify(orderRepository, never()).save(any(Order.class));
+    verify(orderMessageProducer, never()).sendMatchMessage(any());
+    verify(idempotencyGateway).release("cid-sell-t1");
+  }
+
+  @Test
   void should_reject_duplicate_client_order_id() {
     when(idempotencyGateway.tryAcquire("cid-dup")).thenReturn(false);
     PlaceOrderCommand command =

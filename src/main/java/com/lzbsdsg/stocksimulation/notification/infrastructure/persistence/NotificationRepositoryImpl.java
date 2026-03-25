@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.lzbsdsg.stocksimulation.notification.domain.entity.NotificationMessage;
 import com.lzbsdsg.stocksimulation.notification.domain.repository.NotificationRepository;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -15,6 +16,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 @RequiredArgsConstructor
 public class NotificationRepositoryImpl implements NotificationRepository {
+
+  private static final ZoneId ZONE_SHANGHAI = ZoneId.of("Asia/Shanghai");
 
   private final NotificationMapper notificationMapper;
 
@@ -85,7 +88,10 @@ public class NotificationRepositoryImpl implements NotificationRepository {
     m.setTitle(d.getTitle());
     m.setContent(d.getContent());
     m.setRead(d.getRead());
-    m.setCreatedAt(d.getCreatedAt());
+    m.setCreatedAt(
+        d.getCreatedAt() == null
+            ? null
+            : d.getCreatedAt().atZoneSameInstant(ZONE_SHANGHAI).toLocalDateTime());
     return m;
   }
 
@@ -97,7 +103,8 @@ public class NotificationRepositoryImpl implements NotificationRepository {
     d.setTitle(m.getTitle());
     d.setContent(m.getContent());
     d.setRead(m.getRead());
-    d.setCreatedAt(m.getCreatedAt());
+    d.setCreatedAt(
+        m.getCreatedAt() == null ? null : m.getCreatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
     return d;
   }
 }

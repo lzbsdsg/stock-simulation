@@ -3,7 +3,7 @@ package com.lzbsdsg.stocksimulation.portfolio.infrastructure.persistence;
 import com.baomidou.mybatisplus.annotation.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import lombok.Data;
 
 /** 持仓 DO */
@@ -34,7 +34,7 @@ public class PositionDO {
 
   @Version private Integer version;
 
-  private LocalDateTime createdAt;
+  private OffsetDateTime createdAt;
 
-  private LocalDateTime updatedAt;
+  private OffsetDateTime updatedAt;
 }

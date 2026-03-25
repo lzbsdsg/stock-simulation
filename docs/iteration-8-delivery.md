@@ -152,6 +152,14 @@ mvnw.cmd spring-boot:run
 ### 6.2 接口验收（下单 -> 成交 -> 查询）
 
 1. 调用 `POST /api/v1/trade/orders` 下买单（限价满足当前价）
+   {
+  "clientOrderId": "it7-buy-001",
+  "stockCode": "sh600519",
+  "side": "BUY",
+  "orderType": "LIMIT",
+  "price": 1418.88,
+  "quantity": 100
+}
 2. 等待 1~3 秒（MQ 异步撮合）
 3. 调用 `GET /api/v1/trade/orders?scope=today&page=1&size=20`
    - 预期订单状态为 `FILLED`
@@ -160,13 +168,74 @@ mvnw.cmd spring-boot:run
 
 ### 6.3 MQ 与 DLQ 验收
 
-1. 正常成交后，日志应出现：
-   - `trade.match.ok ...`
-   - `Sending trade filled event ...`
-2. 人为制造乐观锁冲突（测试环境并发触发）后，日志应出现重试退避：
-   - `match retry backoff: attempt=...`
-3. 连续冲突超过 3 次后，消息应进入 `trade.match.dlq`
+本节采用“不看后端控制台日志”的验收方式。
 
+1. 打开 `http://localhost:15672`，登录 `.env` 中 RabbitMQ 账号（示例：`stock_app`）。
+2. 进入 `Queues and Streams`，确认存在：
+   - `trade.match.queue`
+   - `trade.match.dlq`
+   - `trade.notification.queue`
+3. 点击 `trade.match.queue`，确认 `Effective policy definition` 包含：
+   - `dead-letter-exchange = trade.match.dlx`
+   - `dead-letter-routing-key = trade.match.dlq`
+4. 正常链路验收（MQ）：
+   - 调用一次下单接口（消息进入 `trade.exchange` + `trade.match`）。
+   - 预期 `trade.match.queue` 无持续堆积（`Ready` 归零或接近 0），且 `Ack` 增长。
+   - 预期 `trade.match.dlq` 不增长。
+5. DLQ 验收：
+   - 在 `Exchanges -> trade.exchange -> Publish message` 发布坏消息。
+   - `Routing key` 填 `trade.match`，`Payload` 示例：`{"bad":"data"}`。
+   - 预期消息进入 `trade.match.dlq`，并可在 `Get messages` 中看到 `x-death.reason = rejected`。
+
+可选：CMD + curl 验收
+
+```cmd
+set RMQ_USER=stock_app
+set RMQ_PASS=<RABBITMQ_DEFAULT_PASS>
+
+REM 查看关键队列
+curl -s -u %RMQ_USER%:%RMQ_PASS% "http://localhost:15672/api/queues/%2F/trade.match.queue"
+curl -s -u %RMQ_USER%:%RMQ_PASS% "http://localhost:15672/api/queues/%2F/trade.match.dlq"
+curl -s -u %RMQ_USER%:%RMQ_PASS% "http://localhost:15672/api/queues/%2F/trade.notification.queue"
+
+REM 发布坏消息触发 DLQ
+curl -s -u %RMQ_USER%:%RMQ_PASS% -H "content-type: application/json" ^
+  -X POST "http://localhost:15672/api/exchanges/%2F/trade.exchange/publish" ^
+  -d "{\"properties\":{\"content_type\":\"application/json\"},\"routing_key\":\"trade.match\",\"payload\":\"{\\\"bad\\\":\\\"data\\\"}\",\"payload_encoding\":\"string\"}"
+
+REM 查看 DLQ 是否增长
+curl -s -u %RMQ_USER%:%RMQ_PASS% "http://localhost:15672/api/queues/%2F/trade.match.dlq"
+```
+
+若历史环境缺失 DLQ 资源（仅需执行一次，CMD + curl）
+
+```cmd
+set RMQ_USER=stock_app
+set RMQ_PASS=<RABBITMQ_DEFAULT_PASS>
+
+curl -s -u %RMQ_USER%:%RMQ_PASS% -H "content-type: application/json" ^
+  -X PUT "http://localhost:15672/api/queues/%2F/trade.match.dlq" ^
+  -d "{\"auto_delete\":false,\"durable\":true,\"arguments\":{}}"
+
+curl -s -u %RMQ_USER%:%RMQ_PASS% -H "content-type: application/json" ^
+  -X POST "http://localhost:15672/api/bindings/%2F/e/trade.match.dlx/q/trade.match.dlq" ^
+  -d "{\"routing_key\":\"trade.match.dlq\",\"arguments\":{}}"
+
+curl -s -u %RMQ_USER%:%RMQ_PASS% -H "content-type: application/json" ^
+  -X PUT "http://localhost:15672/api/policies/%2F/trade-match-dlq-policy" ^
+  -d "{\"pattern\":\"^trade\\.match\\.queue$\",\"definition\":{\"dead-letter-exchange\":\"trade.match.dlx\",\"dead-letter-routing-key\":\"trade.match.dlq\"},\"priority\":1,\"apply-to\":\"queues\"}"
+```
+
+可选：PowerShell 验收
+
+```powershell
+$cred = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("stock_app:<RABBITMQ_DEFAULT_PASS>"))
+$h = @{ Authorization = "Basic $cred"; "content-type" = "application/json" }
+
+Invoke-RestMethod -Headers $h -Uri "http://localhost:15672/api/queues" |
+  Where-Object { $_.name -in @("trade.match.queue","trade.match.dlq","trade.notification.queue") } |
+  Select-Object name,consumers,messages,messages_ready,messages_unacknowledged,effective_policy_definition
+```
 ### 6.4 收盘任务验收
 
 测试环境建议临时设置：
@@ -187,7 +256,7 @@ trade:
 
 ```cmd
 cd /d d:\StockSimulation\stock-simulation
-k6 run -e BASE_URL=http://localhost:8080 -e TOKEN=<accessToken> -e STOCK_CODE=sh600519 -e ORDER_PRICE=1688.88 -e ORDER_QUANTITY=100 -e VUS=5 -e DURATION=1m -e ACCEPT_429=true k6/trade-load-test.js
+k6 run -e BASE_URL=http://localhost:8080 -e TOKEN=<accessToken> -e STOCK_CODE=sh600519 -e ORDER_PRICE=1618.88 -e ORDER_QUANTITY=100 -e VUS=5 -e DURATION=1m -e ACCEPT_429=true k6/trade-load-test.js
 ```
 
 通过标准：

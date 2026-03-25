@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import lombok.Data;
 
 /** 资产快照 DO */
@@ -30,5 +30,5 @@ public class AssetSnapshotDO {
 
   private BigDecimal cumulativeProfitRate;
 
-  private LocalDateTime createdAt;
+  private OffsetDateTime createdAt;
 }

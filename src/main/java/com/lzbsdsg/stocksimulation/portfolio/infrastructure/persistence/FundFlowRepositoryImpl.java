@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.lzbsdsg.stocksimulation.portfolio.domain.entity.FundFlow;
 import com.lzbsdsg.stocksimulation.portfolio.domain.repository.FundFlowRepository;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 @RequiredArgsConstructor
 public class FundFlowRepositoryImpl implements FundFlowRepository {
+
+  private static final ZoneId ZONE_SHANGHAI = ZoneId.of("Asia/Shanghai");
 
   private final FundFlowMapper fundFlowMapper;
 
@@ -48,7 +51,10 @@ public class FundFlowRepositoryImpl implements FundFlowRepository {
         fundFlowMapper.selectList(
             new LambdaQueryWrapper<FundFlowDO>()
                 .eq(FundFlowDO::getUserId, userId)
-                .between(FundFlowDO::getCreatedAt, from, to));
+                .between(
+                    FundFlowDO::getCreatedAt,
+                    from.atZone(ZONE_SHANGHAI).toOffsetDateTime(),
+                    to.atZone(ZONE_SHANGHAI).toOffsetDateTime()));
     return list.stream().map(this::toDomain).collect(Collectors.toList());
   }
 
@@ -63,7 +69,10 @@ public class FundFlowRepositoryImpl implements FundFlowRepository {
     f.setBalanceAfter(d.getBalanceAfter());
     f.setOrderId(d.getOrderId());
     f.setRemark(d.getRemark());
-    f.setCreatedAt(d.getCreatedAt());
+    f.setCreatedAt(
+        d.getCreatedAt() == null
+            ? null
+            : d.getCreatedAt().atZoneSameInstant(ZONE_SHANGHAI).toLocalDateTime());
     return f;
   }
 
@@ -76,7 +85,8 @@ public class FundFlowRepositoryImpl implements FundFlowRepository {
     d.setBalanceAfter(f.getBalanceAfter());
     d.setOrderId(f.getOrderId());
     d.setRemark(f.getRemark());
-    d.setCreatedAt(f.getCreatedAt());
+    d.setCreatedAt(
+        f.getCreatedAt() == null ? null : f.getCreatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
     return d;
   }
 }

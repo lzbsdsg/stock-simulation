@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.lzbsdsg.stocksimulation.portfolio.domain.entity.AssetSnapshot;
 import com.lzbsdsg.stocksimulation.portfolio.domain.repository.AssetSnapshotRepository;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -14,6 +15,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 @RequiredArgsConstructor
 public class AssetSnapshotRepositoryImpl implements AssetSnapshotRepository {
+
+  private static final ZoneId ZONE_SHANGHAI = ZoneId.of("Asia/Shanghai");
 
   private final AssetSnapshotMapper assetSnapshotMapper;
 
@@ -57,7 +60,10 @@ public class AssetSnapshotRepositoryImpl implements AssetSnapshotRepository {
     s.setMarketValue(d.getMarketValue());
     s.setDailyProfit(d.getDailyProfit());
     s.setCumulativeProfitRate(d.getCumulativeProfitRate());
-    s.setCreatedAt(d.getCreatedAt());
+    s.setCreatedAt(
+        d.getCreatedAt() == null
+            ? null
+            : d.getCreatedAt().atZoneSameInstant(ZONE_SHANGHAI).toLocalDateTime());
     return s;
   }
 
@@ -71,7 +77,8 @@ public class AssetSnapshotRepositoryImpl implements AssetSnapshotRepository {
     d.setMarketValue(s.getMarketValue());
     d.setDailyProfit(s.getDailyProfit());
     d.setCumulativeProfitRate(s.getCumulativeProfitRate());
-    d.setCreatedAt(s.getCreatedAt());
+    d.setCreatedAt(
+        s.getCreatedAt() == null ? null : s.getCreatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
     return d;
   }
 }

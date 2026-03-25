@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.lzbsdsg.stocksimulation.portfolio.domain.entity.Position;
 import com.lzbsdsg.stocksimulation.portfolio.domain.repository.PositionRepository;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -14,6 +15,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 @RequiredArgsConstructor
 public class PositionRepositoryImpl implements PositionRepository {
+
+  private static final ZoneId ZONE_SHANGHAI = ZoneId.of("Asia/Shanghai");
 
   private final PositionMapper positionMapper;
 
@@ -80,8 +83,14 @@ public class PositionRepositoryImpl implements PositionRepository {
     p.setTotalCost(d.getTotalCost());
     p.setFrozenUntil(d.getFrozenUntil());
     p.setVersion(d.getVersion());
-    p.setCreatedAt(d.getCreatedAt());
-    p.setUpdatedAt(d.getUpdatedAt());
+    p.setCreatedAt(
+        d.getCreatedAt() == null
+            ? null
+            : d.getCreatedAt().atZoneSameInstant(ZONE_SHANGHAI).toLocalDateTime());
+    p.setUpdatedAt(
+        d.getUpdatedAt() == null
+            ? null
+            : d.getUpdatedAt().atZoneSameInstant(ZONE_SHANGHAI).toLocalDateTime());
     return p;
   }
 
@@ -98,8 +107,10 @@ public class PositionRepositoryImpl implements PositionRepository {
     d.setTotalCost(p.getTotalCost());
     d.setFrozenUntil(p.getFrozenUntil());
     d.setVersion(p.getVersion());
-    d.setCreatedAt(p.getCreatedAt());
-    d.setUpdatedAt(p.getUpdatedAt());
+    d.setCreatedAt(
+        p.getCreatedAt() == null ? null : p.getCreatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
+    d.setUpdatedAt(
+        p.getUpdatedAt() == null ? null : p.getUpdatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
     return d;
   }
 }

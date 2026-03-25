@@ -3,6 +3,7 @@ package com.lzbsdsg.stocksimulation.watchlist.infrastructure.persistence;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.lzbsdsg.stocksimulation.watchlist.domain.entity.WatchlistItem;
 import com.lzbsdsg.stocksimulation.watchlist.domain.repository.WatchlistRepository;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -13,6 +14,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 @RequiredArgsConstructor
 public class WatchlistRepositoryImpl implements WatchlistRepository {
+
+  private static final ZoneId ZONE_SHANGHAI = ZoneId.of("Asia/Shanghai");
 
   private final WatchlistMapper watchlistMapper;
 
@@ -74,7 +77,10 @@ public class WatchlistRepositoryImpl implements WatchlistRepository {
     w.setStockCode(d.getStockCode());
     w.setStockName(d.getStockName());
     w.setSortOrder(d.getSortOrder());
-    w.setCreatedAt(d.getCreatedAt());
+    w.setCreatedAt(
+        d.getCreatedAt() == null
+            ? null
+            : d.getCreatedAt().atZoneSameInstant(ZONE_SHANGHAI).toLocalDateTime());
     return w;
   }
 
@@ -85,7 +91,8 @@ public class WatchlistRepositoryImpl implements WatchlistRepository {
     d.setStockCode(w.getStockCode());
     d.setStockName(w.getStockName());
     d.setSortOrder(w.getSortOrder());
-    d.setCreatedAt(w.getCreatedAt());
+    d.setCreatedAt(
+        w.getCreatedAt() == null ? null : w.getCreatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
     return d;
   }
 }
