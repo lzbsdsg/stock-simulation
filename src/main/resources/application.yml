@@ -107,6 +107,9 @@ trade:
 
 # ---- 行情采样开关 ----
 market:
+  kline:
+    # 东方财富历史K线复权模式: 0=不复权, 1=前复权, 2=后复权
+    fqt: ${MARKET_KLINE_FQT:1}
   ingest:
     latency-sample-enabled: ${MARKET_INGEST_LATENCY_SAMPLE_ENABLED:false}
   websocket:

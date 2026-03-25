@@ -11,9 +11,8 @@ import com.lzbsdsg.stocksimulation.market.infrastructure.resilience.ProviderCirc
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import java.time.LocalDate;
 import java.time.Duration;
-import java.time.format.DateTimeFormatter;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,6 +34,7 @@ public class MarketDataFacade {
 
   private final List<MarketDataProvider> providers;
   private final MarketCacheGateway marketCacheGateway;
+  private final HistoricalKLineService historicalKLineService;
   private final Counter providerFallbackCounter;
   private final Map<String, ProviderCircuitBreaker> circuitBreakers = new ConcurrentHashMap<>();
 
@@ -42,14 +42,19 @@ public class MarketDataFacade {
   public MarketDataFacade(
       List<MarketDataProvider> providers,
       MarketCacheGateway marketCacheGateway,
+      HistoricalKLineService historicalKLineService,
       MeterRegistry meterRegistry) {
     this.providers = providers;
     this.marketCacheGateway = marketCacheGateway;
+    this.historicalKLineService = historicalKLineService;
     this.providerFallbackCounter = meterRegistry.counter("market.provider.fallback.total");
   }
 
-  MarketDataFacade(List<MarketDataProvider> providers, MarketCacheGateway marketCacheGateway) {
-    this(providers, marketCacheGateway, new SimpleMeterRegistry());
+  MarketDataFacade(
+      List<MarketDataProvider> providers,
+      MarketCacheGateway marketCacheGateway,
+      HistoricalKLineService historicalKLineService) {
+    this(providers, marketCacheGateway, historicalKLineService, new SimpleMeterRegistry());
   }
 
   /** 获取单只股票行情（先缓存 → Provider → 降级） */
@@ -175,30 +180,9 @@ public class MarketDataFacade {
   /** 获取K线 */
   public List<KLinePoint> getKLine(
       String stockCode, KLinePeriod period, LocalDate from, LocalDate to) {
-    String key = buildKLineCacheKey(stockCode, period, from, to);
-    List<KLinePoint> cached = marketCacheGateway.getCachedKLine(key);
-    if (cached != null) {
-      marketCacheGateway.setCacheStatusHeader(MarketCacheGateway.HIT_L2);
-      return cached;
-    }
-
-    for (MarketDataProvider provider : providers) {
-      if (provider.isAvailable()) {
-        try {
-          List<KLinePoint> points = provider.getKLine(stockCode, period, from, to);
-          marketCacheGateway.cacheKLine(key, points);
-          marketCacheGateway.setCacheStatusHeader(MarketCacheGateway.MISS);
-          return points;
-        } catch (Exception e) {
-          log.warn(
-              "Provider {} getKLine failed for {}: {}",
-              provider.getClass().getSimpleName(),
-              stockCode,
-              e.getMessage());
-        }
-      }
-    }
-    throw new BizException(ErrorCode.MARKET_DATA_UNAVAILABLE);
+    List<KLinePoint> points = historicalKLineService.getKLine(stockCode, period, from, to);
+    marketCacheGateway.setCacheStatusHeader(MarketCacheGateway.MISS);
+    return points;
   }
 
   private String normalizeStockCode(String stockCode) {
@@ -217,18 +201,6 @@ public class MarketDataFacade {
       return "sz" + code;
     }
     return code;
-  }
-
-  private String buildKLineCacheKey(
-      String stockCode, KLinePeriod period, LocalDate from, LocalDate to) {
-    DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE;
-    return normalizeStockCode(stockCode)
-        + ":"
-        + period.name()
-        + ":"
-        + from.format(formatter)
-        + ":"
-        + to.format(formatter);
   }
 
   private void sleepSilently(long millis) {

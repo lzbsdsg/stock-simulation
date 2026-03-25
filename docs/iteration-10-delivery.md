@@ -72,6 +72,17 @@
   - 支持 `TOKEN/VUS/DURATION` 环境变量
 - 路线图迭代10任务已回填为完成状态（`[x]`）
 
+### 2.6 历史K线真实数据化（补充）
+
+- 后端新增历史日K持久化与同步机制：
+  - `t_market_kline_daily`：真实日K落库
+  - `t_market_kline_sync_state`：按股票记录“当日是否已同步”
+- 新增东方财富历史K线网关，日K数据来源改为真实数据
+- 复权口径可配置：`market.kline.fqt`（默认 `1` 前复权，可切 `0` 不复权）
+- `MarketDataFacade#getKLine` 改为走历史K线服务，不再读写 Redis K线缓存
+- 同一股票在同一自然日仅触发一次增量回源（其余请求走数据库）
+- 周K/月K改为由已落库日K聚合生成（符合“日K为最小单位”）
+
 ## 3. 关键变更文件
 
 - `stock-simulation-web/src/api/request.ts`
@@ -94,6 +105,12 @@
 - `stock-simulation-web/src/components/market/MarketOverview.vue`
 - `stock-simulation-web/src/style.css`
 - `k6/market-load-test.js`
+- `src/main/java/com/lzbsdsg/stocksimulation/market/domain/service/HistoricalKLineService.java`
+- `src/main/java/com/lzbsdsg/stocksimulation/market/infrastructure/gateway/EastMoneyKLineGateway.java`
+- `src/main/java/com/lzbsdsg/stocksimulation/market/domain/repository/MarketKLineDailyRepository.java`
+- `src/main/java/com/lzbsdsg/stocksimulation/market/domain/repository/MarketKLineSyncStateRepository.java`
+- `src/main/java/com/lzbsdsg/stocksimulation/market/infrastructure/persistence/MarketKLineDailyMapper.java`
+- `src/main/resources/db/migration/V20260325_003__create_market_kline_tables.sql`
 - `docs/doc-D-dev-roadmap.md`
 
 ## 4. 测试命令与结果
@@ -122,6 +139,15 @@ mvnw.cmd "-Dtest=AuthControllerApiTest,MarketControllerApiTest,MarketWebSocketHa
 
 结果：`Tests run: 16, Failures: 0, Errors: 0, Skipped: 0`
 
+### 4.3 历史K线后端回归测试（已执行）
+
+```cmd
+cd /d d:\StockSimulation\stock-simulation
+mvnw.cmd -Dtest='MarketDataFacadeTest,HistoricalKLineServiceTest,EastMoneyKLineGatewayTest,MarketControllerApiTest' test
+```
+
+结果：`Tests run: 16, Failures: 0, Errors: 0, Skipped: 0`
+
 ## 5. 验收标准（不只测试通过）
 
 ### 5.1 路线图功能标准（Iteration 10）
@@ -140,12 +166,14 @@ mvnw.cmd "-Dtest=AuthControllerApiTest,MarketControllerApiTest,MarketWebSocketHa
 2. `/api/v1/market/*` 在 UI 中可拉取并展示
 3. 前端可读取 `X-RateLimit-*` 与 `X-Cache-Status`
 4. WS 订阅 `/topic/market/quote/{stockCode}` 可持续接收推送
+5. 历史K线接口使用真实日K数据源，日内重复请求不重复回源
 
 ### 5.3 稳定性与可运维标准
 
 1. 刷新令牌并发仅执行一次（队列化）
 2. WS 推送延迟超过 5s 时前端出现降级标记
 3. 构建产物可成功打包，浏览器页面无白屏
+4. 同一股票同一天仅一次历史K线增量同步（以自动化测试和同步状态表验证）
 
 ### 5.4 性能标准（验收口径）
 
@@ -194,6 +222,24 @@ localStorage.setItem('ss_access_token', 'invalid-token')
 2. 点击卡片进入 `/market/sh600519`
 3. 切换 日K/周K/月K
 4. 预期：K线正常渲染，MA 与成交量同步变化，支持 dataZoom 拖拽
+
+### 6.4.1 历史日K真实性与“每日一次更新”验收
+
+1. 执行同一请求两次（示例）：
+```cmd
+curl "http://localhost:8080/api/v1/market/kline/sh600519?period=DAILY&from=2025-09-26&to=2026-03-25"
+curl "http://localhost:8080/api/v1/market/kline/sh600519?period=DAILY&from=2025-09-26&to=2026-03-25"
+```
+2. 检查数据库：
+```sql
+SELECT stock_code, last_sync_date, last_bar_date
+FROM t_market_kline_sync_state
+WHERE stock_code = 'sh600519';
+```
+3. 通过标准：
+   - 第一次请求后存在同步状态记录
+   - 同一天再次请求不重复触发增量同步（`last_sync_date` 不变化）
+   - `t_market_kline_daily` 有对应日期范围的真实日K记录
 
 ### 6.5 WebSocket 与降级验收
 

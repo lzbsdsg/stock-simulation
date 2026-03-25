@@ -7,11 +7,22 @@ import QuoteCard from '@/components/market/QuoteCard.vue'
 import { useMarketStore } from '@/stores/market'
 import type { KLinePeriod } from '@/types/market'
 
+type RangePreset = '3M' | '6M' | '1Y' | '3Y'
+
+const RANGE_DAYS_MAP: Record<RangePreset, number> = {
+  '3M': 90,
+  '6M': 180,
+  '1Y': 365,
+  '3Y': 365 * 3,
+}
+
 const route = useRoute()
 const marketStore = useMarketStore()
 const period = ref<KLinePeriod>('DAILY')
+const rangePreset = ref<RangePreset>('1Y')
 
 const stockCode = computed(() => String(route.params.stockCode || '').toLowerCase())
+const referenceClose = computed(() => marketStore.selectedQuote?.closePrice ?? null)
 
 async function loadDetail(code: string): Promise<void> {
   if (!code) {
@@ -20,7 +31,10 @@ async function loadDetail(code: string): Promise<void> {
 
   try {
     marketStore.setSelectedCode(code)
-    await Promise.all([marketStore.loadQuote(code), marketStore.loadKLine(code, period.value)])
+    await Promise.all([
+      marketStore.loadQuote(code),
+      marketStore.loadKLine(code, period.value, RANGE_DAYS_MAP[rangePreset.value]),
+    ])
   } catch (error) {
     const message = error instanceof Error ? error.message : '加载详情失败'
     ElMessage.error(message)
@@ -29,6 +43,11 @@ async function loadDetail(code: string): Promise<void> {
 
 async function handlePeriodChange(value: KLinePeriod): Promise<void> {
   period.value = value
+  await loadDetail(stockCode.value)
+}
+
+async function handleRangeChange(value: RangePreset): Promise<void> {
+  rangePreset.value = value
   await loadDetail(stockCode.value)
 }
 
@@ -69,14 +88,31 @@ onMounted(async () => {
 
     <section class="detail-panel">
       <div class="kline-toolbar">
-        <el-radio-group :model-value="period" @change="handlePeriodChange">
-          <el-radio-button label="DAILY">日K</el-radio-button>
-          <el-radio-button label="WEEKLY">周K</el-radio-button>
-          <el-radio-button label="MONTHLY">月K</el-radio-button>
-        </el-radio-group>
+        <div class="kline-toolbar-group">
+          <span class="kline-toolbar-label">周期</span>
+          <el-radio-group :model-value="period" @change="handlePeriodChange">
+            <el-radio-button label="DAILY">日K</el-radio-button>
+            <el-radio-button label="WEEKLY">周K</el-radio-button>
+            <el-radio-button label="MONTHLY">月K</el-radio-button>
+          </el-radio-group>
+        </div>
+
+        <div class="kline-toolbar-group">
+          <span class="kline-toolbar-label">区间</span>
+          <el-radio-group :model-value="rangePreset" @change="handleRangeChange">
+            <el-radio-button label="3M">3月</el-radio-button>
+            <el-radio-button label="6M">6月</el-radio-button>
+            <el-radio-button label="1Y">1年</el-radio-button>
+            <el-radio-button label="3Y">3年</el-radio-button>
+          </el-radio-group>
+        </div>
       </div>
 
-      <KLineChart :points="marketStore.klinePoints" :loading="marketStore.loadingKLine" />
+      <KLineChart
+        :points="marketStore.klinePoints"
+        :loading="marketStore.loadingKLine"
+        :reference-close="referenceClose"
+      />
     </section>
 
     <section class="detail-placeholder">

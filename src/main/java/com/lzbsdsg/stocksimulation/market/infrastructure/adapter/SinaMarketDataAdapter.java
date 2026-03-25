@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Random;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -71,8 +72,13 @@ public class SinaMarketDataAdapter implements MarketDataProvider {
   @Override
   public List<KLinePoint> getKLine(
       String stockCode, KLinePeriod period, LocalDate from, LocalDate to) {
-    QuoteSnapshot latest = getQuote(stockCode);
-    return buildSyntheticKLine(period, from, to, latest);
+    if (from == null || to == null || from.isAfter(to)) {
+      return List.of();
+    }
+
+    String normalizedCode = normalizeStockCode(stockCode);
+    QuoteSnapshot latest = getQuote(normalizedCode);
+    return buildSyntheticKLine(normalizedCode, period, from, to, latest);
   }
 
   @Override
@@ -142,26 +148,78 @@ public class SinaMarketDataAdapter implements MarketDataProvider {
   }
 
   private List<KLinePoint> buildSyntheticKLine(
-      KLinePeriod period, LocalDate from, LocalDate to, QuoteSnapshot latest) {
+      String stockCode, KLinePeriod period, LocalDate from, LocalDate to, QuoteSnapshot latest) {
     List<KLinePoint> points = new ArrayList<>();
+    Random random = new Random(buildSeed(stockCode, period, from, to));
     LocalDate cursor = from;
-    BigDecimal base = latest.getClosePrice() != null ? latest.getClosePrice() : BigDecimal.ONE;
+    BigDecimal previousClose =
+        latest.getClosePrice() != null
+            ? latest.getClosePrice()
+            : latest.getCurrentPrice() != null ? latest.getCurrentPrice() : BigDecimal.ONE;
+    long baseVolume = latest.getVolume() == null ? 100000L : Math.max(50000L, latest.getVolume());
+    int index = 0;
+
     while (!cursor.isAfter(to)) {
+      double trendWave = Math.sin((index + (stockCode.hashCode() & 31)) / 7.0d) * 0.008d;
+      double randomShock = (random.nextDouble() - 0.5d) * 0.022d;
+      double closeDrift = trendWave + randomShock;
+      double openDrift = (random.nextDouble() - 0.5d) * 0.006d;
+
+      BigDecimal open = applyRatio(previousClose, openDrift);
+      BigDecimal close = applyRatio(open, closeDrift);
+      BigDecimal body = close.subtract(open).abs();
+      BigDecimal minBody = open.multiply(BigDecimal.valueOf(0.0015));
+      if (body.compareTo(minBody) < 0) {
+        close = close.add(close.compareTo(open) >= 0 ? minBody : minBody.negate());
+      }
+
+      BigDecimal wickUnit =
+          open.multiply(BigDecimal.valueOf(0.004d + random.nextDouble() * 0.01d)).abs();
+      BigDecimal high =
+          open.max(close)
+              .add(wickUnit.multiply(BigDecimal.valueOf(0.8d + random.nextDouble() * 0.9d)));
+      BigDecimal low =
+          open.min(close)
+              .subtract(wickUnit.multiply(BigDecimal.valueOf(0.8d + random.nextDouble() * 0.9d)))
+              .max(new BigDecimal("0.01"));
+
+      long volume =
+          Math.max(
+              10000L,
+              Math.round(
+                  baseVolume * (0.55d + Math.abs(closeDrift) * 18d + random.nextDouble() * 0.85d)));
+
       KLinePoint point = new KLinePoint();
       point.setDate(cursor);
-      point.setOpen(base.setScale(2, RoundingMode.HALF_UP));
-      BigDecimal close = base.multiply(BigDecimal.valueOf(1.002)).setScale(2, RoundingMode.HALF_UP);
-      point.setClose(close);
-      point.setHigh(close.multiply(BigDecimal.valueOf(1.01)).setScale(2, RoundingMode.HALF_UP));
-      point.setLow(close.multiply(BigDecimal.valueOf(0.99)).setScale(2, RoundingMode.HALF_UP));
-      point.setVolume(latest.getVolume() == null ? 0L : latest.getVolume());
-      point.setAmount(latest.getAmount() == null ? BigDecimal.ZERO : latest.getAmount());
+      point.setOpen(open.setScale(2, RoundingMode.HALF_UP));
+      point.setClose(close.setScale(2, RoundingMode.HALF_UP));
+      point.setHigh(high.setScale(2, RoundingMode.HALF_UP));
+      point.setLow(low.setScale(2, RoundingMode.HALF_UP));
+      point.setVolume(volume);
+      BigDecimal avgPrice = open.add(close).divide(BigDecimal.valueOf(2), 4, RoundingMode.HALF_UP);
+      point.setAmount(avgPrice.multiply(BigDecimal.valueOf(volume)).setScale(2, RoundingMode.HALF_UP));
       points.add(point);
 
-      base = close;
+      previousClose = close.max(new BigDecimal("0.01"));
       cursor = nextCursor(cursor, period);
+      index++;
     }
     return points;
+  }
+
+  private BigDecimal applyRatio(BigDecimal base, double drift) {
+    BigDecimal ratio = BigDecimal.valueOf(1.0d + drift);
+    BigDecimal next = base.multiply(ratio);
+    return next.compareTo(new BigDecimal("0.01")) < 0 ? new BigDecimal("0.01") : next;
+  }
+
+  private long buildSeed(String stockCode, KLinePeriod period, LocalDate from, LocalDate to) {
+    long seed = 1469598103934665603L;
+    seed = seed * 1099511628211L ^ stockCode.hashCode();
+    seed = seed * 1099511628211L ^ period.ordinal();
+    seed = seed * 1099511628211L ^ from.toEpochDay();
+    seed = seed * 1099511628211L ^ to.toEpochDay();
+    return seed;
   }
 
   private LocalDate nextCursor(LocalDate cursor, KLinePeriod period) {

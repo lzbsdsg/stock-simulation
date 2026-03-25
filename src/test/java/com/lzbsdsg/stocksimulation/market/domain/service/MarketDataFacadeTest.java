@@ -30,12 +30,15 @@ class MarketDataFacadeTest {
   @Mock private MarketDataProvider primaryProvider;
   @Mock private MarketDataProvider backupProvider;
   @Mock private MarketCacheGateway marketCacheGateway;
+  @Mock private HistoricalKLineService historicalKLineService;
 
   private MarketDataFacade marketDataFacade;
 
   @BeforeEach
   void setUp() {
-    marketDataFacade = new MarketDataFacade(List.of(primaryProvider, backupProvider), marketCacheGateway);
+    marketDataFacade =
+        new MarketDataFacade(
+            List.of(primaryProvider, backupProvider), marketCacheGateway, historicalKLineService);
   }
 
   @Test
@@ -106,11 +109,12 @@ class MarketDataFacadeTest {
   }
 
   @Test
-  void should_return_kline_from_cache_when_hit() {
+  void should_get_kline_from_historical_service() {
     KLinePoint p = new KLinePoint();
     p.setDate(LocalDate.now());
     p.setClose(new BigDecimal("10.00"));
-    when(marketCacheGateway.getCachedKLine("sh600519:DAILY:2026-03-01:2026-03-02"))
+    when(historicalKLineService.getKLine(
+            "sh600519", KLinePeriod.DAILY, LocalDate.parse("2026-03-01"), LocalDate.parse("2026-03-02")))
         .thenReturn(List.of(p));
 
     List<KLinePoint> result =
@@ -118,7 +122,12 @@ class MarketDataFacadeTest {
             "sh600519", KLinePeriod.DAILY, LocalDate.parse("2026-03-01"), LocalDate.parse("2026-03-02"));
 
     assertEquals(1, result.size());
-    verify(primaryProvider, never()).getKLine("sh600519", KLinePeriod.DAILY, LocalDate.parse("2026-03-01"), LocalDate.parse("2026-03-02"));
+    verify(primaryProvider, never())
+        .getKLine(
+            "sh600519",
+            KLinePeriod.DAILY,
+            LocalDate.parse("2026-03-01"),
+            LocalDate.parse("2026-03-02"));
   }
 
   @Test

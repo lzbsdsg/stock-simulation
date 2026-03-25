@@ -12,6 +12,19 @@ function normalizeCode(stockCode: string): string {
   return stockCode.trim().toLowerCase()
 }
 
+function resolveRangeDays(period: KLinePeriod, rangeDays?: number): number {
+  if (rangeDays && rangeDays > 0) {
+    return rangeDays
+  }
+  if (period === 'MONTHLY') {
+    return 365 * 5
+  }
+  if (period === 'WEEKLY') {
+    return 365 * 3
+  }
+  return 365
+}
+
 export const useMarketStore = defineStore('market', () => {
   const quoteMap = ref<Record<string, Quote>>({})
   const watchCodes = ref<string[]>([...DEFAULT_CODES])
@@ -79,13 +92,18 @@ export const useMarketStore = defineStore('market', () => {
     upsertQuote(quote)
   }
 
-  async function loadKLine(stockCode: string, period = selectedPeriod.value): Promise<void> {
+  async function loadKLine(
+    stockCode: string,
+    period = selectedPeriod.value,
+    rangeDays?: number,
+  ): Promise<void> {
     loadingKLine.value = true
     selectedPeriod.value = period
 
     try {
+      const effectiveRangeDays = resolveRangeDays(period, rangeDays)
       const to = dayjs().format('YYYY-MM-DD')
-      const from = dayjs().subtract(180, 'day').format('YYYY-MM-DD')
+      const from = dayjs().subtract(effectiveRangeDays, 'day').format('YYYY-MM-DD')
       klinePoints.value = await marketApi.getKLine(normalizeCode(stockCode), period, from, to)
     } finally {
       loadingKLine.value = false
