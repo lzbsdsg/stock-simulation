@@ -6,6 +6,7 @@ import com.lzbsdsg.stocksimulation.trade.domain.entity.OrderSide;
 import com.lzbsdsg.stocksimulation.trade.domain.entity.Trade;
 import com.lzbsdsg.stocksimulation.trade.domain.repository.TradeRepository;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 @RequiredArgsConstructor
 public class TradeRepositoryImpl implements TradeRepository {
+
+  private static final ZoneId ZONE_SHANGHAI = ZoneId.of("Asia/Shanghai");
 
   private final TradeMapper tradeMapper;
 
@@ -56,7 +59,10 @@ public class TradeRepositoryImpl implements TradeRepository {
         tradeMapper.selectList(
             new LambdaQueryWrapper<TradeDO>()
                 .eq(TradeDO::getUserId, userId)
-                .between(TradeDO::getTradedAt, from, to));
+                .between(
+                    TradeDO::getTradedAt,
+                    from.atZone(ZONE_SHANGHAI).toOffsetDateTime(),
+                    to.atZone(ZONE_SHANGHAI).toOffsetDateTime()));
     return list.stream().map(this::toDomain).collect(Collectors.toList());
   }
 
@@ -74,7 +80,10 @@ public class TradeRepositoryImpl implements TradeRepository {
     t.setTradeQuantity(d.getTradeQuantity());
     t.setTradeAmount(d.getTradeAmount());
     t.setCommission(d.getCommission());
-    t.setTradedAt(d.getTradedAt());
+    t.setTradedAt(
+        d.getTradedAt() == null
+            ? null
+            : d.getTradedAt().atZoneSameInstant(ZONE_SHANGHAI).toLocalDateTime());
     return t;
   }
 
@@ -90,7 +99,8 @@ public class TradeRepositoryImpl implements TradeRepository {
     d.setTradeQuantity(t.getTradeQuantity());
     d.setTradeAmount(t.getTradeAmount());
     d.setCommission(t.getCommission());
-    d.setTradedAt(t.getTradedAt());
+    d.setTradedAt(
+        t.getTradedAt() == null ? null : t.getTradedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
     return d;
   }
 }

@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import lombok.Data;
 
 /** 成交记录 DO */
@@ -34,7 +34,7 @@ public class TradeDO {
 
   private BigDecimal commission;
 
-  private LocalDateTime tradedAt;
+  private OffsetDateTime tradedAt;
 
-  private LocalDateTime createdAt;
+  private OffsetDateTime createdAt;
 }
