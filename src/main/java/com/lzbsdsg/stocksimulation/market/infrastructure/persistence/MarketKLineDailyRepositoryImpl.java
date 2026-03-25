@@ -43,6 +43,11 @@ public class MarketKLineDailyRepositoryImpl implements MarketKLineDailyRepositor
     marketKLineDailyMapper.upsertBatch(rows);
   }
 
+  @Override
+  public void deleteOlderThan(String stockCode, LocalDate cutoffDateInclusive) {
+    marketKLineDailyMapper.deleteOlderThan(stockCode, cutoffDateInclusive);
+  }
+
   private KLinePoint toDomain(MarketKLineDailyDO data) {
     KLinePoint point = new KLinePoint();
     point.setDate(data.getTradeDate());

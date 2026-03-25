@@ -219,6 +219,8 @@ Week 20  ████ Beta 发布 + 文档收尾
 
 **目标**：接入外部行情数据源 + 多级缓存(L1 Caffeine + L2 Redis)
 
+> 设计更新（2026-03-25）：行情快照继续走多级缓存；历史K线改为“真实日K按需增量入库（PostgreSQL）”，不再使用 Redis K线缓存。
+
 **Flyway 迁移**：
 - [x] `V20260213_003__create_stock_info_table.sql` → t_market_stock_info（建表）
 - [x] `V20260324_004__seed_market_stock_info.sql` → 首批样例种子（幂等 upsert）
@@ -809,7 +811,7 @@ Week 20  ████ Beta 发布 + 文档收尾
 | Market | 股票搜索(Caffeine内存搜索) | **P0** | — |
 | Market | 实时行情(多级缓存L1+L2) | **P0** | L1 TTL=3s |
 | Market | 行情Pub/Sub扇出 | **P0** | 多实例同步 |
-| Market | K 线图(Redis L2缓存) | **P0** | — |
+| Market | 历史K线（真实日K按需增量入库） | **P0** | 同股同日最多一次同步，保留近3年 |
 | Market | WebSocket推送(背压控制) | **P0** | 10000连接/实例 |
 | Trade | 限价委托买入(短事务<50ms) | **P0** | 幂等+行级锁 |
 | Trade | 限价委托卖出 | **P0** | T+1+FOR UPDATE |
@@ -881,7 +883,7 @@ Week 20  ████ Beta 发布 + 文档收尾
 | 3 | 消息通知模块 | 不推送成交通知 |
 | 4 | 收益曲线 | 仅保留资产数值 |
 | 5 | 自选股模块 | MVP 不含自选 |
-| 6 | K 线周K/月K | 仅保留日K |
+| 6 | K 线周K/月K | 由日K聚合，若进度受限可降级为仅日K |
 | 7 | 管理后台 | 直接操作数据库 |
 | 8 | 完整压测(5场景) | 仅保留轻量压测(50VU) |
 | 9 | Loki/Tempo 日志追踪 | 仅保留 Prometheus+Grafana |

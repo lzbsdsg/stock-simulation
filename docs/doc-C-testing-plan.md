@@ -445,7 +445,13 @@ void should_cache_quote_with_ttl()
 void should_return_null_after_ttl_expires()
 
 @Test
-void should_cache_kline_data()
+void should_persist_real_daily_kline_and_query_by_range()
+
+@Test
+void should_incrementally_sync_kline_only_when_stock_requested()
+
+@Test
+void should_keep_only_recent_three_years_kline_data()
 ```
 
 ---

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.eq;
 
 import com.lzbsdsg.stocksimulation.market.domain.entity.KLinePeriod;
 import com.lzbsdsg.stocksimulation.market.domain.entity.KLinePoint;
@@ -88,6 +89,26 @@ class HistoricalKLineServiceTest {
     assertEquals(3000L, weekly.get(0).getVolume());
     assertEquals(LocalDate.parse("2026-03-10"), weekly.get(1).getDate());
     assertEquals(new BigDecimal("13.00"), weekly.get(1).getClose());
+  }
+
+  @Test
+  void should_clamp_query_to_recent_three_years_and_cleanup_old_rows() {
+    LocalDate today = LocalDate.now(ZoneId.of("Asia/Shanghai"));
+    LocalDate lowerBound = today.minusYears(3);
+    LocalDate from = today.minusYears(6);
+    LocalDate to = today.minusDays(1);
+
+    when(marketKLineDailyRepository.findEarliestTradeDate("sh600519"))
+        .thenReturn(Optional.of(lowerBound));
+    when(marketKLineDailyRepository.findLatestTradeDate("sh600519")).thenReturn(Optional.empty());
+    when(eastMoneyKLineGateway.fetchDailyKLine("sh600519", lowerBound, to)).thenReturn(List.of());
+    when(marketKLineDailyRepository.findByStockCodeAndDateRange("sh600519", lowerBound, to))
+        .thenReturn(List.of());
+
+    historicalKLineService.getKLine("sh600519", KLinePeriod.DAILY, from, to);
+
+    verify(eastMoneyKLineGateway).fetchDailyKLine("sh600519", lowerBound, to);
+    verify(marketKLineDailyRepository).deleteOlderThan(eq("sh600519"), eq(lowerBound));
   }
 
   private KLinePoint point(

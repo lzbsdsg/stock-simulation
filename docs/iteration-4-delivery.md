@@ -1,5 +1,7 @@
 # Iteration 4 交付说明（行情模块 Market）
 
+> 说明（2026-03-25 更新）：本文档记录的是 Iteration 4 当时交付状态。当前主干已将历史K线链路重构为“真实日K按需增量入库 + 三年滚动窗口”，不再使用 Redis K线缓存与 Provider 合成K线兜底。请结合 `iteration-10-delivery.md` 与最新设计文档共同阅读。
+
 ## 1. 迭代目标
 
 基于路线图与详细设计文档，完成 Iteration 4 行情模块交付，覆盖以下能力：
@@ -20,7 +22,7 @@
 - 完成 MarketDataFacade：
   - 单只行情读取：L1/L2 命中、回源、降级
   - 批量行情读取：按股票逐只编排读取
-  - K 线读取：L2 缓存命中后直接返回，未命中回源并写缓存
+  - （历史实现）K 线读取：L2 缓存命中后直接返回，未命中回源并写缓存
   - Provider 失败链路：主源失败后自动尝试下一 Provider
   - 全部失败时：优先返回 stale 缓存，否则写空值缓存并抛业务异常
 
@@ -38,7 +40,7 @@
   - stale 缓存写入/读取（300s）
   - 空值缓存（30s）
   - 分布式加载锁（market:load:{code}, TTL=3s）
-  - K 线缓存（60s）
+  - （历史实现）K 线缓存（60s）
   - 响应头注入：X-Cache-Status = HIT-L1 / HIT-L2 / MISS / STALE
 
 - 完成 SinaMarketDataAdapter：
@@ -182,6 +184,6 @@ Authorization: Bearer ACCESS_TOKEN
 
 ## 6. 备注
 
-- K 线在第三方数据接口不可用时提供 Provider 级兜底生成，保障契约可用性与接口稳定性。
+- （历史实现，仅供追溯）当时版本在第三方接口不可用时提供 Provider 级K线兜底生成；现行主干已切换为真实日K入库策略。
 - 股票搜索依赖 t_market_stock_info 数据，默认可通过 Flyway 种子迁移自动导入全量 A 股基础股票数据。
 - 若希望进行严格端到端验收，请结合 Redis/PostgreSQL 运行环境执行上述接口与缓存行为脚本。

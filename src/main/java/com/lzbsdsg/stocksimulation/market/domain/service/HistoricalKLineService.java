@@ -29,6 +29,7 @@ public class HistoricalKLineService {
 
   private static final ZoneId ZONE_SHANGHAI = ZoneId.of("Asia/Shanghai");
   private static final String DATA_SOURCE = "EASTMONEY";
+  private static final int RETAIN_YEARS = 3;
 
   private final MarketKLineDailyRepository marketKLineDailyRepository;
   private final MarketKLineSyncStateRepository marketKLineSyncStateRepository;
@@ -41,14 +42,17 @@ public class HistoricalKLineService {
 
     String normalizedCode = normalizeStockCode(stockCode);
     LocalDate today = LocalDate.now(ZONE_SHANGHAI);
+    LocalDate lowerBound = today.minusYears(RETAIN_YEARS);
+    LocalDate boundedFrom = from.isBefore(lowerBound) ? lowerBound : from;
     LocalDate boundedTo = to.isAfter(today) ? today : to;
-    if (from.isAfter(boundedTo)) {
+    if (boundedFrom.isAfter(boundedTo)) {
       return List.of();
     }
 
-    syncDailyKLine(normalizedCode, from, boundedTo);
+    syncDailyKLine(normalizedCode, boundedFrom, boundedTo);
+    marketKLineDailyRepository.deleteOlderThan(normalizedCode, lowerBound);
     List<KLinePoint> dailyPoints =
-        marketKLineDailyRepository.findByStockCodeAndDateRange(normalizedCode, from, boundedTo);
+        marketKLineDailyRepository.findByStockCodeAndDateRange(normalizedCode, boundedFrom, boundedTo);
     if (period == KLinePeriod.DAILY) {
       return dailyPoints;
     }

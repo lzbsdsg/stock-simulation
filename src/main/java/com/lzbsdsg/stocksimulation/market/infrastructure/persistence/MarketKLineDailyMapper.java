@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Delete;
 
 /** 历史日K Mapper */
 @Mapper
@@ -94,4 +95,13 @@ public interface MarketKLineDailyMapper {
       </script>
       """)
   int upsertBatch(@Param("rows") List<MarketKLineDailyDO> rows);
+
+  @Delete(
+      """
+      DELETE FROM t_market_kline_daily
+      WHERE stock_code = #{stockCode}
+        AND trade_date < #{cutoffDateInclusive}
+      """)
+  int deleteOlderThan(
+      @Param("stockCode") String stockCode, @Param("cutoffDateInclusive") LocalDate cutoffDateInclusive);
 }

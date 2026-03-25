@@ -373,33 +373,32 @@ Query Params:
 Response 200:
 {
   "code": "000000",
-  "data": {
-    "stockCode": "sh600519",
-    "period": "daily",
-    "points": [
-      {
-        "date": "2026-02-12",
-        "open": 1670.00,
-        "close": 1675.50,
-        "high": 1682.00,
-        "low": 1665.00,
-        "volume": 1823400,
-        "amount": 3045670000.00
-      },
-      ...
-    ]
-  }
+  "data": [
+    {
+      "date": "2026-02-12",
+      "open": 1670.00,
+      "close": 1675.50,
+      "high": 1682.00,
+      "low": 1665.00,
+      "volume": 1823400,
+      "amount": 3045670000.00
+    },
+    ...
+  ]
 }
 
 Response Headers:
-  X-Cache-Status: HIT-L2
+  X-Cache-Status: MISS
 
 Error Codes:
 - MARKET_STOCK_NOT_FOUND: 股票代码不存在
 - MARKET_KLINE_DATE_INVALID: 日期范围不合法
 
-缓存路径:
-  Redis L2 TTL=60s → Provider回源
+实现说明:
+  历史日K使用真实数据按需同步并写入 PostgreSQL；
+  同一股票同一自然日最多同步一次；
+  仅保留最近3年数据；
+  周K/月K由日K聚合生成。
 ```
 
 ---

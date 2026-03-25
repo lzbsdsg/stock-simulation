@@ -13,7 +13,7 @@
 | 主数据源 | 新浪财经 HTTP API |
 | 备用数据源 | 腾讯财经 HTTP API |
 | 快照缓存 TTL | 5s |
-| K线缓存 TTL | 60s |
+| 历史K线策略 | 真实日K按需增量入库（PostgreSQL），同股同日最多一次同步，保留近3年 |
 | 节流窗口 | 同一股票 3s 内去重 |
 | 批量上限 | 一次最多 50 只 |
 | 降级策略 | 主源失败 → 备源 → 最近缓存 → 错误码 |
@@ -31,13 +31,14 @@
    - `TencentMarketDataAdapter` — 腾讯实现
    - `MockMarketDataAdapter` — 本地Mock
    - `MarketDataFacade` — 缓存 + 降级 + 节流编排
-   - `MarketCacheGateway` — Redis缓存读写
+   - `MarketCacheGateway` — 行情快照缓存读写
+   - `HistoricalKLineService` — 历史K线按需增量同步与周/月聚合
    - `MarketWebSocketHandler` — WS推送
    - `QuoteSnapshot` / `KLinePoint` — 领域值对象
 4. **API 契约** — GET /market/quote/{code}, GET /market/quotes?codes=, GET /market/kline/{code}, WS /ws/market
 5. **Flyway SQL** — `t_market_stock_info`（股票基础信息表）
-6. **事务与一致性** — 缓存一致性（TTL兜底）、降级状态机
-7. **测试策略** — Mock Provider返回、缓存命中/穿透、降级切换、WS推送
+6. **事务与一致性** — 快照缓存一致性（TTL兜底）、历史K线按需增量一致性
+7. **测试策略** — Mock Provider返回、缓存命中/穿透、历史K线增量同步、降级切换、WS推送
 
 ---
 

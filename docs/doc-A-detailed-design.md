@@ -51,6 +51,7 @@
 | 13 | WebSocket 单实例连接上限 10000，超限拒绝新连接 |
 | 14 | 峰值下单 TPS 目标 ≥ 3000，通过行级锁(非表锁)保证不同用户完全并行 |
 | 15 | 头像上传采用本地存储（默认目录 `uploads/avatars/{yyyyMM}/`），数据库仅保存 `avatar_url`；默认大小限制 2MB，格式限制 jpg/jpeg/png/webp/gif |
+| 16 | 历史K线采用真实日K按需入库策略：仅在访问该股票详情时触发增量同步，同一股票同一天最多同步一次，仅保留最近3年数据 |
 
 ---
 
@@ -134,6 +135,21 @@
 → 回源 → 主Provider(Sina) → 成功写L1+L2 → 返回
 → 主Provider失败 → 断路器检查 → 备Provider(Tencent) → 成功写缓存返回
 → 全部失败 → 返回Redis stale缓存(标记stale) 或 错误码
+```
+
+#### 历史K线获取流程（真实日K + 按需增量）
+
+```
+前端请求 /market/kline/{code}?period&from&to
+→ Controller → MarketDataFacade → HistoricalKLineService
+→ 归一化代码 + 区间裁剪(最多最近3年, to<=today)
+→ 检查该股票日K存量:
+   - 首次访问: 拉取该区间真实日K并 upsert 入库
+   - 非首次访问: 仅补 latest+1 到 to 的增量区间
+→ 若 to=today: 检查同步状态表，确保同一股票同一自然日最多同步一次
+→ 清理3年窗口外历史数据
+→ period=DAILY 直接返回日K
+→ period=WEEKLY/MONTHLY 基于日K聚合后返回
 ```
 
 #### 买入下单流程（高并发优化路径）

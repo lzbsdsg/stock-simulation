@@ -302,11 +302,18 @@ public interface UserConverter {
 | `jwt:blacklist:{jti}` | String (1) | = access TTL 剩余 | JWT黑名单 |
 | `jwt:refresh:{userId}` | String (tokenHash) | 7d | Refresh Token追踪 |
 | `market:quote:{code}` | String (JSON) | 5s + random | 行情快照缓存 |
-| `market:kline:{code}:{period}:{date}` | String (JSON) | 60s | K线缓存 |
+| `market:kline:*` | — | — | 已废弃（历史K线改为 PostgreSQL 持久化） |
 | `market:throttle:{code}` | String (1) | 3s | 节流标记 |
 | `trade:idempotent:{clientOrderId}` | String (1) | 300s | 下单幂等键 |
 | `rate:user:{userId}:{endpoint}` | String (counter) | 60s | 接口限流计数 |
 | `login:fail:{email}` | String (counter) | 1800s | 登录失败计数 |
+
+**历史K线数据存储（2026-03-25 起）**：
+
+| 表名 | 关键字段 | 用途 |
+|---|---|---|
+| `t_market_kline_daily` | `(stock_code, trade_date)` 唯一键 | 存储真实日K，按需增量 upsert |
+| `t_market_kline_sync_state` | `stock_code, last_sync_date, last_bar_date` | 控制“同一股票同一天最多同步一次” |
 
 ---
 

@@ -88,7 +88,7 @@ com.lzbsdsg.stocksimulation
 | 规则 | 说明 |
 |---|---|
 | **L1 = Caffeine (JVM 本地)** | 行情快照 TTL=3s max=5000；股票列表 TTL=5min；配置 TTL=10min |
-| **L2 = Redis Cluster** | 行情快照 TTL=5s+随机偏移(0~500ms)防雪崩；K线 TTL=60s |
+| **L2 = Redis Cluster** | 行情快照 TTL=5s+随机偏移(0~500ms)防雪崩；历史K线不走 Redis 缓存 |
 | **读路径** | L1 → L2 → Provider回源；L2 命中时回填 L1 |
 | **写路径** | 先写 L2，再通过 Redis Pub/Sub 通知所有实例更新 L1 |
 | **缓存失效** | Redis Pub/Sub `cache:invalidate:{region}` 通知所有实例删除 L1 |
@@ -245,7 +245,8 @@ public interface MarketDataProvider {
 ### 5.3 多级缓存与降级
 
 - **L1 缓存**：Caffeine JVM 本地，行情快照 TTL=3s max=5000，K 线不进 L1。
-- **L2 缓存**：Redis Cluster，行情快照 TTL=5s+random(0,500ms)，K 线 TTL=60s。
+- **L2 缓存**：Redis Cluster，行情快照 TTL=5s+random(0,500ms)，历史K线不进 Redis。
+- **历史K线**：真实日K按需增量入 PostgreSQL，同一股票同一自然日最多同步一次，仅保留最近3年。
 - **读路径**：L1 → L2 → Provider 回源；L2 命中时回填 L1。
 - **节流**：同一股票 3s 内重复回源请求，分布式锁排队，仅单实例回源。
 - **批量**：前端自选股列表用 `batchGetQuotes`，一次请求最多 50 只。

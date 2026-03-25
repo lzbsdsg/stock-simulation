@@ -138,7 +138,7 @@ export const useMarketStore = defineStore('market', () => {
     await loadWatchQuotes()
 
     if (selectedCode.value) {
-      await Promise.all([loadQuote(selectedCode.value), loadKLine(selectedCode.value)])
+      await loadQuote(selectedCode.value)
     }
   }
 
