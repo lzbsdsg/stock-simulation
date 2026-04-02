@@ -501,6 +501,165 @@ a {
   color: var(--text-subtle);
 }
 
+.notification-bell {
+  font-weight: 700;
+}
+
+.notification-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.notification-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.notification-item {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.notification-item.unread {
+  background: #f5f9ff;
+}
+
+.notification-title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.notification-title-row small {
+  color: var(--text-subtle);
+}
+
+.notification-item p {
+  margin: 0;
+  color: var(--text-subtle);
+  line-height: 1.5;
+}
+
+.trade-page,
+.portfolio-page,
+.watchlist-page {
+  display: grid;
+  gap: 14px;
+}
+
+.trade-header,
+.portfolio-header,
+.watchlist-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.trade-header h1,
+.portfolio-header h1,
+.watchlist-header h1 {
+  margin: 0;
+  font-size: 30px;
+}
+
+.trade-header p,
+.portfolio-header p,
+.watchlist-header p {
+  margin: 8px 0 0;
+  color: var(--text-subtle);
+}
+
+.trade-panel,
+.order-list-panel,
+.trade-history-panel,
+.position-panel,
+.equity-curve-panel,
+.fund-flow-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.trade-panel h3,
+.order-list-panel h3,
+.trade-history-panel h3,
+.position-panel h3,
+.equity-curve-panel h3,
+.fund-flow-panel h3 {
+  margin: 0;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.trade-form {
+  max-width: 460px;
+}
+
+.detail-trade-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.portfolio-overview-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.curve-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.equity-chart {
+  height: 380px;
+}
+
+.chart-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-subtle);
+}
+
+.watchlist-add-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+.drag-row {
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 6px 8px;
+  color: var(--text-subtle);
+  font-size: 12px;
+}
+
 @keyframes float {
   0%,
   100% {
@@ -550,6 +709,23 @@ a {
   }
 
   .stock-search {
+    grid-template-columns: 1fr;
+  }
+
+  .trade-header,
+  .portfolio-header,
+  .watchlist-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .trade-header h1,
+  .portfolio-header h1,
+  .watchlist-header h1 {
+    font-size: 26px;
+  }
+
+  .watchlist-add-row {
     grid-template-columns: 1fr;
   }
 

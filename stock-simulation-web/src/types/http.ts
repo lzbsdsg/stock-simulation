@@ -14,6 +14,13 @@ export interface ApiResponse<T> {
   timestamp?: string
 }
 
+export interface PageResult<T> {
+  records: T[]
+  total: number
+  page: number
+  size: number
+}
+
 export class ApiRequestError extends Error {
   code: number
   httpStatus: number

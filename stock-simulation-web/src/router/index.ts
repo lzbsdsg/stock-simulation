@@ -49,6 +49,21 @@ const router = createRouter({
           component: () => import('@/pages/market/StockDetailPage.vue'),
           props: true,
         },
+        {
+          path: 'trade',
+          name: 'trade',
+          component: () => import('@/pages/trade/TradePage.vue'),
+        },
+        {
+          path: 'portfolio',
+          name: 'portfolio',
+          component: () => import('@/pages/portfolio/PortfolioPage.vue'),
+        },
+        {
+          path: 'watchlist',
+          name: 'watchlist',
+          component: () => import('@/pages/watchlist/WatchlistPage.vue'),
+        },
       ],
     },
     {

@@ -3,17 +3,23 @@ import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMarketStore } from '@/stores/market'
 import { useAppStore } from '@/stores/app'
-import { formatPercent } from '@/utils/format'
+import { usePortfolioStore } from '@/stores/portfolio'
+import { formatPercent, formatPrice, percentClass } from '@/utils/format'
 
 const router = useRouter()
 const marketStore = useMarketStore()
 const appStore = useAppStore()
+const portfolioStore = usePortfolioStore()
 
 onMounted(async () => {
   if (marketStore.watchQuotes.length === 0) {
     await marketStore.initializeMarket()
   } else {
     marketStore.connectRealtime()
+  }
+
+  if (!portfolioStore.overview) {
+    await portfolioStore.loadOverview()
   }
 })
 
@@ -51,6 +57,16 @@ function openMarket() {
                 Math.max(1, marketStore.watchQuotes.length),
             )
           }}
+        </strong>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">资产总额</span>
+        <strong>{{ formatPrice(portfolioStore.overview?.totalAssets) }}</strong>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">今日盈亏率</span>
+        <strong :class="percentClass(portfolioStore.overview?.todayProfitRate)">
+          {{ formatPercent(portfolioStore.overview?.todayProfitRate) }}
         </strong>
       </article>
     </div>

@@ -4,7 +4,11 @@ import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import KLineChart from '@/components/market/KLineChart.vue'
 import QuoteCard from '@/components/market/QuoteCard.vue'
+import OrderForm from '@/components/trade/OrderForm.vue'
+import OrderList from '@/components/trade/OrderList.vue'
+import TradeHistory from '@/components/trade/TradeHistory.vue'
 import { useMarketStore } from '@/stores/market'
+import { useTradeStore } from '@/stores/trade'
 import type { KLinePeriod } from '@/types/market'
 
 type RangePreset = '3M' | '6M' | '1Y' | '3Y'
@@ -18,6 +22,7 @@ const RANGE_DAYS_MAP: Record<RangePreset, number> = {
 
 const route = useRoute()
 const marketStore = useMarketStore()
+const tradeStore = useTradeStore()
 const period = ref<KLinePeriod>('DAILY')
 const rangePreset = ref<RangePreset>('1Y')
 
@@ -60,8 +65,12 @@ watch(
 
 onMounted(async () => {
   marketStore.connectRealtime()
-  await loadDetail(stockCode.value)
+  await Promise.all([loadDetail(stockCode.value), tradeStore.loadOrders(), tradeStore.loadTrades()])
 })
+
+async function refreshTradePanels(): Promise<void> {
+  await Promise.all([tradeStore.loadOrders(), tradeStore.loadTrades()])
+}
 </script>
 
 <template>
@@ -115,9 +124,10 @@ onMounted(async () => {
       />
     </section>
 
-    <section class="detail-placeholder">
-      <h2>交易面板（下一迭代）</h2>
-      <p>本迭代聚焦认证与行情能力，交易下单面板将在后续迭代接入。</p>
+    <section class="detail-trade-grid">
+      <OrderForm :stock-code="stockCode" @placed="refreshTradePanels" />
+      <OrderList />
+      <TradeHistory />
     </section>
   </section>
 </template>

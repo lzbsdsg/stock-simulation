@@ -529,17 +529,17 @@ Week 20  ████ Beta 发布 + 文档收尾
 **目标**：完成交易页面 + 持仓页面 + 资产总览
 
 **前端任务**：
-- [ ] **Trade Components**: OrderForm（买入/卖出表单）, OrderList, TradeHistory
-- [ ] **Trade Page**: TradePage（交易面板 + 委托列表 + 成交记录）
-- [ ] **Trade Store**: useTradeStore（placeOrder/cancelOrder/orders/trades）
-- [ ] **Portfolio Components**: AssetOverview, PositionTable, EquityCurve, FundFlowTable
-- [ ] **Portfolio Page**: PortfolioPage（资产总览 + 持仓 + 收益曲线 + 流水）
-- [ ] **Portfolio Store**: usePortfolioStore（overview/positions/fundFlows）
-- [ ] **Dashboard**: DashboardPage（资产总览卡片 + 自选股简要行情）
-- [ ] 交易表单校验（100股整数倍、价格范围）
-- [ ] 金额格式化（千分位、颜色标记红涨绿跌）
-- [ ] 幂等处理: 下单按钮防重复点击 + clientOrderId UUID
-- [ ] 成交 WS 通知: 订阅 `/user/queue/trade-notify` → Toast 弹窗
+- [x] **Trade Components**: OrderForm（买入/卖出表单）, OrderList, TradeHistory
+- [x] **Trade Page**: TradePage（交易面板 + 委托列表 + 成交记录）
+- [x] **Trade Store**: useTradeStore（placeOrder/cancelOrder/orders/trades）
+- [x] **Portfolio Components**: AssetOverview, PositionTable, EquityCurve, FundFlowTable
+- [x] **Portfolio Page**: PortfolioPage（资产总览 + 持仓 + 收益曲线 + 流水）
+- [x] **Portfolio Store**: usePortfolioStore（overview/positions/fundFlows）
+- [x] **Dashboard**: DashboardPage（资产总览卡片 + 自选股简要行情）
+- [x] 交易表单校验（100股整数倍、价格范围）
+- [x] 金额格式化（颜色标记红涨绿跌）
+- [x] 幂等处理: 下单按钮防重复点击 + clientOrderId UUID
+- [x] 成交 WS 通知: 订阅 `/user/queue/notification` → Toast 弹窗
 
 **验收标准**：
 - 可在 StockDetailPage 直接下单
@@ -556,22 +556,22 @@ Week 20  ████ Beta 发布 + 文档收尾
 **目标**：完善实时推送、自选股管理、站内消息通知
 
 **Flyway 迁移**：
-- [ ] `V20260213_006__create_watchlist_table.sql` → t_watchlist_item
-- [ ] `V20260213_007__create_notification_table.sql` → t_notification_message
+- [x] `V20260213_006__create_watchlist_table.sql` → t_watchlist_item
+- [x] `V20260213_007__create_notification_table.sql` → t_notification_message
 
 **后端任务**：
-- [ ] **Watchlist**: WatchlistController + WatchlistApplicationService + WatchlistRepository
-- [ ] **Notification**: NotificationController + NotificationApplicationService
-- [ ] **Notification MQ**: TradePushConsumer — 消费 `trade.filled` 事件 → 写站内信 + WS推送
-- [ ] WebSocket 用户私有频道（`/user/queue/notification`）
-- [ ] 行情推送优化：仅推送用户已订阅的自选股（过滤后推送）
+- [x] **Watchlist**: WatchlistController + WatchlistApplicationService + WatchlistRepository
+- [x] **Notification**: NotificationController + NotificationApplicationService
+- [x] **Notification MQ**: TradePushConsumer — 消费 `trade.filled` 事件 → 写站内信 + WS推送
+- [x] WebSocket 用户私有频道（`/user/queue/notification`）
+- [x] 行情推送优化：仅推送用户已订阅的自选股（过滤后推送）
 
 **前端任务**：
-- [ ] **Watchlist Page**: 自选股列表 + 添加/删除 + 拖拽排序
-- [ ] **Watchlist Store**: useWatchlistStore
-- [ ] **Notification**: 右上角消息铃铛 + 未读计数 + 下拉列表
-- [ ] 成交通知 Toast 弹窗
-- [ ] WS 订阅 `/user/queue/notification`
+- [x] **Watchlist Page**: 自选股列表 + 添加/删除 + 拖拽排序
+- [x] **Watchlist Store**: useWatchlistStore
+- [x] **Notification**: 右上角消息铃铛 + 未读计数 + 下拉列表
+- [x] 成交通知 Toast 弹窗
+- [x] WS 订阅 `/user/queue/notification`
 
 **验收标准**：
 - 可添加/删除自选股（最多50只）
