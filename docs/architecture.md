@@ -188,6 +188,59 @@
 - WebSocket 连接上限：单实例 ≤ 10000 连接，超限拒绝新连接并返回 503
 - 推送背压：消息队列满时丢弃旧消息（行情数据非关键，允许丢失）
 
+### 3.2.1 可见股票集合驱动的实时调度（2026-04 更新）
+
+为保障高并发长尾访问场景下的实时性，行情抓取从“固定股票池”升级为“前端可见集合驱动”。
+
+```
+前端页面可见股票（列表/详情/自选）
+   -> POST /api/v1/market/visible-codes (1.5s 心跳)
+   -> Redis ZSet: market:active:quotes (score=lastSeenTs)
+   -> MarketIngestService 每 1s 执行：
+      1) active-window 内活跃股票优先批量拉取
+      2) round-robin 全市场轮巡补齐，避免冷门股票长期不更新
+   -> 写 L2 + 广播 Pub/Sub + 各实例推送 WS
+```
+
+**调度策略**：
+- 活跃优先：默认 active-window=8s 内被上报的股票优先拉取。
+- 轮巡兜底：默认每轮补齐 100 只全市场轮巡股票，避免缓存长期冷启动。
+- 预算保护：通过 `active-batch-size` 与 `round-robin-batch-size` 控制单轮抓取上限。
+
+**默认参数**：
+- `market.ingest.pull-interval-ms=1000`
+- `market.ingest.active-window-ms=8000`
+- `market.ingest.active-batch-size=800`
+- `market.ingest.round-robin-batch-size=100`
+
+**SLO 目标（可见股票集合）**：
+- 可见股票更新周期：1~2 秒。
+- WebSocket 推送端到端延迟 P99 < 500ms。
+- 行情读接口 P95/P99: < 50ms / < 100ms。
+
+### 3.2.2 行情实时观测接口（2026-04 更新）
+
+为避免仅依赖 Prometheus 看板排障，新增业务侧直读接口：
+
+- `GET /api/v1/market/realtime-metrics`
+- 用途：一跳查询行情链路关键延迟与运行状态，便于联调、灰度和验收。
+
+**返回核心指标**：
+- 活跃池规模：`activeCodeCount`（active-window 内可见股票数）
+- 抓取状态：`lastIngestCodeCount`、`lastPublishedQuoteCount`、`lastIngestDurationMs`
+- WS 状态：`wsActiveConnections`、`wsQueuedTasks`、`wsDegradedMode`、`wsDroppedTotal`
+- 延迟分项：
+   - `ingestCycleLatency`（`market.ingest.cycle.duration`）
+   - `pubSubFanoutLatency`（`market.pubsub.fanout.delay`）
+   - `wsQueueLatency`（`market.ws.queue.delay`）
+   - `wsPushLatency`（`ws_push_duration_seconds`）
+
+**延迟字段定义**：
+- `count`：样本数
+- `meanMs`：平均耗时(ms)
+- `maxMs`：最大耗时(ms)
+- `p95Ms` / `p99Ms`：若已启用分位统计则返回，否则为 `null`
+
 ### 3.3 读写分离
 
 ```

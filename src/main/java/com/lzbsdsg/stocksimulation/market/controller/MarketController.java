@@ -1,8 +1,10 @@
 package com.lzbsdsg.stocksimulation.market.controller;
 
+import com.lzbsdsg.stocksimulation.common.annotation.RateLimit;
 import com.lzbsdsg.stocksimulation.common.result.Result;
 import com.lzbsdsg.stocksimulation.market.application.MarketApplicationService;
 import com.lzbsdsg.stocksimulation.market.application.vo.KLineVO;
+import com.lzbsdsg.stocksimulation.market.application.vo.MarketRealtimeMetricsVO;
 import com.lzbsdsg.stocksimulation.market.application.vo.QuoteVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -51,5 +53,20 @@ public class MarketController {
   @GetMapping("/search")
   public Result<List<QuoteVO>> searchStock(@RequestParam String keyword) {
     return Result.success(marketApplicationService.searchStock(keyword));
+  }
+
+  @Operation(summary = "上报当前页面可见股票集合")
+  @PostMapping("/visible-codes")
+  @RateLimit(limit = 120, window = 60, key = "market:visible-codes")
+  public Result<Void> reportVisibleCodes(@RequestBody List<String> stockCodes) {
+    marketApplicationService.reportVisibleCodes(stockCodes);
+    return Result.success(null);
+  }
+
+  @Operation(summary = "获取行情链路实时观测指标")
+  @GetMapping("/realtime-metrics")
+  @RateLimit(limit = 60, window = 60, key = "market:realtime-metrics")
+  public Result<MarketRealtimeMetricsVO> getRealtimeMetrics() {
+    return Result.success(marketApplicationService.getRealtimeMetrics());
   }
 }

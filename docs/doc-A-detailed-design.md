@@ -137,6 +137,61 @@
 → 全部失败 → 返回Redis stale缓存(标记stale) 或 错误码
 ```
 
+#### 可见股票集合驱动流程（2026-04 更新）
+
+```
+前端进入行情/自选/详情页面
+→ 计算当前可见股票集合（最多几十只）
+→ 每1.5s 调用 POST /api/v1/market/visible-codes 上报
+→ Redis ZSet 记录 stockCode 最后上报时间
+→ MarketIngestService 每1s执行抓取：
+   a. 优先抓 active-window 内活跃股票
+   b. 再抓 round-robin 全市场轮巡股票
+→ 抓取成功后写 L1/L2 + Pub/Sub 广播 + WS 推送
+→ 页面先读缓存快照，再接收增量推送
+```
+
+**设计意图**：
+- 将抓取对象从“固定少量股票”升级为“全站用户当前可见股票并集”。
+- 在用户量高、可见股票差异大时，通过股票去重与批量抓取收敛回源压力。
+- 通过轮巡补齐降低长尾股票冷启动概率。
+
+**关键参数**：
+- `market.ingest.pull-interval-ms=1000`
+- `market.ingest.active-window-ms=8000`
+- `market.ingest.active-batch-size=800`
+- `market.ingest.round-robin-batch-size=100`
+
+#### 行情链路实时观测流程（2026-04 更新）
+
+```
+客户端 / 运维脚本
+→ GET /api/v1/market/realtime-metrics
+→ MarketApplicationService 聚合：
+    a. Redis 活跃池统计（activeCodeCount）
+    b. MarketIngestService 最近一次抓取状态
+    c. MarketWebSocketHandler 连接与队列状态
+    d. Micrometer Timer 快照（ingest/pubsub/ws队列/ws发送）
+→ 返回统一 Result<T>
+```
+
+**接口契约（简化）**：
+- Path：`/api/v1/market/realtime-metrics`
+- Method：`GET`
+- 鉴权：沿用行情接口鉴权策略
+- 限流：`@RateLimit(limit=60, window=60, key="market:realtime-metrics")`
+- 响应：
+   - `activeCodeCount`
+   - `lastIngestCodeCount`
+   - `lastPublishedQuoteCount`
+   - `lastIngestDurationMs`
+   - `wsActiveConnections` / `wsQueuedTasks` / `wsDegradedMode` / `wsDroppedTotal`
+   - `ingestCycleLatency` / `pubSubFanoutLatency` / `wsQueueLatency` / `wsPushLatency`
+
+**设计意图**：
+- 让“实时性是否达标”具备单接口可观测性，减少临时查日志与多系统跳转。
+- 将链路拆分为抓取、扇出、排队、发送四段，便于快速定位瓶颈。
+
 #### 历史K线获取流程（真实日K + 按需增量）
 
 ```

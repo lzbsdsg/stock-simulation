@@ -579,6 +579,25 @@ Week 20  ████ Beta 发布 + 文档收尾
 - 下单成交后收到站内消息通知 + Toast
 - 通知可标记已读
 
+#### Iteration 12 补充（2026-04）：可见股票集合驱动实时性增强
+
+**目标**：在高并发且用户可见股票差异较大时，保障“可见股票 1~2 秒更新”。
+
+**任务**：
+- [x] 新增 `POST /api/v1/market/visible-codes`，前端按 1.5s 心跳上报可见股票。
+- [x] 新增 Redis 活跃股票池 `market:active:quotes`（ZSet, score=lastSeenTs）。
+- [x] `MarketIngestService` 从“固定前50只”改为“活跃优先 + 全市场轮巡补齐”。
+- [x] 拉取周期改为 1s（可配置），轮巡批量与活跃批量可配置。
+- [x] 文档补充可验收方案（功能、性能、延迟、切页场景）。
+- [x] 新增 `GET /api/v1/market/realtime-metrics`，聚合抓取/扇出/WS 延迟观测。
+- [x] 增加 `market.ingest.cycle.duration`、`market.pubsub.fanout.delay`、`market.ws.queue.delay` 指标埋点。
+
+**验收标准**：
+- 活跃窗口内股票推送刷新周期达到 1~2 秒。
+- 切页后 2 秒内新可见集合开始持续更新。
+- `ws_push_latency_ms` P99 < 500ms。
+- `GET /api/v1/market/realtime-metrics` 返回实时链路数据且延迟计数持续增长。
+
 ---
 
 ### Iteration 13 — Week 14：部署 — Docker集群 + Nginx LB + PG主从 + Redis Cluster

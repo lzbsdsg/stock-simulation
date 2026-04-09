@@ -194,7 +194,7 @@ cd /d d:\StockSimulation\stock-simulation
 mvnw.cmd spring-boot:run
 ```
 
-2. 前端
+1. 前端
 ```cmd
 cd /d d:\StockSimulation\stock-simulation\stock-simulation-web
 pnpm dev
@@ -215,8 +215,8 @@ pnpm dev
 ```js
 localStorage.setItem('ss_access_token', 'invalid-token')
 ```
-3. 在行情页点击“刷新行情”
-4. 预期：请求不报 401 页面错误，自动 refresh 后数据正常返回
+1. 在行情页点击“刷新行情”
+2. 预期：请求不报 401 页面错误，自动 refresh 后数据正常返回
 
 ### 6.4 行情页面与 K 线验收
 
@@ -232,13 +232,13 @@ localStorage.setItem('ss_access_token', 'invalid-token')
 curl "http://localhost:8080/api/v1/market/kline/sh600519?period=DAILY&from=2025-09-26&to=2026-03-25"
 curl "http://localhost:8080/api/v1/market/kline/sh600519?period=DAILY&from=2025-09-26&to=2026-03-25"
 ```
-2. 检查数据库：
+1. 检查数据库：
 ```sql
 SELECT stock_code, last_sync_date, last_bar_date
 FROM t_market_kline_sync_state
 WHERE stock_code = 'sh600519';
 ```
-3. 通过标准：
+1. 通过标准：
    - 第一次请求后存在同步状态记录
    - 同一天再次请求不重复触发增量同步（`last_sync_date` 不变化）
    - `t_market_kline_daily` 有对应日期范围的真实日K记录
@@ -262,7 +262,7 @@ WHERE stock_code = 'sh600519';
 cd /d d:\StockSimulation\stock-simulation
 k6 run -e BASE_URL=http://localhost:8080 -e TOKEN=<accessToken> -e VUS=100 -e DURATION=5m k6/market-load-test.js
 ```
-3. 通过标准：
+1. 通过标准：
    - `http_req_failed rate < 0.01`
    - `http_req_duration{endpoint:quote} p(99) < 200`
    - `http_req_duration{endpoint:quotes} p(99) < 220`

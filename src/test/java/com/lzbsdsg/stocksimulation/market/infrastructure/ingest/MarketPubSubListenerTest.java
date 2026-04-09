@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lzbsdsg.stocksimulation.config.CaffeineConfig;
 import com.lzbsdsg.stocksimulation.market.domain.entity.QuoteSnapshot;
 import com.lzbsdsg.stocksimulation.market.infrastructure.websocket.MarketWebSocketHandler;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -30,8 +31,9 @@ class MarketPubSubListenerTest {
     RedisTemplate<String, Object> redisTemplate = org.mockito.Mockito.mock(RedisTemplate.class);
     doReturn(serializer).when(redisTemplate).getValueSerializer();
     ObjectMapper objectMapper = new ObjectMapper();
-    MarketPubSubListener listener =
-      new MarketPubSubListener(cacheManager, websocketHandler, redisTemplate, objectMapper);
+    SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+    MarketPubSubListener listener = new MarketPubSubListener(cacheManager, websocketHandler, redisTemplate,
+        objectMapper, meterRegistry);
 
     QuoteSnapshot quote = new QuoteSnapshot();
     quote.setStockCode("sh600519");
@@ -39,8 +41,7 @@ class MarketPubSubListenerTest {
     quote.setCurrentPrice(new BigDecimal("1688.88"));
     quote.setTimestamp(LocalDateTime.now());
 
-    Message message =
-        new DefaultMessage(
+    Message message = new DefaultMessage(
         "market:quote:broadcast".getBytes(StandardCharsets.UTF_8), "payload".getBytes(StandardCharsets.UTF_8));
     when(serializer.deserialize("payload".getBytes(StandardCharsets.UTF_8))).thenReturn(quote);
 
@@ -59,12 +60,12 @@ class MarketPubSubListenerTest {
     RedisTemplate<String, Object> redisTemplate = org.mockito.Mockito.mock(RedisTemplate.class);
     doReturn(serializer).when(redisTemplate).getValueSerializer();
     ObjectMapper objectMapper = new ObjectMapper();
-    MarketPubSubListener listener =
-      new MarketPubSubListener(cacheManager, websocketHandler, redisTemplate, objectMapper);
+    SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+    MarketPubSubListener listener = new MarketPubSubListener(cacheManager, websocketHandler, redisTemplate,
+        objectMapper, meterRegistry);
 
-    Message message =
-        new DefaultMessage(
-            "market:quote:broadcast".getBytes(StandardCharsets.UTF_8), "bad-json".getBytes(StandardCharsets.UTF_8));
+    Message message = new DefaultMessage(
+        "market:quote:broadcast".getBytes(StandardCharsets.UTF_8), "bad-json".getBytes(StandardCharsets.UTF_8));
     when(serializer.deserialize("bad-json".getBytes(StandardCharsets.UTF_8)))
         .thenThrow(new RuntimeException("bad payload"));
 

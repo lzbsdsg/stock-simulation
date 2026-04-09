@@ -677,6 +677,79 @@ k6 run -e BASE_URL=http://localhost:8080 -e TOKEN=xxx k6/trade-order.js
 k6 run --out json=k6-results.json k6/trade-order.js
 ```
 
+### 3.5 可见股票集合实时性专项验证（2026-04）
+
+#### 3.5.1 功能验证（可见集合上报）
+
+```cmd
+curl -X POST "http://localhost:8080/api/v1/market/visible-codes" ^
+  -H "Authorization: Bearer <TOKEN>" ^
+  -H "Content-Type: application/json" ^
+  -d "[\"sh600519\",\"sz000001\",\"sh601318\"]"
+```
+
+通过标准：
+- 返回 `code=200`。
+- 1~2 秒内，以上股票可在 WS 订阅端收到更新。
+
+#### 3.5.2 Redis 活跃池验证
+
+```cmd
+redis-cli ZREVRANGEBYSCORE market:active:quotes +inf -inf WITHSCORES LIMIT 0 20
+```
+
+通过标准：
+- 可看到刚上报的股票代码。
+- score 时间戳持续更新（心跳生效）。
+
+#### 3.5.3 端到端实时性与延迟验证
+
+使用现有脚本：
+
+```cmd
+k6 run -e WS_URL=ws://localhost:8080/ws/market/websocket -e WS_TOKEN=<TOKEN> -e TARGET_CODE=sh600519 k6/websocket-load-test.js
+```
+
+通过标准：
+- `ws_push_latency_ms p(99) < 500`
+- `ws_latency_samples_total > 0`
+
+#### 3.5.4 可见集合切页场景验证
+
+步骤：
+1. 页面A上报股票集合A。
+2. 页面B切换后上报股票集合B。
+3. 观察 2 秒内 WS 推送从A集合切换为B集合。
+
+通过标准：
+- 切页后 2 秒内可见股票收到推送。
+- 非可见集合推送明显下降（无持续无效推送）。
+
+#### 3.5.5 性能目标（可见集合）
+
+- 可见股票更新周期：1~2 秒。
+- 行情接口 P95 < 50ms，P99 < 100ms。
+- WS 推送延迟 P99 < 500ms。
+
+#### 3.5.6 实时观测接口验证（新增）
+
+```cmd
+curl "http://localhost:8080/api/v1/market/realtime-metrics" ^
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+通过标准：
+- 返回 `code=200`，且 `data` 字段完整。
+- `activeCodeCount > 0`（已存在可见集合上报时）。
+- `lastIngestCodeCount >= lastPublishedQuoteCount`。
+- `ingestCycleLatency.count > 0`、`wsPushLatency.count > 0`。
+- 压测期间 `wsQueuedTasks` 不持续线性增长（否则视为背压风险）。
+
+建议观测阈值：
+- `ingestCycleLatency.meanMs < 1000`
+- `pubSubFanoutLatency.p99Ms < 200`（若有分位统计）
+- `wsQueueLatency.p99Ms < 500`（若有分位统计）
+
 ---
 
 ## 四、安全测试方案

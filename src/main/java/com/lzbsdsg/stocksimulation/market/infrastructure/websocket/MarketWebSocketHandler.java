@@ -17,13 +17,15 @@ import org.springframework.stereotype.Component;
 /**
  * 行情 WebSocket 推送处理器
  *
- * <p>通过 STOMP 将实时行情推送给前端订阅者。 频道示例: /topic/market/quote/sh600519
+ * <p>
+ * 通过 STOMP 将实时行情推送给前端订阅者。 频道示例: /topic/market/quote/sh600519
  */
 @Slf4j
 @Component
 public class MarketWebSocketHandler {
 
   private static final String QUOTE_TOPIC_PREFIX = "/topic/market/quote/";
+  private static final String WS_QUEUE_DELAY_TIMER_METRIC = "market.ws.queue.delay";
 
   private final SimpMessagingTemplate messagingTemplate;
   private final ObjectMapper objectMapper;
@@ -38,6 +40,7 @@ public class MarketWebSocketHandler {
   private final Object queueLock = new Object();
 
   private final Counter wsPushDroppedCounter;
+  private final Timer wsQueueDelayTimer;
   private final Timer wsPushDurationTimer;
 
   private volatile long lastPushAtMs;
@@ -62,6 +65,9 @@ public class MarketWebSocketHandler {
     this.degradedPushIntervalMs = degradedPushIntervalMs;
     this.degradeLagThresholdMs = degradeLagThresholdMs;
     this.wsPushDroppedCounter = meterRegistry.counter("ws_push_dropped_total");
+    this.wsQueueDelayTimer = Timer.builder(WS_QUEUE_DELAY_TIMER_METRIC)
+        .description("Queue waiting delay before websocket send")
+        .register(meterRegistry);
     this.wsPushDurationTimer = meterRegistry.timer("ws_push_duration_seconds");
   }
 
@@ -130,6 +136,8 @@ public class MarketWebSocketHandler {
     PushTask taskToSend = nextTask;
     String destination = QUOTE_TOPIC_PREFIX + taskToSend.stockCode();
     Object payloadToSend = enrichPayloadWithLatency(taskToSend.payload());
+    long queueDelayMs = Math.max(now - taskToSend.enqueuedAtMs(), 0L);
+    wsQueueDelayTimer.record(queueDelayMs, java.util.concurrent.TimeUnit.MILLISECONDS);
     wsPushDurationTimer.record(() -> messagingTemplate.convertAndSend(destination, payloadToSend));
     log.debug("Pushed quote for {} to {}", taskToSend.stockCode(), destination);
   }
@@ -139,18 +147,22 @@ public class MarketWebSocketHandler {
     messagingTemplate.convertAndSendToUser(userId, destination, payload);
   }
 
-  int getActiveConnectionCount() {
+  public int getActiveConnectionCount() {
     return sessionRegistry.getActiveConnectionCount();
   }
 
-  int getQueuedTaskCount() {
+  public int getQueuedTaskCount() {
     synchronized (queueLock) {
       return pushQueue.size();
     }
   }
 
-  boolean isDegradedMode() {
+  public boolean isDegradedMode() {
     return System.currentTimeMillis() < degradedUntilMs;
+  }
+
+  public double getDroppedTotal() {
+    return wsPushDroppedCounter.count();
   }
 
   private int currentPushIntervalMs(long nowMs) {
@@ -180,5 +192,6 @@ public class MarketWebSocketHandler {
     return sessionRegistry.snapshotUserSessions();
   }
 
-  private record PushTask(String stockCode, Object payload, long enqueuedAtMs) {}
+  private record PushTask(String stockCode, Object payload, long enqueuedAtMs) {
+  }
 }

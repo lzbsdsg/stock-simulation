@@ -84,8 +84,8 @@ mybatis-plus:
 # ---- JWT ----
 jwt:
   secret: ${JWT_SECRET}
-  access-token-expiration: 28800000    # 8 小时 (ms)
-  refresh-token-expiration: 604800000  # 7 天 (ms)
+  access-token-expiration: 28800000 # 8 小时 (ms)
+  refresh-token-expiration: 604800000 # 7 天 (ms)
 
 # ---- 交易规则 ----
 trade:
@@ -111,12 +111,18 @@ market:
     # 东方财富历史K线复权模式: 0=不复权, 1=前复权, 2=后复权
     fqt: ${MARKET_KLINE_FQT:1}
   ingest:
+    pull-interval-ms: ${MARKET_INGEST_PULL_INTERVAL_MS:1000}
+    renew-interval-ms: ${MARKET_INGEST_RENEW_INTERVAL_MS:3000}
+    active-window-ms: ${MARKET_INGEST_ACTIVE_WINDOW_MS:8000}
+    active-batch-size: ${MARKET_INGEST_ACTIVE_BATCH_SIZE:800}
+    round-robin-batch-size: ${MARKET_INGEST_ROUND_ROBIN_BATCH_SIZE:100}
+    stock-universe-refresh-ms: ${MARKET_INGEST_STOCK_UNIVERSE_REFRESH_MS:300000}
     latency-sample-enabled: ${MARKET_INGEST_LATENCY_SAMPLE_ENABLED:false}
   websocket:
     max-connections: ${MARKET_WS_MAX_CONNECTIONS:10000}
     backpressure-queue-depth: ${MARKET_WS_BACKPRESSURE_QUEUE_DEPTH:100}
     payload-bytes-limit: ${MARKET_WS_PAYLOAD_BYTES_LIMIT:65536}
-    push-interval-ms: ${MARKET_WS_PUSH_INTERVAL_MS:3000}
+    push-interval-ms: ${MARKET_WS_PUSH_INTERVAL_MS:1000}
     degraded-push-interval-ms: ${MARKET_WS_DEGRADED_PUSH_INTERVAL_MS:10000}
     degrade-lag-threshold-ms: ${MARKET_WS_DEGRADE_LAG_THRESHOLD_MS:5000}
     dispatch-interval-ms: ${MARKET_WS_DISPATCH_INTERVAL_MS:500}

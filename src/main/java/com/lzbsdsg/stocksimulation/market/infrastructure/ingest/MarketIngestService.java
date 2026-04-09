@@ -5,10 +5,18 @@ import com.lzbsdsg.stocksimulation.market.domain.entity.StockInfo;
 import com.lzbsdsg.stocksimulation.market.domain.gateway.MarketDataProvider;
 import com.lzbsdsg.stocksimulation.market.domain.repository.StockInfoRepository;
 import com.lzbsdsg.stocksimulation.market.infrastructure.gateway.MarketCacheGateway;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import jakarta.annotation.PostConstruct;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,11 +27,15 @@ import org.springframework.stereotype.Service;
 /**
  * 行情拉取主节点服务（分布式锁选主）。
  *
- * <p>核心机制： - Redis 分布式锁 key: market:ingest:leader, TTL=10s + 定时续期 - 仅持锁实例定时拉取行情（3s/次, @Scheduled） -
- * 拉取结果： 1. 写入 Redis L2 缓存 (TTL=5s+random) 2. 发布 Redis Pub/Sub channel: market:quote:broadcast -
+ * <p>
+ * 核心机制： - Redis 分布式锁 key: market:ingest:leader, TTL=10s + 定时续期 -
+ * 仅持锁实例定时拉取行情（3s/次, @Scheduled） -
+ * 拉取结果： 1. 写入 Redis L2 缓存 (TTL=5s+random) 2. 发布 Redis Pub/Sub channel:
+ * market:quote:broadcast -
  * 其他实例通过 MarketPubSubListener 订阅广播
  *
- * <p>扩展： - 多实例部署时仅一个实例拉取，减少上游 API 调用量 - 持锁实例宕机后，锁 TTL 过期，其他实例自动抢锁接管
+ * <p>
+ * 扩展： - 多实例部署时仅一个实例拉取，减少上游 API 调用量 - 持锁实例宕机后，锁 TTL 过期，其他实例自动抢锁接管
  */
 @Slf4j
 @Service
@@ -34,47 +46,100 @@ public class MarketIngestService {
   static final String BROADCAST_CHANNEL = "market:quote:broadcast";
   static final String PUB_TS_KEY_PREFIX = "market:ingest:pubts:";
   static final Duration LEADER_LOCK_TTL = Duration.ofSeconds(10);
-  private static final int INGEST_BATCH_SIZE = 50;
+
+  private static final int DEFAULT_ACTIVE_BATCH_SIZE = 800;
+  private static final int DEFAULT_ROUND_ROBIN_BATCH_SIZE = 100;
+  private static final long DEFAULT_ACTIVE_WINDOW_MS = 8000L;
+  private static final long DEFAULT_STOCK_UNIVERSE_REFRESH_MS = 300000L;
+
+  private static final String INGEST_CYCLE_TIMER_METRIC = "market.ingest.cycle.duration";
 
   private final List<MarketDataProvider> providers;
   private final StockInfoRepository stockInfoRepository;
   private final MarketCacheGateway marketCacheGateway;
   private final RedisTemplate<String, Object> redisTemplate;
+  private final MarketActiveQuoteRegistry marketActiveQuoteRegistry;
+  private final MeterRegistry meterRegistry;
 
   @Value("${market.ingest.latency-sample-enabled:false}")
   private boolean latencySampleEnabled;
 
-  private volatile String leaderToken;
+  @Value("${market.ingest.active-window-ms:8000}")
+  private long activeWindowMs;
 
-  @Scheduled(fixedRate = 3000)
+  @Value("${market.ingest.active-batch-size:800}")
+  private int activeBatchSize;
+
+  @Value("${market.ingest.round-robin-batch-size:100}")
+  private int roundRobinBatchSize;
+
+  @Value("${market.ingest.stock-universe-refresh-ms:300000}")
+  private long stockUniverseRefreshMs;
+
+  private volatile String leaderToken;
+  private volatile List<String> stockUniverse = List.of();
+  private volatile long stockUniverseLoadedAtMs;
+  private final AtomicInteger roundRobinCursor = new AtomicInteger(0);
+  private volatile long lastIngestAtMs;
+  private volatile long lastIngestDurationMs;
+  private volatile int lastIngestCodeCount;
+  private volatile int lastPublishedQuoteCount;
+  private Timer ingestCycleTimer;
+
+  @PostConstruct
+  void initMetrics() {
+    ingestCycleTimer = Timer.builder(INGEST_CYCLE_TIMER_METRIC)
+        .description("Market ingest cycle duration")
+        .register(meterRegistry);
+  }
+
+  @Scheduled(fixedRateString = "${market.ingest.pull-interval-ms:1000}")
   public void pullAndBroadcast() {
+    long cycleStartNs = System.nanoTime();
     if (!ensureLeadership()) {
       return;
     }
 
-    List<String> stockCodes = loadIngestCodes();
-    if (stockCodes.isEmpty()) {
-      return;
-    }
+    int ingestCodeCount = 0;
+    int publishedQuoteCount = 0;
+    try {
+      marketActiveQuoteRegistry.evictStale(Duration.ofMillis(Math.max(activeWindowMs, 1L)));
+      List<String> stockCodes = loadIngestCodes();
+      ingestCodeCount = stockCodes.size();
+      if (stockCodes.isEmpty()) {
+        return;
+      }
 
-    List<QuoteSnapshot> quotes = loadQuotes(stockCodes);
-    for (QuoteSnapshot quote : quotes) {
-      if (quote == null || quote.getStockCode() == null || quote.getStockCode().isBlank()) {
-        continue;
+      List<QuoteSnapshot> quotes = loadQuotes(stockCodes);
+      for (QuoteSnapshot quote : quotes) {
+        if (quote == null || quote.getStockCode() == null || quote.getStockCode().isBlank()) {
+          continue;
+        }
+        String normalizedCode = quote.getStockCode().trim().toLowerCase();
+        marketCacheGateway.cacheQuote(normalizedCode, quote);
+        if (latencySampleEnabled) {
+          long publishTs = System.currentTimeMillis();
+          redisTemplate
+              .opsForValue()
+              .set(PUB_TS_KEY_PREFIX + normalizedCode, publishTs, 30, TimeUnit.SECONDS);
+        }
+        redisTemplate.convertAndSend(BROADCAST_CHANNEL, quote);
+        publishedQuoteCount++;
       }
-      String normalizedCode = quote.getStockCode().trim().toLowerCase();
-      marketCacheGateway.cacheQuote(normalizedCode, quote);
-      if (latencySampleEnabled) {
-        long publishTs = System.currentTimeMillis();
-        redisTemplate
-            .opsForValue()
-            .set(PUB_TS_KEY_PREFIX + normalizedCode, publishTs, 30, TimeUnit.SECONDS);
+    } finally {
+      if (ingestCycleTimer == null) {
+        initMetrics();
       }
-      redisTemplate.convertAndSend(BROADCAST_CHANNEL, quote);
+      lastIngestAtMs = System.currentTimeMillis();
+      long durationNs = System.nanoTime() - cycleStartNs;
+      lastIngestDurationMs = TimeUnit.NANOSECONDS.toMillis(durationNs);
+      lastIngestCodeCount = ingestCodeCount;
+      lastPublishedQuoteCount = publishedQuoteCount;
+      ingestCycleTimer.record(durationNs, TimeUnit.NANOSECONDS);
     }
   }
 
-  @Scheduled(fixedRate = 3000)
+  @Scheduled(fixedRateString = "${market.ingest.renew-interval-ms:3000}")
   public void renewLeadership() {
     String token = leaderToken;
     if (token == null) {
@@ -99,14 +164,13 @@ public class MarketIngestService {
     }
 
     String nextToken = UUID.randomUUID().toString();
-    Boolean acquired =
-        redisTemplate
-            .opsForValue()
-            .setIfAbsent(
-                INGEST_LEADER_KEY,
-                nextToken,
-                LEADER_LOCK_TTL.getSeconds(),
-                TimeUnit.SECONDS);
+    Boolean acquired = redisTemplate
+        .opsForValue()
+        .setIfAbsent(
+            INGEST_LEADER_KEY,
+            nextToken,
+            LEADER_LOCK_TTL.getSeconds(),
+            TimeUnit.SECONDS);
     if (Boolean.TRUE.equals(acquired)) {
       leaderToken = nextToken;
       return true;
@@ -114,13 +178,60 @@ public class MarketIngestService {
     return false;
   }
 
-  private List<String> loadIngestCodes() {
-    return stockInfoRepository.findAllListed().stream()
+  List<String> loadIngestCodes() {
+    int safeActiveBatchSize = Math.max(activeBatchSize, 0);
+    int safeRoundRobinBatchSize = Math.max(roundRobinBatchSize, 0);
+    Duration activeWindow = Duration.ofMillis(Math.max(activeWindowMs, DEFAULT_ACTIVE_WINDOW_MS));
+
+    List<String> activeCodes = marketActiveQuoteRegistry.listActiveCodes(
+        activeWindow,
+        safeActiveBatchSize > 0 ? safeActiveBatchSize : DEFAULT_ACTIVE_BATCH_SIZE);
+    Set<String> activeSet = new HashSet<>(activeCodes);
+
+    List<String> fallbackCodes = pickRoundRobinCodes(
+        activeSet,
+        safeRoundRobinBatchSize > 0
+            ? safeRoundRobinBatchSize
+            : DEFAULT_ROUND_ROBIN_BATCH_SIZE);
+
+    List<String> ingestCodes = new ArrayList<>(activeCodes.size() + fallbackCodes.size());
+    ingestCodes.addAll(activeCodes);
+    ingestCodes.addAll(fallbackCodes);
+    return ingestCodes;
+  }
+
+  private List<String> pickRoundRobinCodes(Set<String> excludedCodes, int batchSize) {
+    List<String> universe = getOrLoadStockUniverse();
+    if (universe.isEmpty() || batchSize <= 0) {
+      return List.of();
+    }
+
+    int size = universe.size();
+    int start = Math.floorMod(roundRobinCursor.getAndAdd(batchSize), size);
+    List<String> result = new ArrayList<>(batchSize);
+    for (int i = 0; i < size && result.size() < batchSize; i++) {
+      String code = universe.get((start + i) % size);
+      if (!excludedCodes.contains(code)) {
+        result.add(code);
+      }
+    }
+    return result;
+  }
+
+  private List<String> getOrLoadStockUniverse() {
+    long now = System.currentTimeMillis();
+    if (!stockUniverse.isEmpty() && now - stockUniverseLoadedAtMs < Math.max(stockUniverseRefreshMs, 1L)) {
+      return stockUniverse;
+    }
+
+    List<String> loaded = stockInfoRepository.findAllListed().stream()
         .map(StockInfo::getStockCode)
         .filter(code -> code != null && !code.isBlank())
-        .map(code -> code.trim().toLowerCase())
-        .limit(INGEST_BATCH_SIZE)
+        .map(code -> code.trim().toLowerCase(Locale.ROOT))
         .toList();
+    stockUniverse = loaded;
+    stockUniverseLoadedAtMs = now;
+    return stockUniverse;
   }
 
   private List<QuoteSnapshot> loadQuotes(List<String> stockCodes) {
@@ -138,5 +249,21 @@ public class MarketIngestService {
       }
     }
     return List.of();
+  }
+
+  public long getLastIngestAtMs() {
+    return lastIngestAtMs;
+  }
+
+  public long getLastIngestDurationMs() {
+    return lastIngestDurationMs;
+  }
+
+  public int getLastIngestCodeCount() {
+    return lastIngestCodeCount;
+  }
+
+  public int getLastPublishedQuoteCount() {
+    return lastPublishedQuoteCount;
   }
 }

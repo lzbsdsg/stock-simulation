@@ -78,3 +78,7 @@ export async function searchStocks(keyword: string): Promise<Quote[]> {
   )
   return data.map(normalizeQuote)
 }
+
+export async function reportVisibleCodes(stockCodes: string[]): Promise<void> {
+  await unwrapResponse<void>(request.post('/market/visible-codes', stockCodes))
+}

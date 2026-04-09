@@ -137,18 +137,18 @@ mvnw.cmd "-Dtest=MatchConsumerTest" test
 - `GET /api/v1/trade/trades` 可查到成交记录
 - 买入成交后持仓冻结（T+1），卖出成交后资金入账
 
-2. 一致性与可靠性
+1. 一致性与可靠性
 - 并发/冲突下撮合可重试，日志可见重试
 - 重试失败消息进入 `trade.match.dlq`
 - 成交事件可被通知消费者消费并落库
 
-3. 调度任务
+1. 调度任务
 - 收盘任务执行后：待成交订单可过期，持仓冻结日期可修正
 - 分布式锁生效（同一日期仅一个实例执行）
 - 归档任务执行后：符合条件订单从 `t_trade_order` 迁移到 `t_trade_order_archive`
 - `GET /api/v1/trade/orders?scope=history` 在归档后仍可查到迁移订单
 
-4. 稳定性与性能（本迭代）
+1. 稳定性与性能（本迭代）
 - 冒烟压测期间无连接拒绝/大面积 5xx
 - MQ 消费链路在低并发下稳定处理，不出现异常中断
 - 归档批处理不阻塞线上交易接口（独立凌晨 cron + 批量处理）
@@ -289,8 +289,8 @@ cd /d d:\StockSimulation\stock-simulation
 k6 run -e BASE_URL=http://localhost:8080 -e TOKEN=<accessToken> -e STOCK_CODE=sh600519 -e ORDER_PRICE=1618.88 -e ORDER_QUANTITY=100 -e VUS=10 -e DURATION=20s -e ACCEPT_429=true k6/trade-load-test.js
 ```
 
-3. 在 RabbitMQ UI 观察 `trade.match.queue` 无长期堆积，消费者持续 ACK。
-4. 调用：
+1. 在 RabbitMQ UI 观察 `trade.match.queue` 无长期堆积，消费者持续 ACK。
+2. 调用：
    - `GET /api/v1/trade/orders?scope=today&page=1&size=50`
    - `GET /api/v1/trade/trades?page=1&size=50`
 
@@ -314,11 +314,11 @@ trade:
     archive-batch-size: 100
 ```
 
-4. 观察日志：`trade.archive.done date=... archivedOrders=...`
-5. 验证数据库：
+1. 观察日志：`trade.archive.done date=... archivedOrders=...`
+2. 验证数据库：
    - `t_trade_order` 中样本订单消失
    - `t_trade_order_archive` 中出现同 `order_id` 数据
-6. 调用 `GET /api/v1/trade/orders?scope=history&page=1&size=20`，确认可查到该订单。
+3. 调用 `GET /api/v1/trade/orders?scope=history&page=1&size=20`，确认可查到该订单。
 
 ## 7. Iteration 8 通过结论
 

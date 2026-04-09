@@ -53,6 +53,7 @@ export const useMarketStore = defineStore('market', () => {
   })
 
   const selectedQuote = computed(() => quoteMap.value[normalizeCode(selectedCode.value)] ?? null)
+  let visibleHeartbeatTimer: number | null = null
 
   function upsertQuote(quote: Quote): void {
     quoteMap.value = {
@@ -62,17 +63,77 @@ export const useMarketStore = defineStore('market', () => {
   }
 
   function setSelectedCode(stockCode: string): void {
-    selectedCode.value = normalizeCode(stockCode)
-    ws.subscribeQuote(selectedCode.value)
+    const previous = normalizeCode(selectedCode.value)
+    const next = normalizeCode(stockCode)
+    selectedCode.value = next
+
+    if (previous && previous !== next && !watchCodes.value.includes(previous)) {
+      ws.unsubscribeQuote(previous)
+    }
+    if (next) {
+      ws.subscribeQuote(next)
+    }
+    void reportVisibleCodes()
   }
 
   function setWatchCodes(codes: string[]): void {
+    const previousCodes = new Set(watchCodes.value)
     const normalized = Array.from(new Set(codes.map(normalizeCode).filter((code) => code.length > 0)))
     watchCodes.value = normalized.length > 0 ? normalized : [...DEFAULT_CODES]
+    const nextCodes = new Set(watchCodes.value)
+
+    for (const code of previousCodes) {
+      if (!nextCodes.has(code) && code !== normalizeCode(selectedCode.value)) {
+        ws.unsubscribeQuote(code)
+      }
+    }
 
     for (const code of watchCodes.value) {
       ws.subscribeQuote(code)
     }
+    void reportVisibleCodes()
+  }
+
+  function collectVisibleCodes(): string[] {
+    const merged = [...watchCodes.value]
+    const selected = normalizeCode(selectedCode.value)
+    if (selected) {
+      merged.push(selected)
+    }
+    return Array.from(new Set(merged.filter((code) => code.length > 0)))
+  }
+
+  async function reportVisibleCodes(): Promise<void> {
+    if (!authStore.isAuthenticated) {
+      return
+    }
+    const visibleCodes = collectVisibleCodes()
+    if (visibleCodes.length === 0) {
+      return
+    }
+    try {
+      await marketApi.reportVisibleCodes(visibleCodes)
+    } catch (_error) {
+      // 可见股票上报失败不阻断行情展示主流程
+    }
+  }
+
+  function startVisibleHeartbeat(): void {
+    if (visibleHeartbeatTimer !== null) {
+      return
+    }
+    void reportVisibleCodes()
+    visibleHeartbeatTimer = window.setInterval(() => {
+      void reportVisibleCodes()
+    }, 1500)
+  }
+
+  function stopVisibleHeartbeat(): void {
+    if (visibleHeartbeatTimer === null) {
+      return
+    }
+    window.clearInterval(visibleHeartbeatTimer)
+    visibleHeartbeatTimer = null
   }
 
   async function loadWatchQuotes(): Promise<void> {
@@ -131,6 +192,7 @@ export const useMarketStore = defineStore('market', () => {
     }
 
     ws.connect()
+    startVisibleHeartbeat()
     for (const code of watchCodes.value) {
       ws.subscribeQuote(code)
     }
@@ -148,6 +210,7 @@ export const useMarketStore = defineStore('market', () => {
     }
 
     ws.connect()
+    startVisibleHeartbeat()
     for (const code of watchCodes.value) {
       ws.subscribeQuote(code)
     }
@@ -157,6 +220,7 @@ export const useMarketStore = defineStore('market', () => {
   }
 
   function disconnectRealtime(): void {
+    stopVisibleHeartbeat()
     ws.disconnect()
   }
 
