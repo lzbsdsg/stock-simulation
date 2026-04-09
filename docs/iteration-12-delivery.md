@@ -91,6 +91,12 @@
 - GET /api/v1/notifications/unread-count
 - WS: /user/queue/notification
 
+## 3.1 遗漏补齐（2026-04）
+
+- 通知未读计数口径补齐：
+  - `stock-simulation-web/src/stores/notification.ts`
+  - 补齐内容：未读数从“当前页本地列表统计”改为“服务端未读总数”，并在 WS 新通知、单条已读、全部已读时保持一致更新。
+
 ## 4. 已执行命令与结果
 
 ### 4.1 后端测试（已执行）

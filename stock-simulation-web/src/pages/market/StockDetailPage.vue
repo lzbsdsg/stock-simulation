@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import KLineChart from '@/components/market/KLineChart.vue'
@@ -9,6 +9,7 @@ import OrderList from '@/components/trade/OrderList.vue'
 import TradeHistory from '@/components/trade/TradeHistory.vue'
 import { useMarketStore } from '@/stores/market'
 import { useTradeStore } from '@/stores/trade'
+import { useWatchlistStore } from '@/stores/watchlist'
 import type { KLinePeriod } from '@/types/market'
 
 type RangePreset = '3M' | '6M' | '1Y' | '3Y'
@@ -23,11 +24,14 @@ const RANGE_DAYS_MAP: Record<RangePreset, number> = {
 const route = useRoute()
 const marketStore = useMarketStore()
 const tradeStore = useTradeStore()
+const watchlistStore = useWatchlistStore()
 const period = ref<KLinePeriod>('DAILY')
 const rangePreset = ref<RangePreset>('1Y')
+let refreshTimer: number | null = null
 
 const stockCode = computed(() => String(route.params.stockCode || '').toLowerCase())
 const referenceClose = computed(() => marketStore.selectedQuote?.closePrice ?? null)
+const isInWatchlist = computed(() => watchlistStore.items.some((item) => item.stockCode === stockCode.value))
 
 async function loadDetail(code: string): Promise<void> {
   if (!code) {
@@ -65,19 +69,74 @@ watch(
 
 onMounted(async () => {
   marketStore.connectRealtime()
-  await Promise.all([loadDetail(stockCode.value), tradeStore.loadOrders(), tradeStore.loadTrades()])
+  await Promise.all([
+    loadDetail(stockCode.value),
+    tradeStore.loadOrders(),
+    tradeStore.loadTrades(),
+    watchlistStore.load(),
+  ])
+  marketStore.setWatchCodes(watchlistStore.items.map((item) => item.stockCode))
+  startAutoRefresh()
 })
+
+onBeforeUnmount(() => {
+  stopAutoRefresh()
+})
+
+function startAutoRefresh(): void {
+  if (refreshTimer !== null) {
+    return
+  }
+  refreshTimer = window.setInterval(() => {
+    if (tradeStore.loadingOrders || tradeStore.loadingTrades || tradeStore.placingOrder) {
+      return
+    }
+    void refreshTradePanels().catch(() => undefined)
+  }, 3000)
+}
+
+function stopAutoRefresh(): void {
+  if (refreshTimer === null) {
+    return
+  }
+  window.clearInterval(refreshTimer)
+  refreshTimer = null
+}
 
 async function refreshTradePanels(): Promise<void> {
   await Promise.all([tradeStore.loadOrders(), tradeStore.loadTrades()])
+}
+
+async function addCurrentStockToWatchlist(): Promise<void> {
+  if (!stockCode.value || isInWatchlist.value) {
+    return
+  }
+  try {
+    await watchlistStore.add(stockCode.value)
+    marketStore.setWatchCodes(watchlistStore.items.map((item) => item.stockCode))
+    ElMessage.success('已添加到自选股')
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '添加自选股失败'
+    ElMessage.error(message)
+  }
 }
 </script>
 
 <template>
   <section class="stock-detail-page">
     <header class="detail-header">
-      <h1>股票详情</h1>
-      <p>实时成交价 + K 线技术视图，支持日/周/月切换。</p>
+      <div>
+        <h1>股票详情</h1>
+        <p>实时成交价 + K 线技术视图，支持日/周/月切换。</p>
+      </div>
+      <el-button
+        type="primary"
+        plain
+        :disabled="isInWatchlist"
+        @click="addCurrentStockToWatchlist"
+      >
+        {{ isInWatchlist ? '已在自选股' : '添加到自选股' }}
+      </el-button>
     </header>
 
     <QuoteCard

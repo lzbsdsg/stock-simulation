@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive } from 'vue'
+import { computed, reactive, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useTradeStore } from '@/stores/trade'
 import type { OrderType, TradeSide } from '@/types/trade'
@@ -21,6 +21,15 @@ const form = reactive({
   price: 10,
   quantity: 100,
 })
+
+watch(
+  () => props.stockCode,
+  (value) => {
+    if (typeof value === 'string') {
+      form.stockCode = value
+    }
+  },
+)
 
 const canSubmit = computed(() => {
   return form.stockCode.trim().length > 0 && form.quantity > 0 && form.quantity % 100 === 0

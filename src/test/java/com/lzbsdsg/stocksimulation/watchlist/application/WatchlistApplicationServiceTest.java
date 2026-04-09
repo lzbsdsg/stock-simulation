@@ -10,6 +10,8 @@ import static org.mockito.Mockito.when;
 import com.lzbsdsg.stocksimulation.common.exception.BizException;
 import com.lzbsdsg.stocksimulation.common.result.ErrorCode;
 import com.lzbsdsg.stocksimulation.market.domain.entity.QuoteSnapshot;
+import com.lzbsdsg.stocksimulation.market.domain.entity.StockInfo;
+import com.lzbsdsg.stocksimulation.market.domain.repository.StockInfoRepository;
 import com.lzbsdsg.stocksimulation.market.domain.service.MarketDataFacade;
 import com.lzbsdsg.stocksimulation.watchlist.application.vo.WatchlistItemVO;
 import com.lzbsdsg.stocksimulation.watchlist.domain.entity.WatchlistItem;
@@ -35,6 +37,8 @@ class WatchlistApplicationServiceTest {
     private WatchlistRepository watchlistRepository;
     @Mock
     private MarketDataFacade marketDataFacade;
+    @Mock
+    private StockInfoRepository stockInfoRepository;
 
     @InjectMocks
     private WatchlistApplicationService watchlistApplicationService;
@@ -106,8 +110,14 @@ class WatchlistApplicationServiceTest {
         quote.setStockCode("sh600519");
         quote.setStockName("贵州茅台");
 
+        StockInfo stockInfo = new StockInfo();
+        stockInfo.setStockCode("sh600519");
+        stockInfo.setStockName("贵州茅台");
+        stockInfo.setListed(true);
+
         when(watchlistRepository.findByUserIdAndStockCode(1001L, "sh600519")).thenReturn(Optional.empty());
         when(watchlistRepository.countByUserId(1001L)).thenReturn(3L);
+        when(stockInfoRepository.findByStockCode("sh600519")).thenReturn(Optional.of(stockInfo));
         when(marketDataFacade.getQuote("sh600519")).thenReturn(quote);
 
         watchlistApplicationService.addStock("SH600519");
@@ -120,6 +130,19 @@ class WatchlistApplicationServiceTest {
         assertEquals("sh600519", saved.getStockCode());
         assertEquals("贵州茅台", saved.getStockName());
         assertEquals(4, saved.getSortOrder());
+    }
+
+    @Test
+    void should_reject_add_stock_when_stock_not_found() {
+        when(watchlistRepository.findByUserIdAndStockCode(1001L, "foo000001")).thenReturn(Optional.empty());
+        when(watchlistRepository.countByUserId(1001L)).thenReturn(1L);
+        when(stockInfoRepository.findByStockCode("foo000001")).thenReturn(Optional.empty());
+
+        BizException ex = assertThrows(BizException.class, () -> watchlistApplicationService.addStock("foo000001"));
+
+        assertEquals(ErrorCode.MARKET_STOCK_NOT_FOUND, ex.getErrorCode());
+        verify(watchlistRepository, never()).save(any());
+        verify(marketDataFacade, never()).getQuote(any());
     }
 
     @Test

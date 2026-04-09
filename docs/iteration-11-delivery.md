@@ -62,6 +62,16 @@
 - GET /api/v1/portfolio/fund-flows
 - GET /api/v1/portfolio/equity-curve
 
+## 3.1 遗漏补齐（2026-04）
+
+- 交易面板实时刷新补齐：
+  - `stock-simulation-web/src/pages/trade/TradePage.vue`
+  - `stock-simulation-web/src/pages/market/StockDetailPage.vue`
+  - 补齐内容：增加 3s 轻量轮询刷新委托与成交列表，并在页面卸载时清理定时器。
+- 股票详情下单联动补齐：
+  - `stock-simulation-web/src/components/trade/OrderForm.vue`
+  - 补齐内容：`stockCode` props 改为可响应路由切换，避免切股后下单代码未同步。
+
 ## 4. 已执行命令与结果
 
 ### 4.1 后端测试（已执行）

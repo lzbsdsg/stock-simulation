@@ -3,6 +3,8 @@ package com.lzbsdsg.stocksimulation.watchlist.application;
 import com.lzbsdsg.stocksimulation.common.exception.BizException;
 import com.lzbsdsg.stocksimulation.common.result.ErrorCode;
 import com.lzbsdsg.stocksimulation.market.domain.entity.QuoteSnapshot;
+import com.lzbsdsg.stocksimulation.market.domain.entity.StockInfo;
+import com.lzbsdsg.stocksimulation.market.domain.repository.StockInfoRepository;
 import com.lzbsdsg.stocksimulation.market.domain.service.MarketDataFacade;
 import com.lzbsdsg.stocksimulation.watchlist.application.vo.WatchlistItemVO;
 import com.lzbsdsg.stocksimulation.watchlist.domain.entity.WatchlistItem;
@@ -34,6 +36,7 @@ public class WatchlistApplicationService {
 
   private final WatchlistRepository watchlistRepository;
   private final MarketDataFacade marketDataFacade;
+  private final StockInfoRepository stockInfoRepository;
 
   public List<WatchlistItemVO> getWatchlist() {
     Long userId = currentUserId();
@@ -91,11 +94,31 @@ public class WatchlistApplicationService {
       throw new BizException(ErrorCode.WATCHLIST_LIMIT_EXCEEDED);
     }
 
-    QuoteSnapshot quote = marketDataFacade.getQuote(normalizedCode);
+    StockInfo stockInfo =
+        stockInfoRepository
+            .findByStockCode(normalizedCode)
+            .filter(item -> Boolean.TRUE.equals(item.getListed()))
+            .orElseThrow(() -> new BizException(ErrorCode.MARKET_STOCK_NOT_FOUND));
+
+    String stockName = stockInfo.getStockName();
+    try {
+      QuoteSnapshot quote = marketDataFacade.getQuote(normalizedCode);
+      if (quote != null && quote.getStockName() != null && !quote.getStockName().isBlank()) {
+        stockName = quote.getStockName();
+      }
+    } catch (BizException ex) {
+      if (ex.getErrorCode() != ErrorCode.MARKET_DATA_UNAVAILABLE
+          && ex.getErrorCode() != ErrorCode.MARKET_PROVIDER_ALL_FAILED
+          && ex.getErrorCode() != ErrorCode.MARKET_STOCK_NOT_FOUND) {
+        throw ex;
+      }
+      log.warn("watchlist.add.quote.degraded userId={} stockCode={}", userId, normalizedCode);
+    }
+
     WatchlistItem item = new WatchlistItem();
     item.setUserId(userId);
     item.setStockCode(normalizedCode);
-    item.setStockName(quote.getStockName());
+    item.setStockName(stockName);
     item.setSortOrder((int) count + 1);
     item.setCreatedAt(LocalDateTime.now());
     watchlistRepository.save(item);

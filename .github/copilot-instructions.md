@@ -2,7 +2,7 @@
 
 > 本文件是仓库级 Copilot 指令，等价于 Agent Skills 配置包。
 > 放置于 `.github/copilot-instructions.md`，Copilot Chat 会自动读取并遵守。
-> v2.0：整合百万用户高并发硬规则
+
 
 ---
 

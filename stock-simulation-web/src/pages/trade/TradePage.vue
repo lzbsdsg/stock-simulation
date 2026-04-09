@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onBeforeUnmount, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import OrderForm from '@/components/trade/OrderForm.vue'
 import OrderList from '@/components/trade/OrderList.vue'
@@ -7,15 +7,41 @@ import TradeHistory from '@/components/trade/TradeHistory.vue'
 import { useTradeStore } from '@/stores/trade'
 
 const tradeStore = useTradeStore()
+let refreshTimer: number | null = null
 
 onMounted(async () => {
   try {
     await Promise.all([tradeStore.loadOrders(), tradeStore.loadTrades()])
+    startAutoRefresh()
   } catch (error) {
     const message = error instanceof Error ? error.message : '交易数据加载失败'
     ElMessage.error(message)
   }
 })
+
+onBeforeUnmount(() => {
+  stopAutoRefresh()
+})
+
+function startAutoRefresh(): void {
+  if (refreshTimer !== null) {
+    return
+  }
+  refreshTimer = window.setInterval(() => {
+    if (tradeStore.loadingOrders || tradeStore.loadingTrades || tradeStore.placingOrder) {
+      return
+    }
+    void refreshAll().catch(() => undefined)
+  }, 3000)
+}
+
+function stopAutoRefresh(): void {
+  if (refreshTimer === null) {
+    return
+  }
+  window.clearInterval(refreshTimer)
+  refreshTimer = null
+}
 
 async function refreshAll(): Promise<void> {
   await Promise.all([tradeStore.loadOrders(), tradeStore.loadTrades()])
