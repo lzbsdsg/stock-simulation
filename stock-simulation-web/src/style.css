@@ -501,8 +501,18 @@ a {
   color: var(--text-subtle);
 }
 
-.notification-bell {
-  font-weight: 700;
+.notification-bell-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.notification-bell-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--brand);
 }
 
 .notification-panel {
@@ -559,6 +569,91 @@ a {
 .watchlist-page {
   display: grid;
   gap: 14px;
+}
+
+.notification-page {
+  display: grid;
+  gap: 14px;
+}
+
+.notification-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.notification-page-header h1 {
+  margin: 0;
+  font-size: 30px;
+}
+
+.notification-page-header p {
+  margin: 8px 0 0;
+  color: var(--text-subtle);
+}
+
+.notification-page-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.notification-page-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 14px;
+}
+
+.notification-page-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.notification-page-item {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.notification-page-item.unread {
+  background: #f5f9ff;
+}
+
+.notification-page-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.notification-page-item-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notification-page-item-head small {
+  color: var(--text-subtle);
+}
+
+.notification-page-item p {
+  margin: 0;
+  color: var(--text-subtle);
+  line-height: 1.6;
+}
+
+.notification-page-item-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .trade-header,
@@ -714,14 +809,16 @@ a {
 
   .trade-header,
   .portfolio-header,
-  .watchlist-header {
+  .watchlist-header,
+  .notification-page-header {
     flex-direction: column;
     align-items: flex-start;
   }
 
   .trade-header h1,
   .portfolio-header h1,
-  .watchlist-header h1 {
+  .watchlist-header h1,
+  .notification-page-header h1 {
     font-size: 26px;
   }
 

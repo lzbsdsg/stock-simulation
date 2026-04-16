@@ -64,6 +64,11 @@ const router = createRouter({
           name: 'watchlist',
           component: () => import('@/pages/watchlist/WatchlistPage.vue'),
         },
+        {
+          path: 'notifications',
+          name: 'notifications',
+          component: () => import('@/pages/notification/NotificationPage.vue'),
+        },
       ],
     },
     {

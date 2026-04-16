@@ -66,6 +66,7 @@ async function handleLogout() {
         <RouterLink to="/trade" class="sidebar-link">交易中心</RouterLink>
         <RouterLink to="/portfolio" class="sidebar-link">持仓资产</RouterLink>
         <RouterLink to="/watchlist" class="sidebar-link">自选股</RouterLink>
+        <RouterLink to="/notifications" class="sidebar-link">消息通知</RouterLink>
       </aside>
 
       <main class="layout-content">

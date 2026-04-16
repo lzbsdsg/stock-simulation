@@ -33,7 +33,10 @@ async function handleReadAll(): Promise<void> {
   <el-popover placement="bottom" :width="360" trigger="click">
     <template #reference>
       <el-badge :value="notificationStore.unreadCount" :hidden="notificationStore.unreadCount === 0">
-        <el-button circle plain class="notification-bell">铃</el-button>
+        <el-button plain class="notification-bell-trigger">
+          <span class="notification-bell-dot" aria-hidden="true"></span>
+          <span>消息通知</span>
+        </el-button>
       </el-badge>
     </template>
 

@@ -10,6 +10,7 @@ import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFacto
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.amqp.SimpleRabbitListenerContainerFactoryConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -75,27 +76,37 @@ public class RabbitMQConfig {
   }
 
   @Bean
-  public Binding matchBinding(Queue matchQueue, DirectExchange tradeExchange) {
+  public Binding matchBinding(
+      @Qualifier("matchQueue") Queue matchQueue,
+      @Qualifier("tradeExchange") DirectExchange tradeExchange) {
     return BindingBuilder.bind(matchQueue).to(tradeExchange).with(MATCH_ROUTING_KEY);
   }
 
   @Bean
-  public Binding matchDeadLetterBinding(Queue matchDeadLetterQueue, DirectExchange matchDlxExchange) {
+  public Binding matchDeadLetterBinding(
+      @Qualifier("matchDeadLetterQueue") Queue matchDeadLetterQueue,
+      @Qualifier("matchDlxExchange") DirectExchange matchDlxExchange) {
     return BindingBuilder.bind(matchDeadLetterQueue).to(matchDlxExchange).with(MATCH_DLQ_ROUTING_KEY);
   }
 
   @Bean
-  public Binding notificationBinding(Queue notificationQueue, DirectExchange tradeExchange) {
+  public Binding notificationBinding(
+      @Qualifier("notificationQueue") Queue notificationQueue,
+      @Qualifier("tradeExchange") DirectExchange tradeExchange) {
     return BindingBuilder.bind(notificationQueue).to(tradeExchange).with(NOTIFICATION_ROUTING_KEY);
   }
 
   @Bean
-  public Binding tradeFilledNotificationBinding(Queue notificationQueue, FanoutExchange tradeFilledExchange) {
+  public Binding tradeFilledNotificationBinding(
+      @Qualifier("notificationQueue") Queue notificationQueue,
+      @Qualifier("tradeFilledExchange") FanoutExchange tradeFilledExchange) {
     return BindingBuilder.bind(notificationQueue).to(tradeFilledExchange);
   }
 
   @Bean
-  public Binding emailBinding(Queue emailQueue, DirectExchange emailExchange) {
+  public Binding emailBinding(
+      @Qualifier("emailQueue") Queue emailQueue,
+      @Qualifier("emailExchange") DirectExchange emailExchange) {
     return BindingBuilder.bind(emailQueue).to(emailExchange).with(EMAIL_ROUTING_KEY);
   }
 
