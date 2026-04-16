@@ -1,5 +1,13 @@
 ﻿import request, { unwrapResponse } from '@/api/request'
-import type { KLinePeriod, KLinePoint, Quote } from '@/types/market'
+import type {
+  KLinePeriod,
+  KLinePoint,
+  MarketIndexQuote,
+  MarketListedPagePayload,
+  MarketRankPayload,
+  Quote,
+} from '@/types/market'
+import type { PageResult } from '@/types/http'
 
 function toNumber(value: unknown): number | null {
   if (typeof value === 'number') {
@@ -81,4 +89,46 @@ export async function searchStocks(keyword: string): Promise<Quote[]> {
 
 export async function reportVisibleCodes(stockCodes: string[]): Promise<void> {
   await unwrapResponse<void>(request.post('/market/visible-codes', stockCodes))
+}
+
+export async function getListedStocksPage(page: number, size: number): Promise<MarketListedPagePayload> {
+  const data = await unwrapResponse<PageResult<{ stockCode: string; stockName: string }>>(
+    request.get('/market/listed', {
+      params: { page, size },
+    }),
+  )
+  return {
+    total: data.total,
+    page: data.page,
+    size: data.size,
+    records: data.records.map((item) => ({
+      stockCode: item.stockCode.trim().toLowerCase(),
+      stockName: item.stockName,
+    })),
+  }
+}
+
+export async function getOfficialIndexQuotes(): Promise<MarketIndexQuote[]> {
+  const data = await unwrapResponse<MarketIndexQuote[]>(request.get('/market/indexes'))
+  return data.map((item) => ({
+    stockCode: item.stockCode.trim().toLowerCase(),
+    stockName: item.stockName,
+    currentPrice: toNumber(item.currentPrice),
+    changeAmount: toNumber(item.changeAmount),
+    changePercent: toNumber(item.changePercent),
+    volume: toNumber(item.volume),
+    amount: toNumber(item.amount),
+  }))
+}
+
+export async function getOfficialRankBoard(limit = 10): Promise<MarketRankPayload> {
+  const data = await unwrapResponse<MarketRankPayload>(
+    request.get('/market/rank-board', {
+      params: { limit },
+    }),
+  )
+  return {
+    gainers: data.gainers.map(normalizeQuote),
+    losers: data.losers.map(normalizeQuote),
+  }
 }

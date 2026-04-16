@@ -25,9 +25,19 @@ function resolveRangeDays(period: KLinePeriod, rangeDays?: number): number {
   return 365
 }
 
+function normalizeCodes(codes: string[]): string[] {
+  return Array.from(new Set(codes.map(normalizeCode).filter((code) => code.length > 0)))
+}
+
+function mergeCodeSources(...sources: string[][]): string[] {
+  return normalizeCodes(sources.flat())
+}
+
 export const useMarketStore = defineStore('market', () => {
   const quoteMap = ref<Record<string, Quote>>({})
-  const watchCodes = ref<string[]>([...DEFAULT_CODES])
+  const watchlistCodes = ref<string[]>([])
+  const marketPageCodes = ref<string[]>([])
+  const hotspotCodes = ref<string[]>([...DEFAULT_CODES])
   const searchResults = ref<Quote[]>([])
   const selectedCode = ref(DEFAULT_CODES[0])
   const selectedPeriod = ref<KLinePeriod>('DAILY')
@@ -46,19 +56,39 @@ export const useMarketStore = defineStore('market', () => {
     },
   })
 
+  const realtimeCodes = computed(() =>
+    mergeCodeSources(watchlistCodes.value, marketPageCodes.value, hotspotCodes.value),
+  )
+
+  const displayCodes = computed(() => {
+    if (marketPageCodes.value.length > 0) {
+      return marketPageCodes.value
+    }
+    if (watchlistCodes.value.length > 0) {
+      return watchlistCodes.value
+    }
+    return hotspotCodes.value
+  })
+
+  const watchCodes = computed(() => displayCodes.value)
+
   const watchQuotes = computed(() => {
-    return watchCodes.value
+    return displayCodes.value
       .map((code) => quoteMap.value[normalizeCode(code)])
       .filter((quote): quote is Quote => Boolean(quote))
   })
 
   const selectedQuote = computed(() => quoteMap.value[normalizeCode(selectedCode.value)] ?? null)
   let visibleHeartbeatTimer: number | null = null
+  let subscribedRealtimeCodes: string[] = []
 
   function upsertQuote(quote: Quote): void {
-    quoteMap.value = {
-      ...quoteMap.value,
-      [normalizeCode(quote.stockCode)]: quote,
+    quoteMap.value[normalizeCode(quote.stockCode)] = quote
+  }
+
+  function mergeQuotes(quotes: Quote[]): void {
+    for (const quote of quotes) {
+      upsertQuote(quote)
     }
   }
 
@@ -67,7 +97,7 @@ export const useMarketStore = defineStore('market', () => {
     const next = normalizeCode(stockCode)
     selectedCode.value = next
 
-    if (previous && previous !== next && !watchCodes.value.includes(previous)) {
+    if (previous && previous !== next && !subscribedRealtimeCodes.includes(previous)) {
       ws.unsubscribeQuote(previous)
     }
     if (next) {
@@ -76,11 +106,10 @@ export const useMarketStore = defineStore('market', () => {
     void reportVisibleCodes()
   }
 
-  function setWatchCodes(codes: string[]): void {
-    const previousCodes = new Set(watchCodes.value)
-    const normalized = Array.from(new Set(codes.map(normalizeCode).filter((code) => code.length > 0)))
-    watchCodes.value = normalized.length > 0 ? normalized : [...DEFAULT_CODES]
-    const nextCodes = new Set(watchCodes.value)
+  function syncRealtimeSubscriptions(): void {
+    const previousCodes = new Set(subscribedRealtimeCodes)
+    const nextCodes = new Set(realtimeCodes.value)
+    subscribedRealtimeCodes = Array.from(nextCodes)
 
     for (const code of previousCodes) {
       if (!nextCodes.has(code) && code !== normalizeCode(selectedCode.value)) {
@@ -88,14 +117,34 @@ export const useMarketStore = defineStore('market', () => {
       }
     }
 
-    for (const code of watchCodes.value) {
+    for (const code of subscribedRealtimeCodes) {
       ws.subscribeQuote(code)
     }
     void reportVisibleCodes()
   }
 
+  function setWatchlistCodes(codes: string[]): void {
+    watchlistCodes.value = normalizeCodes(codes)
+    syncRealtimeSubscriptions()
+  }
+
+  function setMarketPageCodes(codes: string[]): void {
+    marketPageCodes.value = normalizeCodes(codes)
+    syncRealtimeSubscriptions()
+  }
+
+  function setHotspotCodes(codes: string[]): void {
+    hotspotCodes.value = normalizeCodes(codes)
+    syncRealtimeSubscriptions()
+  }
+
+  // 保留旧接口以避免现有调用点一次性迁移带来回归。
+  function setWatchCodes(codes: string[]): void {
+    setWatchlistCodes(codes)
+  }
+
   function collectVisibleCodes(): string[] {
-    const merged = [...watchCodes.value]
+    const merged = [...realtimeCodes.value]
     const selected = normalizeCode(selectedCode.value)
     if (selected) {
       merged.push(selected)
@@ -137,12 +186,26 @@ export const useMarketStore = defineStore('market', () => {
   }
 
   async function loadWatchQuotes(): Promise<void> {
+    if (displayCodes.value.length === 0) {
+      return
+    }
     loadingQuotes.value = true
     try {
-      const quotes = await marketApi.batchGetQuotes(watchCodes.value)
-      for (const quote of quotes) {
-        upsertQuote(quote)
-      }
+      const quotes = await marketApi.batchGetQuotes(displayCodes.value)
+      mergeQuotes(quotes)
+    } finally {
+      loadingQuotes.value = false
+    }
+  }
+
+  async function loadWatchlistQuotes(): Promise<void> {
+    if (watchlistCodes.value.length === 0) {
+      return
+    }
+    loadingQuotes.value = true
+    try {
+      const quotes = await marketApi.batchGetQuotes(watchlistCodes.value)
+      mergeQuotes(quotes)
     } finally {
       loadingQuotes.value = false
     }
@@ -193,9 +256,7 @@ export const useMarketStore = defineStore('market', () => {
 
     ws.connect()
     startVisibleHeartbeat()
-    for (const code of watchCodes.value) {
-      ws.subscribeQuote(code)
-    }
+    syncRealtimeSubscriptions()
 
     await loadWatchQuotes()
 
@@ -211,9 +272,7 @@ export const useMarketStore = defineStore('market', () => {
 
     ws.connect()
     startVisibleHeartbeat()
-    for (const code of watchCodes.value) {
-      ws.subscribeQuote(code)
-    }
+    syncRealtimeSubscriptions()
     if (selectedCode.value) {
       ws.subscribeQuote(selectedCode.value)
     }
@@ -226,6 +285,10 @@ export const useMarketStore = defineStore('market', () => {
 
   return {
     quoteMap,
+    watchlistCodes,
+    marketPageCodes,
+    hotspotCodes,
+    realtimeCodes,
     watchCodes,
     searchResults,
     selectedCode,
@@ -239,9 +302,14 @@ export const useMarketStore = defineStore('market', () => {
     wsStatus: ws.status,
     wsLagMs: ws.lastLagMs,
     wsDegraded: ws.isDegraded,
+    setWatchlistCodes,
+    setMarketPageCodes,
+    setHotspotCodes,
     setWatchCodes,
     setSelectedCode,
     loadWatchQuotes,
+    loadWatchlistQuotes,
+    mergeQuotes,
     loadQuote,
     loadKLine,
     search,

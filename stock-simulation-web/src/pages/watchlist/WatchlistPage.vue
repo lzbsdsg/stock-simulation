@@ -32,7 +32,7 @@ onMounted(async () => {
 
 async function refresh(): Promise<void> {
   await watchlistStore.load()
-  marketStore.setWatchCodes(watchCodes.value)
+  marketStore.setWatchlistCodes(watchCodes.value)
 }
 
 async function addStock(): Promise<void> {

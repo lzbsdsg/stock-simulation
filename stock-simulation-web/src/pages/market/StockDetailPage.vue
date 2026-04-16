@@ -75,7 +75,7 @@ onMounted(async () => {
     tradeStore.loadTrades(),
     watchlistStore.load(),
   ])
-  marketStore.setWatchCodes(watchlistStore.items.map((item) => item.stockCode))
+  marketStore.setWatchlistCodes(watchlistStore.items.map((item) => item.stockCode))
   startAutoRefresh()
 })
 
@@ -113,7 +113,7 @@ async function addCurrentStockToWatchlist(): Promise<void> {
   }
   try {
     await watchlistStore.add(stockCode.value)
-    marketStore.setWatchCodes(watchlistStore.items.map((item) => item.stockCode))
+    marketStore.setWatchlistCodes(watchlistStore.items.map((item) => item.stockCode))
     ElMessage.success('已添加到自选股')
   } catch (error) {
     const message = error instanceof Error ? error.message : '添加自选股失败'

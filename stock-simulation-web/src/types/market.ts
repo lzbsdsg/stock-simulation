@@ -32,3 +32,30 @@ export interface QuoteSuggestion {
 export interface WsQuotePayload extends Partial<Quote> {
   wsPushTsMillis?: number
 }
+
+export interface MarketListedItem {
+  stockCode: string
+  stockName: string
+}
+
+export interface MarketListedPagePayload {
+  total: number
+  page: number
+  size: number
+  records: MarketListedItem[]
+}
+
+export interface MarketIndexQuote {
+  stockCode: string
+  stockName: string
+  currentPrice: number | null
+  changeAmount: number | null
+  changePercent: number | null
+  volume: number | null
+  amount: number | null
+}
+
+export interface MarketRankPayload {
+  gainers: Quote[]
+  losers: Quote[]
+}

@@ -1,22 +1,45 @@
 ﻿<script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMarketStore } from '@/stores/market'
 import { useAppStore } from '@/stores/app'
 import { usePortfolioStore } from '@/stores/portfolio'
+import { useWatchlistStore } from '@/stores/watchlist'
 import { formatPercent, formatPrice, percentClass } from '@/utils/format'
 
 const router = useRouter()
 const marketStore = useMarketStore()
 const appStore = useAppStore()
 const portfolioStore = usePortfolioStore()
+const watchlistStore = useWatchlistStore()
+
+const focusQuotes = computed(() => {
+  const focusCodes = watchlistStore.items.map((item) => item.stockCode.toLowerCase())
+  return focusCodes
+    .map((code) => marketStore.quoteMap[code])
+    .filter((quote) => Boolean(quote))
+})
+
+const avgFocusChangePercent = computed(() => {
+  if (focusQuotes.value.length === 0) {
+    return null
+  }
+  const total = focusQuotes.value.reduce((sum, item) => sum + (item.changePercent ?? 0), 0)
+  return total / focusQuotes.value.length
+})
 
 onMounted(async () => {
-  if (marketStore.watchQuotes.length === 0) {
+  await watchlistStore.load()
+  const focusCodes = watchlistStore.items.map((item) => item.stockCode)
+  marketStore.setWatchlistCodes(focusCodes)
+
+  if (marketStore.realtimeCodes.length === 0) {
     await marketStore.initializeMarket()
   } else {
     marketStore.connectRealtime()
   }
+
+  await marketStore.loadWatchlistQuotes()
 
   if (!portfolioStore.overview) {
     await portfolioStore.loadOverview()
@@ -51,12 +74,7 @@ function openMarket() {
       <article class="metric-card">
         <span class="metric-label">热门股票平均涨跌</span>
         <strong>
-          {{
-            formatPercent(
-              marketStore.watchQuotes.reduce((sum, item) => sum + (item.changePercent ?? 0), 0) /
-                Math.max(1, marketStore.watchQuotes.length),
-            )
-          }}
+          {{ formatPercent(avgFocusChangePercent) }}
         </strong>
       </article>
       <article class="metric-card">
@@ -75,7 +93,7 @@ function openMarket() {
       <h2>关注股票</h2>
       <ul>
         <li
-          v-for="quote in marketStore.watchQuotes"
+          v-for="quote in focusQuotes"
           :key="quote.stockCode"
           class="dashboard-list-item"
           @click="router.push(`/market/${quote.stockCode}`)"
@@ -91,6 +109,7 @@ function openMarket() {
           </span>
         </li>
       </ul>
+      <el-empty v-if="focusQuotes.length === 0" description="暂无自选股，请先添加自选" :image-size="90" />
     </section>
 
     <div class="dashboard-actions">

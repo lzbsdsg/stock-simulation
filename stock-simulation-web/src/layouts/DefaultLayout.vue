@@ -24,9 +24,7 @@ onMounted(() => {
     .load()
     .then(() => {
       const codes = watchlistStore.items.map((item) => item.stockCode)
-      if (codes.length > 0) {
-        marketStore.setWatchCodes(codes)
-      }
+      marketStore.setWatchlistCodes(codes)
     })
     .catch(() => undefined)
 })

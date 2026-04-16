@@ -56,6 +56,7 @@ function handleClick() {
       <span>高 {{ quote.highPrice === null ? '--' : quote.highPrice.toFixed(2) }}</span>
       <span>低 {{ quote.lowPrice === null ? '--' : quote.lowPrice.toFixed(2) }}</span>
       <span>量 {{ quote.volume === null ? '--' : quote.volume }}</span>
+      <span>额 {{ quote.amount === null ? '--' : quote.amount }}</span>
     </footer>
   </article>
 </template>

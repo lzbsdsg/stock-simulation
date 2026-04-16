@@ -17,12 +17,23 @@ const totalVolume = computed(() => {
   return props.quotes.reduce((sum, item) => sum + (item.volume ?? 0), 0)
 })
 
+const totalAmount = computed(() => {
+  return props.quotes.reduce((sum, item) => sum + (item.amount ?? 0), 0)
+})
+
 const avgChange = computed(() => {
   if (props.quotes.length === 0) {
     return null
   }
   const total = props.quotes.reduce((sum, item) => sum + (item.changePercent ?? 0), 0)
   return total / props.quotes.length
+})
+
+const riseRatio = computed(() => {
+  if (props.quotes.length === 0) {
+    return null
+  }
+  return (riseCount.value / props.quotes.length) * 100
 })
 </script>
 
@@ -45,8 +56,16 @@ const avgChange = computed(() => {
       <strong>{{ formatVolume(totalVolume) }}</strong>
     </article>
     <article>
+      <span>总成交额</span>
+      <strong>{{ formatVolume(totalAmount) }}</strong>
+    </article>
+    <article>
       <span>平均涨跌</span>
       <strong :class="(avgChange ?? 0) >= 0 ? 'up' : 'down'">{{ formatPercent(avgChange) }}</strong>
+    </article>
+    <article>
+      <span>上涨占比</span>
+      <strong :class="(riseRatio ?? 0) >= 50 ? 'up' : 'down'">{{ formatPercent(riseRatio) }}</strong>
     </article>
   </section>
 </template>

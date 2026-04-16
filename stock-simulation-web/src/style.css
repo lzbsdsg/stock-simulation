@@ -359,7 +359,7 @@ a {
   padding: 14px;
   box-shadow: var(--shadow-sm);
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
   gap: 8px;
 }
 
@@ -438,10 +438,113 @@ a {
 
 .quote-card footer {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
   color: var(--text-subtle);
   font-size: 12px;
+}
+
+.market-board-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.market-board-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.market-board-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.market-board-card h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.market-board-card small {
+  color: var(--text-subtle);
+}
+
+.market-board-card > strong {
+  font-size: 28px;
+}
+
+.market-board-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+}
+
+.market-board-card footer {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-subtle);
+  font-size: 12px;
+}
+
+.market-rank-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.market-rank-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.market-rank-panel h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.market-rank-panel ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.market-rank-panel li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.market-rank-panel li:hover {
+  background: #f8fbff;
+}
+
+.market-pagination {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.market-pagination small {
+  color: var(--text-subtle);
 }
 
 .detail-header {
@@ -805,6 +908,10 @@ a {
 
   .stock-search {
     grid-template-columns: 1fr;
+  }
+
+  .market-pagination {
+    justify-items: start;
   }
 
   .trade-header,
