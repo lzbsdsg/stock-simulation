@@ -1,0 +1,10 @@
+target/
+stock-simulation-web/node_modules/
+stock-simulation-web/dist/
+logs/
+.git/
+.idea/
+.vscode/
+*.log
+*.tmp
+uploads/
