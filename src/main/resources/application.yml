@@ -145,13 +145,6 @@ springdoc:
     persist-authorization: true
     try-it-out-enabled: true
 
-# ---- 头像存储 ----
-avatar:
-  storage:
-    root-dir: ${AVATAR_STORAGE_ROOT_DIR:uploads}
-    public-prefix: ${AVATAR_PUBLIC_PREFIX:/uploads}
-    max-size-bytes: ${AVATAR_MAX_SIZE_BYTES:2097152}
-
 # ---- Actuator ----
 management:
   endpoints:

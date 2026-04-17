@@ -70,6 +70,11 @@ const router = createRouter({
           component: () => import('@/pages/notification/NotificationPage.vue'),
         },
         {
+          path: 'profile',
+          name: 'profile',
+          component: () => import('@/pages/user/UserProfilePage.vue'),
+        },
+        {
           path: 'admin',
           name: 'admin-console',
           meta: { requiresAdmin: true },

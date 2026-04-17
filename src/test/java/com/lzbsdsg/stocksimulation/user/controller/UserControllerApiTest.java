@@ -5,7 +5,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -24,12 +23,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.multipart.MultipartFile;
 
 @WebMvcTest(UserController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -62,7 +59,7 @@ class UserControllerApiTest {
   @Test
   void should_get_current_user() throws Exception {
     when(userApplicationService.getCurrentUser(1L))
-        .thenReturn(new UserProfileDTO(1L, "u@test.com", "nick", null, "USER", "ACTIVE"));
+                .thenReturn(new UserProfileDTO(1L, "u@test.com", "nick", "USER", "ACTIVE"));
 
     mockMvc
         .perform(get("/api/v1/user/me"))
@@ -74,10 +71,9 @@ class UserControllerApiTest {
 
   @Test
   void should_update_current_user() throws Exception {
-    UpdateUserProfileCommand command = new UpdateUserProfileCommand("newNick", "https://a.b/c.png");
+    UpdateUserProfileCommand command = new UpdateUserProfileCommand("newNick");
     when(userApplicationService.updateProfile(eq(1L), any(UpdateUserProfileCommand.class)))
-        .thenReturn(
-            new UserProfileDTO(1L, "u@test.com", "newNick", "https://a.b/c.png", "USER", "ACTIVE"));
+        .thenReturn(new UserProfileDTO(1L, "u@test.com", "newNick", "USER", "ACTIVE"));
 
     mockMvc
         .perform(
@@ -103,27 +99,5 @@ class UserControllerApiTest {
                         new ChangePasswordCommand("Strong123", "NewStrong123"))))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.code").value(200));
-  }
-
-  @Test
-  void should_upload_avatar() throws Exception {
-    MockMultipartFile file =
-        new MockMultipartFile("file", "avatar.png", "image/png", "fakepng".getBytes());
-    when(userApplicationService.uploadAvatar(eq(1L), any(MultipartFile.class)))
-        .thenReturn(
-            new UserProfileDTO(
-                1L, "u@test.com", "nick", "/uploads/avatars/202603/u1-abc.png", "USER", "ACTIVE"));
-
-    mockMvc
-        .perform(
-            multipart("/api/v1/user/avatar")
-                .file(file)
-                .with(
-                    request -> {
-                      request.setMethod("POST");
-                      return request;
-                    }))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.data.avatarUrl").value("/uploads/avatars/202603/u1-abc.png"));
   }
 }

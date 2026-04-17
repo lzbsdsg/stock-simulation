@@ -12,7 +12,7 @@
 Week  1  ████ 项目骨架 + 开发环境 + 基础设施(Redis Cluster/PG主从/Nginx)
 Week  2  ████ 通用基础设施 — 多级缓存抽象 + 限流 + 读写分离路由
 Week  3  ████ 认证模块 (Auth) — OTP/登录/JWT + Caffeine锁定缓存
-Week  4  ████ 用户与账户模块 (User/Account) — 行级锁 + 乐观锁 + 头像上传
+Week  4  ████ 用户与账户模块 (User/Account) — 行级锁 + 乐观锁
 Week  5  ████ 行情模块 (Market) — Provider 抽象 + 多级缓存(L1+L2)
 Week  6  ████ 行情模块 (Market) — Pub/Sub扇出 + 分布式锁选主 + 断路器降级
 Week  7  ████ 行情模块 (Market) — WebSocket推送 + 背压控制 + 连接管理
@@ -178,7 +178,7 @@ Week 21  ████ Beta 发布 + 文档收尾
 
 ### Iteration 3 — Week 4：用户与账户模块 (User/Account)
 
-**目标**：用户资金账户创建、冻结/解冻机制（行级锁 + 乐观锁）+ 用户头像上传与更新
+**目标**：用户资金账户创建、冻结/解冻机制（行级锁 + 乐观锁）+ 用户资料管理
 
 **状态**：✅ 已完成（实现与验收口径见 `iteration-3-delivery.md` 与 `iteration-3-acceptance-script.md`）
 
@@ -190,10 +190,7 @@ Week 21  ████ Beta 发布 + 文档收尾
 - [x] **Domain**: AccountDomainService.freeze() / unfreeze() — 纯业务规则校验
 - [x] **Repository**: AccountRepository → AccountRepositoryImpl
 - [x] **Application**: AccountApplicationService（账户初始化 + 冻结/解冻对外接口）
-- [x] **Controller**: UserController（查看/修改用户信息 + 头像上传）
-- [x] **Storage**: AvatarStorageService（本地存储目录 `uploads/avatars/{yyyyMM}/`）
-- [x] **Config**: StaticResourceConfig（`/uploads/**` 静态资源映射）
-- [x] **Security**: 放行头像静态访问路径 `/uploads/**`
+- [x] **Controller**: UserController（查看/修改用户信息 + 修改密码）
 - [x] 注册流程集成：注册时自动创建 Account（初始资金）
 - [x] **行级锁**: `SELECT ... FOR UPDATE` 仅锁当前用户 Account 行
 - [x] **乐观锁**: `UPDATE ... WHERE version = ?`，MyBatis-Plus `@Version` 注解
@@ -201,7 +198,7 @@ Week 21  ████ Beta 发布 + 文档收尾
 **测试**：
 - [x] AccountDomainServiceTest (8条: 冻结/解冻/余额不足/恒等式校验)
 - [x] AccountRepositoryIntegrationTest (4条: CRUD + 乐观锁冲突)
-- [x] UserControllerApiTest 增加头像上传 `multipart/form-data` 用例
+- [x] UserControllerApiTest 覆盖资料查询/更新与修改密码场景
 - [x] **TradeConcurrencyTest** (3条: 并发冻结同一账户 → 行级锁串行 / 不同账户 → 完全并行 / 乐观锁冲突重试)
 
 **验收标准**：
@@ -210,9 +207,6 @@ Week 21  ████ Beta 发布 + 文档收尾
 - 乐观锁冲突时抛出 OptimisticLockingFailureException
 - `SELECT ... FOR UPDATE` 正确锁定行，并发冻结不超卖
 - 10线程并发冻结同一账户 → 仅一个成功（余额不足场景）
-- POST `/api/v1/user/avatar` 上传图片成功并返回 `avatarUrl`
-- 返回的 `avatarUrl` 可通过 `GET /uploads/**` 直接访问
-- 头像格式限制生效（jpg/jpeg/png/webp/gif），文件大小限制生效（默认 2MB）
 
 ---
 

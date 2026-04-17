@@ -3,7 +3,6 @@
 本文档用于可执行验收，覆盖：
 
 - 接口可用性
-- 头像上传可用性
 - 注册后自动建账
 - 用户资料/密码修改可用
 - 账户并发冻结安全
@@ -112,7 +111,7 @@ curl -i -X GET "%BASE%/api/v1/user/me" ^
 通过标准：
 
 - HTTP 200
-- 返回 userId/email/nickname/avatarUrl/role/status
+- 返回 userId/email/nickname/role/status
 - userId 与注册返回一致
 
 ### 5.2 修改资料
@@ -121,7 +120,7 @@ curl -i -X GET "%BASE%/api/v1/user/me" ^
 curl -i -X PUT "%BASE%/api/v1/user/me" ^
   -H "Content-Type: application/json" ^
   -H "Authorization: Bearer %ACCESS_TOKEN%" ^
-  -d "{\"nickname\":\"iter3_updated\",\"avatarUrl\":\"https://example.com/avatar.png\"}"
+  -d "{\"nickname\":\"iter3_updated\"}"
 ```
 
 通过标准：
@@ -142,52 +141,6 @@ curl -i -X PUT "%BASE%/api/v1/user/password" ^
 通过标准：
 
 - HTTP 200
-
-### 5.4 上传头像
-
-先在当前目录准备一个测试图片（例如 `avatar-test.png`），执行：
-
-```bat
-curl -i -X POST "%BASE%/api/v1/user/avatar" ^
-  -H "Authorization: Bearer %ACCESS_TOKEN%" ^
-  -F "file=@avatar-test.png"
-```
-
-通过标准：
-
-- HTTP 200
-- 返回 `avatarUrl` 字段（形如 `/uploads/avatars/202603/u1-xxxx.png`）
-- 浏览器可访问 `http://localhost:8080<avatarUrl>`
-
-### 5.5 上传头像-非法格式（应失败）
-
-先准备一个非图片文件（例如 `avatar-invalid.txt`），执行：
-
-```bat
-curl -i -X POST "%BASE%/api/v1/user/avatar" ^
-  -H "Authorization: Bearer %ACCESS_TOKEN%" ^
-  -F "file=@avatar-invalid.txt"
-```
-
-通过标准：
-
-- HTTP 400
-- 返回错误信息提示头像格式仅支持图片（jpg/jpeg/png/webp/gif）
-
-### 5.6 上传头像-超大小（应失败）
-
-先准备一个超过 2MB 的图片（例如 `avatar-big.png`），执行：
-
-```bat
-curl -i -X POST "%BASE%/api/v1/user/avatar" ^
-  -H "Authorization: Bearer %ACCESS_TOKEN%" ^
-  -F "file=@avatar-big.png"
-```
-
-通过标准：
-
-- HTTP 400
-- 返回错误信息提示头像大小超限
 
 ## 6. 改密生效验收（旧密码失效，新密码生效）
 
@@ -248,7 +201,6 @@ mvnw.cmd "-Dtest=AccountDomainServiceTest,AccountRepositoryIntegrationTest,Trade
 
 - 注册成功但 t_user_account 无记录
 - /api/v1/user/me、/api/v1/user/password 任一不可用
-- /api/v1/user/avatar 上传失败或返回URL不可访问
 - 改密后旧密码仍可登录
 - 并发冻结出现超卖或资金不一致
 - 目标测试集存在失败

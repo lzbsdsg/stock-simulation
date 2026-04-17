@@ -5,7 +5,6 @@
 基于路线图与详细设计文档，完成 Iteration 3 用户与账户模块交付，覆盖以下能力：
 
 - 注册后自动创建资金账户
-- 头像上传与资料头像修改
 - 账户冻结/解冻、扣减冻结、入账能力
 - 账户并发安全（同账户并发冲突控制）
 - 乐观锁冲突重试与失败抛错
@@ -26,8 +25,7 @@
 
 - 完成 `UserApplicationService`：
   - `getCurrentUser`：查询当前用户资料
-  - `updateProfile`：修改昵称、头像
-  - `uploadAvatar`：上传头像文件并更新用户头像 URL
+  - `updateProfile`：修改昵称
   - `changePassword`：校验旧密码与新密码强度后更新
 
 ### 2.2 控制器接口
@@ -35,19 +33,8 @@
 - 完成 `UserController`：
   - `GET /api/v1/user/me`：获取当前用户信息
   - `PUT /api/v1/user/me`：修改当前用户资料
-  - `POST /api/v1/user/avatar`：上传并更新头像
   - `PUT /api/v1/user/password`：修改密码
 - 从 `SecurityContext` 读取当前用户 ID，未认证时返回 401 语义错误。
-
-### 2.3 头像上传与存储
-
-- 新增本地头像存储服务：`AvatarStorageService`
-  - 存储目录：`${avatar.storage.root-dir}/avatars/{yyyyMM}/`
-  - 访问前缀：`${avatar.storage.public-prefix}`（默认 `/uploads`）
-  - 默认大小限制：2MB（`avatar.storage.max-size-bytes`）
-  - 支持格式：jpg/jpeg/png/webp/gif
-- 新增静态资源映射：`/uploads/**` → 本地 `uploads/` 目录
-- 安全放行：`/uploads/**`
 
 ### 2.4 并发与锁策略落地
 
@@ -66,8 +53,7 @@
 
 当前覆盖说明：
 
-- 自动化测试已覆盖账户核心规则、仓储行为、并发锁策略，以及头像上传成功路径。
-- 头像上传负向场景（非法格式、超大小）在 `docs/iteration-3-acceptance-script.md` 中通过 CMD 脚本执行验收。
+- 自动化测试已覆盖账户核心规则、仓储行为、并发锁策略，以及用户资料查询/更新和密码修改路径。
 
 ### 3.2 建议执行命令
 
@@ -98,7 +84,7 @@ GET /api/v1/user/me
 Authorization: Bearer ACCESS_TOKEN
 ```
 
-预期：HTTP 200，返回 `userId/email/nickname/avatarUrl/role/status`。
+预期：HTTP 200，返回 `userId/email/nickname/role/status`。
 
 2. 修改用户资料
 
@@ -108,25 +94,11 @@ Authorization: Bearer ACCESS_TOKEN
 Content-Type: application/json
 
 {
-  "nickname": "newNick",
-  "avatarUrl": "https://example.com/avatar.png"
+  "nickname": "newNick"
 }
 ```
 
-预期：HTTP 200，返回更新后的 `nickname/avatarUrl`。
-
-3. 上传头像
-
-```http
-POST /api/v1/user/avatar
-Authorization: Bearer ACCESS_TOKEN
-Content-Type: multipart/form-data
-
-file=<avatar.png>
-```
-
-预期：HTTP 200，返回更新后的 `avatarUrl`（例如 `/uploads/avatars/202603/u1-xxxx.png`），
-并且可直接 GET 访问该 URL。
+预期：HTTP 200，返回更新后的 `nickname`。
 
 4. 修改密码
 
@@ -188,8 +160,6 @@ WHERE user_id = <注册返回的userId>;
 - 同账户并发冻结场景无超卖，不同账户场景可并行处理
 - 乐观锁冲突具备重试机制，超过重试上限给出明确异常
 - 用户模块 4 个接口可通过 Swagger 正常调用
-- 用户模块头像上传接口可正常上传并返回可访问 URL
-- 头像上传负向场景（非法格式、超大小）可按验收脚本返回 HTTP 400
 - 修改密码后旧密码失效、新密码生效
 - 注册后数据库中可查询到对应账户记录
 - 本次迭代测试集合全部通过（24/24）

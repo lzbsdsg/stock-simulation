@@ -83,6 +83,27 @@ export const useAuthStore = defineStore('auth', () => {
     applySession(session)
   }
 
+  function persistCurrentSession(): void {
+    if (!accessToken.value || !refreshToken.value) {
+      return
+    }
+
+    saveAuthSession({
+      accessToken: accessToken.value,
+      refreshToken: refreshToken.value,
+      expiresIn: expiresIn.value,
+      userId: userId.value,
+      nickname: nickname.value,
+      role: role.value,
+    })
+  }
+
+  function applyProfileSnapshot(nextNickname: string | null): void {
+    const normalized = nextNickname?.trim() ?? ''
+    nickname.value = normalized ? normalized : null
+    persistCurrentSession()
+  }
+
   async function sendOtp(email: string): Promise<void> {
     await authApi.sendOtp({ email })
   }
@@ -140,6 +161,7 @@ export const useAuthStore = defineStore('auth', () => {
     ensureInitialized,
     hydrateFromStorage,
     applyTokenPayload,
+    applyProfileSnapshot,
     sendOtp,
     login,
     register,

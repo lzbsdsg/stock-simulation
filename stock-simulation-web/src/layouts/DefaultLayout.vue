@@ -65,6 +65,7 @@ async function handleLogout() {
         <RouterLink to="/portfolio" class="sidebar-link">持仓资产</RouterLink>
         <RouterLink to="/watchlist" class="sidebar-link">自选股</RouterLink>
         <RouterLink to="/notifications" class="sidebar-link">消息通知</RouterLink>
+        <RouterLink to="/profile" class="sidebar-link">个人资料</RouterLink>
         <RouterLink v-if="authStore.isAdmin" to="/admin" class="sidebar-link">管理后台</RouterLink>
       </aside>
 
