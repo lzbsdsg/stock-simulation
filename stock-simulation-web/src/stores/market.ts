@@ -4,9 +4,20 @@ import { defineStore } from 'pinia'
 import * as marketApi from '@/api/market'
 import { useWebSocket } from '@/composables/useWebSocket'
 import { useAuthStore } from '@/stores/auth'
-import type { KLinePeriod, KLinePoint, Quote } from '@/types/market'
+import type { KLinePeriod, KLinePoint, MarketListedItem, Quote } from '@/types/market'
 
 const DEFAULT_CODES = ['sh600519', 'sz000001', 'sh601318', 'sh600036']
+const LISTED_UNIVERSE_CACHE_TTL_MS = 10 * 60 * 1000
+
+interface LoadKLineOptions {
+  preferCache?: boolean
+  backgroundRefresh?: boolean
+}
+
+interface LoadQuoteOptions {
+  preferCache?: boolean
+  backgroundRefresh?: boolean
+}
 
 function normalizeCode(stockCode: string): string {
   return stockCode.trim().toLowerCase()
@@ -42,6 +53,9 @@ export const useMarketStore = defineStore('market', () => {
   const selectedCode = ref(DEFAULT_CODES[0])
   const selectedPeriod = ref<KLinePeriod>('DAILY')
   const klinePoints = ref<KLinePoint[]>([])
+  const klineCache = ref<Record<string, KLinePoint[]>>({})
+  const listedUniverseCache = ref<MarketListedItem[]>([])
+  const listedUniverseCachedAt = ref(0)
   const loadingQuotes = ref(false)
   const loadingKLine = ref(false)
   const loadingSearch = ref(false)
@@ -81,6 +95,9 @@ export const useMarketStore = defineStore('market', () => {
   const selectedQuote = computed(() => quoteMap.value[normalizeCode(selectedCode.value)] ?? null)
   let visibleHeartbeatTimer: number | null = null
   let subscribedRealtimeCodes: string[] = []
+  const quoteInFlight = new Map<string, Promise<Quote>>()
+  const klineInFlight = new Map<string, Promise<KLinePoint[]>>()
+  let latestKLineRequestToken = 0
 
   function upsertQuote(quote: Quote): void {
     const code = normalizeCode(quote.stockCode)
@@ -143,6 +160,21 @@ export const useMarketStore = defineStore('market', () => {
   function setHotspotCodes(codes: string[]): void {
     hotspotCodes.value = normalizeCodes(codes)
     syncRealtimeSubscriptions()
+  }
+
+  function setListedUniverseCache(items: MarketListedItem[]): void {
+    listedUniverseCache.value = [...items]
+    listedUniverseCachedAt.value = Date.now()
+  }
+
+  function getListedUniverseCache(maxAgeMs = LISTED_UNIVERSE_CACHE_TTL_MS): MarketListedItem[] | null {
+    if (listedUniverseCache.value.length === 0 || listedUniverseCachedAt.value <= 0) {
+      return null
+    }
+    if (Date.now() - listedUniverseCachedAt.value > maxAgeMs) {
+      return null
+    }
+    return [...listedUniverseCache.value]
   }
 
   // 保留旧接口以避免现有调用点一次性迁移带来回归。
@@ -222,8 +254,57 @@ export const useMarketStore = defineStore('market', () => {
     }
   }
 
-  async function loadQuote(stockCode: string): Promise<void> {
-    const quote = await marketApi.getQuote(normalizeCode(stockCode))
+  function getQuoteTask(normalizedCode: string): Promise<Quote> {
+    const existing = quoteInFlight.get(normalizedCode)
+    if (existing) {
+      return existing
+    }
+
+    const task = marketApi.getQuote(normalizedCode)
+    quoteInFlight.set(normalizedCode, task)
+    return task.finally(() => {
+      quoteInFlight.delete(normalizedCode)
+    })
+  }
+
+  function getKLineTask(
+    requestKey: string,
+    normalizedCode: string,
+    period: KLinePeriod,
+    from: string,
+    to: string,
+  ): Promise<KLinePoint[]> {
+    const existing = klineInFlight.get(requestKey)
+    if (existing) {
+      return existing
+    }
+
+    const task = marketApi.getKLine(normalizedCode, period, from, to)
+    klineInFlight.set(requestKey, task)
+    return task.finally(() => {
+      klineInFlight.delete(requestKey)
+    })
+  }
+
+  async function loadQuote(stockCode: string, options: LoadQuoteOptions = {}): Promise<void> {
+    const normalizedCode = normalizeCode(stockCode)
+    const cached = quoteMap.value[normalizedCode]
+    const preferCache = options.preferCache === true
+    const backgroundRefresh = options.backgroundRefresh !== false
+
+    if (preferCache && cached) {
+      if (!backgroundRefresh) {
+        return
+      }
+      void getQuoteTask(normalizedCode)
+        .then((quote) => {
+          upsertQuote(quote)
+        })
+        .catch(() => undefined)
+      return
+    }
+
+    const quote = await getQuoteTask(normalizedCode)
     upsertQuote(quote)
   }
 
@@ -231,17 +312,50 @@ export const useMarketStore = defineStore('market', () => {
     stockCode: string,
     period = selectedPeriod.value,
     rangeDays?: number,
+    options: LoadKLineOptions = {},
   ): Promise<void> {
-    loadingKLine.value = true
+    const effectiveRangeDays = resolveRangeDays(period, rangeDays)
+    const normalizedCode = normalizeCode(stockCode)
+    const cacheKey = `${normalizedCode}|${period}|${effectiveRangeDays}`
+    const to = dayjs().format('YYYY-MM-DD')
+    const from = dayjs().subtract(effectiveRangeDays, 'day').format('YYYY-MM-DD')
+    const requestKey = `${cacheKey}|${from}|${to}`
+    const cachedPoints = klineCache.value[cacheKey]
+    const preferCache = options.preferCache === true
+    const backgroundRefresh = options.backgroundRefresh !== false
     selectedPeriod.value = period
 
+    if (preferCache && cachedPoints && cachedPoints.length > 0) {
+      klinePoints.value = cachedPoints
+      if (!backgroundRefresh) {
+        return
+      }
+
+      const requestToken = ++latestKLineRequestToken
+      void getKLineTask(requestKey, normalizedCode, period, from, to)
+        .then((points) => {
+          klineCache.value[cacheKey] = points
+          if (requestToken === latestKLineRequestToken) {
+            klinePoints.value = points
+          }
+        })
+        .catch(() => undefined)
+      return
+    }
+
+    const requestToken = ++latestKLineRequestToken
+    loadingKLine.value = true
+
     try {
-      const effectiveRangeDays = resolveRangeDays(period, rangeDays)
-      const to = dayjs().format('YYYY-MM-DD')
-      const from = dayjs().subtract(effectiveRangeDays, 'day').format('YYYY-MM-DD')
-      klinePoints.value = await marketApi.getKLine(normalizeCode(stockCode), period, from, to)
+      const points = await getKLineTask(requestKey, normalizedCode, period, from, to)
+      klineCache.value[cacheKey] = points
+      if (requestToken === latestKLineRequestToken) {
+        klinePoints.value = points
+      }
     } finally {
-      loadingKLine.value = false
+      if (requestToken === latestKLineRequestToken) {
+        loadingKLine.value = false
+      }
     }
   }
 
@@ -316,6 +430,8 @@ export const useMarketStore = defineStore('market', () => {
     setWatchlistCodes,
     setMarketPageCodes,
     setHotspotCodes,
+    setListedUniverseCache,
+    getListedUniverseCache,
     setWatchCodes,
     setSelectedCode,
     loadWatchQuotes,

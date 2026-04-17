@@ -1,8 +1,7 @@
 ﻿<script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import KLineChart from '@/components/market/KLineChart.vue'
 import QuoteCard from '@/components/market/QuoteCard.vue'
 import OrderForm from '@/components/trade/OrderForm.vue'
 import OrderList from '@/components/trade/OrderList.vue'
@@ -25,6 +24,7 @@ const route = useRoute()
 const marketStore = useMarketStore()
 const tradeStore = useTradeStore()
 const watchlistStore = useWatchlistStore()
+const KLineChart = defineAsyncComponent(() => import('@/components/market/KLineChart.vue'))
 const period = ref<KLinePeriod>('DAILY')
 const rangePreset = ref<RangePreset>('1Y')
 let refreshTimer: number | null = null
@@ -46,10 +46,22 @@ async function loadDetail(code: string): Promise<void> {
 
   try {
     marketStore.setSelectedCode(code)
-    await Promise.all([
-      marketStore.loadQuote(code),
-      marketStore.loadKLine(code, period.value, RANGE_DAYS_MAP[rangePreset.value]),
-    ])
+    const shouldAwaitQuote = !marketStore.selectedQuote
+    const quoteTask = marketStore.loadQuote(code, {
+      preferCache: true,
+      backgroundRefresh: true,
+    })
+    const klineTask = marketStore.loadKLine(code, period.value, RANGE_DAYS_MAP[rangePreset.value], {
+      preferCache: true,
+      backgroundRefresh: true,
+    })
+
+    if (shouldAwaitQuote) {
+      await Promise.all([quoteTask, klineTask])
+    } else {
+      void quoteTask.catch(() => undefined)
+      await klineTask
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : '加载详情失败'
     ElMessage.error(message)
@@ -58,12 +70,28 @@ async function loadDetail(code: string): Promise<void> {
 
 async function handlePeriodChange(value: KLinePeriod): Promise<void> {
   period.value = value
-  await loadDetail(stockCode.value)
+  try {
+    await marketStore.loadKLine(stockCode.value, period.value, RANGE_DAYS_MAP[rangePreset.value], {
+      preferCache: true,
+      backgroundRefresh: true,
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '加载K线失败'
+    ElMessage.error(message)
+  }
 }
 
 async function handleRangeChange(value: RangePreset): Promise<void> {
   rangePreset.value = value
-  await loadDetail(stockCode.value)
+  try {
+    await marketStore.loadKLine(stockCode.value, period.value, RANGE_DAYS_MAP[rangePreset.value], {
+      preferCache: true,
+      backgroundRefresh: true,
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '加载K线失败'
+    ElMessage.error(message)
+  }
 }
 
 watch(
@@ -75,13 +103,14 @@ watch(
 
 onMounted(async () => {
   marketStore.connectRealtime()
-  await Promise.all([
-    loadDetail(stockCode.value),
-    tradeStore.loadOrders(),
-    tradeStore.loadTrades(),
-    watchlistStore.load(),
-  ])
-  marketStore.setWatchlistCodes(watchlistStore.items.map((item) => item.stockCode))
+  await loadDetail(stockCode.value)
+  void Promise.all([tradeStore.loadOrders(), tradeStore.loadTrades()]).catch(() => undefined)
+  void watchlistStore
+    .load()
+    .then(() => {
+      marketStore.setWatchlistCodes(watchlistStore.items.map((item) => item.stockCode))
+    })
+    .catch(() => undefined)
   startAutoRefresh()
 })
 

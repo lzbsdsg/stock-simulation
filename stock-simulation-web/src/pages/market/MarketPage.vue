@@ -15,6 +15,7 @@ const PAGE_SIZE_OPTIONS = [30, 40]
 const BOARD_REFRESH_MS = 5000
 const QUOTE_REFRESH_MS = 3000
 const LIST_FETCH_BATCH_SIZE = 200
+const MARKET_PAGE_STATE_KEY = 'market:page-state:v1'
 
 const router = useRouter()
 const marketStore = useMarketStore()
@@ -94,9 +95,11 @@ const pageEnd = computed(() => {
 
 onMounted(async () => {
   try {
+    restorePageState()
     await marketStore.initializeMarket()
-    await Promise.all([loadListedUniverse(), loadOfficialBoard()])
-    await applyLocalPage(1)
+    await loadListedUniverse()
+    await applyLocalPage(currentPage.value)
+    void loadOfficialBoard({ showError: false, showLoading: true })
     startBoardRefresh()
     startQuoteRefresh()
   } catch (error) {
@@ -106,10 +109,10 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  persistPageState()
   stopBoardRefresh()
   stopQuoteRefresh()
   marketStore.setMarketPageCodes([])
-  void marketStore.loadWatchlistQuotes()
 })
 
 function startBoardRefresh(): void {
@@ -153,6 +156,8 @@ function stopQuoteRefresh(): void {
 }
 
 function handleSelectStock(stockCode: string): void {
+  marketStore.setSelectedCode(stockCode)
+  void marketStore.loadQuote(stockCode).catch(() => undefined)
   router.push(`/market/${stockCode}`)
 }
 
@@ -179,6 +184,13 @@ function patchBoardData(indexes: MarketIndexQuote[]): void {
 }
 
 async function loadListedUniverse(): Promise<void> {
+  const cached = marketStore.getListedUniverseCache()
+  if (cached && cached.length > 0) {
+    listedUniverse.value = cached
+    totalStocks.value = cached.length
+    return
+  }
+
   const first = await marketApi.getListedStocksPage(1, LIST_FETCH_BATCH_SIZE)
   const records = [...first.records]
   const total = first.total
@@ -189,6 +201,7 @@ async function loadListedUniverse(): Promise<void> {
   }
   listedUniverse.value = records
   totalStocks.value = records.length
+  marketStore.setListedUniverseCache(records)
 }
 
 async function applyLocalPage(page: number): Promise<void> {
@@ -204,9 +217,52 @@ async function applyLocalPage(page: number): Promise<void> {
     const currentRecords = listedUniverse.value.slice(startIndex, endIndex)
     const currentCodes = currentRecords.map((item) => item.stockCode)
     marketStore.setMarketPageCodes(currentCodes)
-    await marketStore.loadWatchQuotes()
+
+    const hasAllCachedQuotes =
+      currentCodes.length > 0
+      && currentCodes.every((code) => Boolean(marketStore.quoteMap[code]))
+
+    if (hasAllCachedQuotes) {
+      void marketStore.loadWatchQuotes(true)
+    } else {
+      await marketStore.loadWatchQuotes()
+    }
   } finally {
     loadingPageQuotes.value = false
+  }
+}
+
+function restorePageState(): void {
+  try {
+    const raw = window.sessionStorage.getItem(MARKET_PAGE_STATE_KEY)
+    if (!raw) {
+      return
+    }
+    const parsed = JSON.parse(raw) as { page?: unknown; pageSize?: unknown }
+    const restoredPage = Number(parsed.page)
+    const restoredPageSize = Number(parsed.pageSize)
+    if (Number.isFinite(restoredPage) && restoredPage > 0) {
+      currentPage.value = Math.floor(restoredPage)
+    }
+    if (PAGE_SIZE_OPTIONS.includes(restoredPageSize)) {
+      pageSize.value = restoredPageSize
+    }
+  } catch (_error) {
+    // 会话状态恢复失败时保持默认分页，不阻断主流程
+  }
+}
+
+function persistPageState(): void {
+  try {
+    window.sessionStorage.setItem(
+      MARKET_PAGE_STATE_KEY,
+      JSON.stringify({
+        page: currentPage.value,
+        pageSize: pageSize.value,
+      }),
+    )
+  } catch (_error) {
+    // 会话状态保存失败不影响行情主流程
   }
 }
 
@@ -235,11 +291,14 @@ async function loadOfficialBoard(options?: {
 }
 
 function handlePageChange(page: number): void {
+  currentPage.value = page
+  persistPageState()
   void applyLocalPage(page)
 }
 
 function handlePageSizeChange(size: number): void {
   pageSize.value = size
+  persistPageState()
   void applyLocalPage(1)
 }
 
