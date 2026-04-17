@@ -124,10 +124,10 @@ async function addCurrentStockToWatchlist(): Promise<void> {
 
 <template>
   <section class="stock-detail-page">
-    <header class="detail-header">
+    <header class="page-head">
       <div>
-        <h1>股票详情</h1>
-        <p>实时成交价 + K 线技术视图，支持日/周/月切换。</p>
+        <h1 class="page-title">股票详情</h1>
+        <p class="page-subtitle">实时报价、技术图表与交易动作同屏联动。</p>
       </div>
       <el-button
         type="primary"
@@ -139,20 +139,42 @@ async function addCurrentStockToWatchlist(): Promise<void> {
       </el-button>
     </header>
 
-    <QuoteCard
-      v-if="marketStore.selectedQuote"
-      :quote="marketStore.selectedQuote"
-      :clickable="false"
-      class="detail-quote-card"
-    />
+    <section class="detail-top-grid">
+      <section class="section-card detail-quote-section">
+        <div class="section-card-head">
+          <div>
+            <h2 class="section-card-title">实时行情</h2>
+            <p class="section-card-subtitle">含开高低昨收与量价信息</p>
+          </div>
+        </div>
 
-    <el-alert
-      v-if="marketStore.wsDegraded"
-      type="warning"
-      :closable="false"
-      title="检测到推送延迟超过5秒，页面已进入降级展示。"
-      show-icon
-    />
+        <QuoteCard
+          v-if="marketStore.selectedQuote"
+          :quote="marketStore.selectedQuote"
+          :clickable="false"
+          class="detail-quote-card"
+        />
+      </section>
+
+      <section class="section-card detail-status-section">
+        <div class="section-card-head">
+          <div>
+            <h2 class="section-card-title">链路状态</h2>
+            <p class="section-card-subtitle">实时推送可用性监控</p>
+          </div>
+          <span class="panel-tag">{{ marketStore.wsStatus }}</span>
+        </div>
+
+        <el-alert
+          v-if="marketStore.wsDegraded"
+          type="warning"
+          :closable="false"
+          title="检测到推送延迟超过5秒，页面已进入降级展示。"
+          show-icon
+        />
+        <el-alert v-else type="success" :closable="false" title="实时链路正常，数据持续更新中。" show-icon />
+      </section>
+    </section>
 
     <section class="detail-panel">
       <div class="kline-toolbar">
@@ -190,3 +212,32 @@ async function addCurrentStockToWatchlist(): Promise<void> {
     </section>
   </section>
 </template>
+
+<style scoped>
+.detail-top-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 1fr);
+  align-items: start;
+}
+
+.detail-quote-section,
+.detail-status-section {
+  align-content: start;
+}
+
+.detail-quote-card {
+  max-width: none;
+}
+
+.detail-trade-grid {
+  display: grid;
+  gap: 14px;
+}
+
+@media (max-width: 1080px) {
+  .detail-top-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

@@ -11,19 +11,21 @@ const items = computed(() => {
     return []
   }
   return [
-    { label: '总资产', value: formatPrice(overview.totalAssets), cls: '' },
-    { label: '可用资金', value: formatPrice(overview.availableBalance), cls: '' },
-    { label: '冻结资金', value: formatPrice(overview.frozenBalance), cls: '' },
-    { label: '持仓市值', value: formatPrice(overview.marketValue), cls: '' },
+    { label: '总资产', value: formatPrice(overview.totalAssets), cls: '', featured: true },
+    { label: '可用资金', value: formatPrice(overview.availableBalance), cls: '', featured: false },
+    { label: '冻结资金', value: formatPrice(overview.frozenBalance), cls: '', featured: false },
+    { label: '持仓市值', value: formatPrice(overview.marketValue), cls: '', featured: false },
     {
       label: '总收益率',
       value: formatPercent(overview.totalProfitRate),
       cls: percentClass(overview.totalProfitRate),
+      featured: false,
     },
     {
       label: '今日盈亏率',
       value: formatPercent(overview.todayProfitRate),
       cls: percentClass(overview.todayProfitRate),
+      featured: false,
     },
   ]
 })
@@ -31,9 +33,14 @@ const items = computed(() => {
 
 <template>
   <section class="portfolio-overview-grid">
-    <article v-for="item in items" :key="item.label" class="metric-card">
+    <article
+      v-for="item in items"
+      :key="item.label"
+      class="metric-tile"
+      :class="{ 'portfolio-featured-metric': item.featured }"
+    >
       <span class="metric-label">{{ item.label }}</span>
-      <strong :class="item.cls">{{ item.value }}</strong>
+      <strong class="metric-value mono-number" :class="item.cls">{{ item.value }}</strong>
     </article>
   </section>
 </template>

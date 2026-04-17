@@ -20,6 +20,21 @@ const draggingCode = ref('')
 
 const watchCodes = computed(() => watchlistStore.items.map((item) => item.stockCode))
 
+const riseCount = computed(
+  () => watchlistStore.items.filter((item) => (item.changePercent ?? 0) > 0).length,
+)
+
+const fallCount = computed(
+  () => watchlistStore.items.filter((item) => (item.changePercent ?? 0) < 0).length,
+)
+
+const strongestItem = computed(() => {
+  if (watchlistStore.items.length === 0) {
+    return null
+  }
+  return [...watchlistStore.items].sort((a, b) => (b.changePercent ?? -Infinity) - (a.changePercent ?? -Infinity))[0]
+})
+
 watch(inputKeyword, (value) => {
   if (value !== selectedKeywordLabel.value) {
     selectedStockCode.value = ''
@@ -156,59 +171,106 @@ async function onDrop(targetCode: string): Promise<void> {
 
 <template>
   <section class="watchlist-page">
-    <header class="watchlist-header">
+    <header class="page-head">
       <div>
-        <h1>自选股</h1>
-        <p>最多50只，支持拖拽排序与实时行情刷新。</p>
+        <h1 class="page-title">观察列表</h1>
+        <p class="page-subtitle">构建你的重点跟踪池，支持拖拽排序与实时更新。</p>
       </div>
       <el-button type="primary" plain @click="refresh">刷新</el-button>
     </header>
 
-    <div class="watchlist-add-row">
-      <el-autocomplete
-        v-model="inputKeyword"
-        :fetch-suggestions="querySuggestions"
-        placeholder="输入股票代码或名称，如 sh600519 / 贵州茅台"
-        clearable
-        @clear="selectedStockCode = ''; selectedKeywordLabel = ''"
-        @select="onSelectSuggestion"
-        @keyup.enter="addStock"
-      />
-      <el-button type="primary" @click="addStock">添加</el-button>
-    </div>
+    <section class="watchlist-summary-grid">
+      <article class="metric-tile">
+        <span class="metric-label">跟踪数量</span>
+        <strong class="metric-value mono-number">{{ watchlistStore.items.length }}</strong>
+      </article>
+      <article class="metric-tile">
+        <span class="metric-label">上涨标的</span>
+        <strong class="metric-value up mono-number">{{ riseCount }}</strong>
+      </article>
+      <article class="metric-tile">
+        <span class="metric-label">下跌标的</span>
+        <strong class="metric-value down mono-number">{{ fallCount }}</strong>
+      </article>
+      <article class="metric-tile">
+        <span class="metric-label">当前最强</span>
+        <strong class="metric-value">
+          {{ strongestItem ? `${strongestItem.stockName} ${formatPercent(strongestItem.changePercent)}` : '--' }}
+        </strong>
+      </article>
+    </section>
 
-    <el-table v-loading="watchlistStore.loading" :data="watchlistStore.items" row-key="stockCode" size="small">
-      <el-table-column label="排序" width="70">
-        <template #default="scope">{{ scope.$index + 1 }}</template>
-      </el-table-column>
-      <el-table-column prop="stockCode" label="代码" width="120" />
-      <el-table-column prop="stockName" label="名称" min-width="120" />
-      <el-table-column label="现价" width="120">
-        <template #default="scope">{{ formatPrice(scope.row.currentPrice) }}</template>
-      </el-table-column>
-      <el-table-column label="涨跌幅" width="120">
-        <template #default="scope">
-          <span :class="percentClass(scope.row.changePercent)">{{ formatPercent(scope.row.changePercent) }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="排序操作" min-width="160">
-        <template #default="scope">
-          <div
-            class="drag-row"
-            draggable="true"
-            @dragstart="onDragStart(scope.row.stockCode)"
-            @dragover.prevent
-            @drop="onDrop(scope.row.stockCode)"
-          >
-            拖到这里交换顺序
-          </div>
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" width="90" fixed="right">
-        <template #default="scope">
-          <el-button link type="danger" @click="removeStock(scope.row.stockCode)">删除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+    <section class="section-card watchlist-editor-panel">
+      <div class="section-card-head">
+        <div>
+          <h2 class="section-card-title">添加与管理</h2>
+          <p class="section-card-subtitle">最多 50 只，支持模糊检索与键盘回车添加</p>
+        </div>
+      </div>
+
+      <div class="watchlist-add-row">
+        <el-autocomplete
+          v-model="inputKeyword"
+          :fetch-suggestions="querySuggestions"
+          placeholder="输入股票代码或名称，如 sh600519 / 贵州茅台"
+          clearable
+          @clear="selectedStockCode = ''; selectedKeywordLabel = ''"
+          @select="onSelectSuggestion"
+          @keyup.enter="addStock"
+        />
+        <el-button type="primary" @click="addStock">添加</el-button>
+      </div>
+    </section>
+
+    <section class="section-card">
+      <div class="section-card-head">
+        <div>
+          <h2 class="section-card-title">观察池明细</h2>
+          <p class="section-card-subtitle">拖拽“排序操作”列可快速调整观察优先级</p>
+        </div>
+      </div>
+
+      <el-table v-loading="watchlistStore.loading" :data="watchlistStore.items" row-key="stockCode" size="small">
+        <el-table-column label="排序" width="70">
+          <template #default="scope">{{ scope.$index + 1 }}</template>
+        </el-table-column>
+        <el-table-column prop="stockCode" label="代码" width="120" />
+        <el-table-column prop="stockName" label="名称" min-width="120" />
+        <el-table-column label="现价" width="120">
+          <template #default="scope">{{ formatPrice(scope.row.currentPrice) }}</template>
+        </el-table-column>
+        <el-table-column label="涨跌幅" width="120">
+          <template #default="scope">
+            <span :class="percentClass(scope.row.changePercent)">{{ formatPercent(scope.row.changePercent) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="排序操作" min-width="160">
+          <template #default="scope">
+            <div
+              class="drag-row"
+              draggable="true"
+              @dragstart="onDragStart(scope.row.stockCode)"
+              @dragover.prevent
+              @drop="onDrop(scope.row.stockCode)"
+            >
+              拖到这里交换顺序
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="90" fixed="right">
+          <template #default="scope">
+            <el-button link type="danger" @click="removeStock(scope.row.stockCode)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </section>
   </section>
 </template>
+
+<style scoped>
+.watchlist-summary-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+</style>

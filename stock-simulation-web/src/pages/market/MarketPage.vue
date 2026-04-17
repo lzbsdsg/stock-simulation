@@ -34,6 +34,18 @@ const rateLimitText = computed(() => {
   return `limit=${info.limit ?? '-'} | remaining=${info.remaining ?? '-'} | reset=${info.reset ?? '-'}`
 })
 
+const wsStatusClass = computed(() => (marketStore.wsStatus === 'CONNECTED' ? 'up' : 'down'))
+
+const latencyClass = computed(() => {
+  if (marketStore.wsLagMs > 5000) {
+    return 'down'
+  }
+  if (marketStore.wsLagMs > 1500) {
+    return 'flat'
+  }
+  return 'up'
+})
+
 const marketQuotes = computed(() => marketStore.watchQuotes)
 
 const quoteGridLoading = computed(() => loadingPageQuotes.value || marketStore.loadingQuotes)
@@ -43,6 +55,20 @@ const totalPages = computed(() => {
     return 1
   }
   return Math.ceil(totalStocks.value / pageSize.value)
+})
+
+const pageStart = computed(() => {
+  if (totalStocks.value === 0) {
+    return 0
+  }
+  return (currentPage.value - 1) * pageSize.value + 1
+})
+
+const pageEnd = computed(() => {
+  if (totalStocks.value === 0) {
+    return 0
+  }
+  return Math.min(totalStocks.value, currentPage.value * pageSize.value)
 })
 
 onMounted(async () => {
@@ -212,70 +238,120 @@ async function handleRefresh(): Promise<void> {
 
 <template>
   <section class="market-page">
-    <header class="market-header">
+    <header class="page-head market-head">
       <div>
-        <h1>行情中心</h1>
-        <p>支持股票搜索、实时推送、缓存状态监控与详情跳转。</p>
+        <h1 class="page-title">行情中心</h1>
+        <p class="page-subtitle">按市场状态分区展示，提升盘中扫描效率与重点识别速度。</p>
       </div>
-      <el-button type="primary" plain @click="handleRefresh">刷新行情</el-button>
+      <div class="market-head-actions">
+        <el-button type="primary" plain @click="handleRefresh">刷新行情</el-button>
+      </div>
     </header>
 
-    <section class="market-meta-grid">
-      <article class="meta-card">
-        <span>WS 连接状态</span>
-        <strong>{{ marketStore.wsStatus }}</strong>
-      </article>
-      <article class="meta-card">
-        <span>推送延迟</span>
-        <strong>{{ marketStore.wsLagMs }} ms</strong>
-      </article>
-      <article class="meta-card">
-        <span>降级标记</span>
-        <strong>{{ marketStore.wsDegraded ? '已降级' : '正常' }}</strong>
-      </article>
-      <article class="meta-card">
-        <span>缓存新鲜度</span>
-        <strong>{{ appStore.lastCacheStatus }}</strong>
-      </article>
-    </section>
-
-    <el-alert class="market-alert" type="info" :closable="false" show-icon>
-      <template #title>限流头信息</template>
-      {{ rateLimitText }}
-    </el-alert>
-
-    <StockSearch @select="handleSelectStock" />
-
-    <section v-loading="loadingOfficialBoard" class="market-board-grid">
-      <article v-for="index in marketIndexes" :key="index.stockCode" class="market-board-card">
-        <header>
-          <h3>{{ index.stockName }}</h3>
-          <small>{{ index.stockCode.toUpperCase() }}</small>
-        </header>
-        <strong>{{ formatPrice(index.currentPrice) }}</strong>
-        <div class="market-board-row">
-          <span :class="percentClass(index.changePercent)">{{ formatPercent(index.changePercent) }}</span>
-          <span :class="percentClass(index.changeAmount)">{{ formatPrice(index.changeAmount) }}</span>
+    <section class="market-top-grid">
+      <section class="section-card market-search-panel">
+        <div class="section-card-head">
+          <div>
+            <h2 class="section-card-title">股票检索</h2>
+            <p class="section-card-subtitle">输入代码/名称后直接跳转到详情页</p>
+          </div>
+          <span class="panel-tag">实时查询</span>
         </div>
-        <footer>
-          <span>量 {{ formatVolume(index.volume) }}</span>
-          <span>额 {{ formatVolume(index.amount) }}</span>
-        </footer>
-      </article>
+        <StockSearch @select="handleSelectStock" />
+      </section>
+
+      <section class="section-card market-status-panel">
+        <div class="section-card-head">
+          <div>
+            <h2 class="section-card-title">链路状态</h2>
+            <p class="section-card-subtitle">连接、延迟、缓存与限流头</p>
+          </div>
+        </div>
+
+        <div class="market-status-list">
+          <article class="metric-tile">
+            <span class="metric-label">WS 连接状态</span>
+            <strong class="metric-value" :class="wsStatusClass">{{ marketStore.wsStatus }}</strong>
+          </article>
+          <article class="metric-tile">
+            <span class="metric-label">推送延迟</span>
+            <strong class="metric-value" :class="latencyClass">{{ marketStore.wsLagMs }} ms</strong>
+          </article>
+          <article class="metric-tile">
+            <span class="metric-label">降级标记</span>
+            <strong class="metric-value" :class="marketStore.wsDegraded ? 'down' : 'up'">
+              {{ marketStore.wsDegraded ? '已降级' : '正常' }}
+            </strong>
+          </article>
+          <article class="metric-tile">
+            <span class="metric-label">缓存新鲜度</span>
+            <strong class="metric-value">{{ appStore.lastCacheStatus || 'N/A' }}</strong>
+          </article>
+        </div>
+
+        <el-alert class="market-alert" type="info" :closable="false" show-icon>
+          <template #title>限流头信息</template>
+          {{ rateLimitText }}
+        </el-alert>
+      </section>
     </section>
 
-    <MarketOverview :quotes="marketQuotes" />
+    <section v-loading="loadingOfficialBoard" class="section-card market-index-panel">
+      <div class="section-card-head">
+        <div>
+          <h2 class="section-card-title">市场指数看板</h2>
+          <p class="section-card-subtitle">追踪指数级别的价格变化、量能和成交额</p>
+        </div>
+      </div>
 
-    <section v-loading="quoteGridLoading" class="quote-grid">
-      <QuoteCard
-        v-for="quote in marketQuotes"
-        :key="quote.stockCode"
-        :quote="quote"
-        @select="handleSelectStock"
-      />
+      <section class="market-board-grid">
+        <article v-for="index in marketIndexes" :key="index.stockCode" class="market-board-card">
+          <header>
+            <h3>{{ index.stockName }}</h3>
+            <small>{{ index.stockCode.toUpperCase() }}</small>
+          </header>
+          <strong class="mono-number">{{ formatPrice(index.currentPrice) }}</strong>
+          <div class="market-board-row">
+            <span :class="percentClass(index.changePercent)">{{ formatPercent(index.changePercent) }}</span>
+            <span :class="percentClass(index.changeAmount)">{{ formatPrice(index.changeAmount) }}</span>
+          </div>
+          <footer>
+            <span>量 {{ formatVolume(index.volume) }}</span>
+            <span>额 {{ formatVolume(index.amount) }}</span>
+          </footer>
+        </article>
+      </section>
     </section>
 
-    <section class="market-pagination">
+    <section class="section-card market-breadth-panel">
+      <div class="section-card-head">
+        <div>
+          <h2 class="section-card-title">市场广度</h2>
+          <p class="section-card-subtitle">上涨/下跌分布与整体成交活跃度</p>
+        </div>
+      </div>
+      <MarketOverview :quotes="marketQuotes" />
+    </section>
+
+    <section v-loading="quoteGridLoading" class="section-card market-list-panel">
+      <div class="section-card-head">
+        <div>
+          <h2 class="section-card-title">股票扫描区</h2>
+          <p class="section-card-subtitle">当前页 {{ pageStart }} - {{ pageEnd }} / 共 {{ totalStocks }} 只</p>
+        </div>
+      </div>
+
+      <section class="quote-grid">
+        <QuoteCard
+          v-for="quote in marketQuotes"
+          :key="quote.stockCode"
+          :quote="quote"
+          @select="handleSelectStock"
+        />
+      </section>
+    </section>
+
+    <section class="market-pagination section-card">
       <el-pagination
         background
         layout="total, sizes, prev, pager, next"
@@ -291,3 +367,51 @@ async function handleRefresh(): Promise<void> {
     </section>
   </section>
 </template>
+
+<style scoped>
+.market-page {
+  display: grid;
+  gap: 14px;
+}
+
+.market-head-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.market-top-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1.12fr) minmax(320px, 1fr);
+}
+
+.market-status-panel {
+  align-content: start;
+}
+
+.market-status-list {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.market-alert {
+  margin-top: 6px;
+}
+
+.market-index-panel,
+.market-breadth-panel,
+.market-list-panel {
+  align-content: start;
+}
+
+@media (max-width: 1120px) {
+  .market-top-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .market-status-list {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

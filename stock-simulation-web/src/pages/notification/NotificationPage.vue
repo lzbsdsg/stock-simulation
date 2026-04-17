@@ -9,6 +9,8 @@ const page = ref(1)
 const size = ref(20)
 
 const notifications = computed(() => notificationStore.notifications)
+const unreadCount = computed(() => notifications.value.filter((item) => !item.read).length)
+const readCount = computed(() => notifications.value.filter((item) => item.read).length)
 
 onMounted(async () => {
   await refresh()
@@ -56,7 +58,7 @@ async function markAllRead(): Promise<void> {
     <header class="notification-page-header">
       <div>
         <h1>消息通知</h1>
-        <p>查看系统通知、成交提醒，并支持标记已读。</p>
+        <p>集中查看系统通知与交易提醒，支持快速清理未读。</p>
       </div>
       <div class="notification-page-actions">
         <el-tag type="danger" effect="dark">未读 {{ notificationStore.unreadCount }}</el-tag>
@@ -64,6 +66,25 @@ async function markAllRead(): Promise<void> {
         <el-button type="primary" @click="markAllRead">全部已读</el-button>
       </div>
     </header>
+
+    <section class="notification-summary-grid">
+      <article class="metric-tile">
+        <span class="metric-label">未读消息</span>
+        <strong class="metric-value down mono-number">{{ unreadCount }}</strong>
+      </article>
+      <article class="metric-tile">
+        <span class="metric-label">已读消息</span>
+        <strong class="metric-value mono-number">{{ readCount }}</strong>
+      </article>
+      <article class="metric-tile">
+        <span class="metric-label">当前分页</span>
+        <strong class="metric-value mono-number">{{ page }}</strong>
+      </article>
+      <article class="metric-tile">
+        <span class="metric-label">每页条数</span>
+        <strong class="metric-value mono-number">{{ size }}</strong>
+      </article>
+    </section>
 
     <section class="notification-page-panel">
       <el-empty
@@ -103,3 +124,11 @@ async function markAllRead(): Promise<void> {
     </section>
   </section>
 </template>
+
+<style scoped>
+.notification-summary-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+</style>

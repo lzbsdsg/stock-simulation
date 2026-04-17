@@ -1,6 +1,7 @@
 ﻿<script setup lang="ts">
 import { computed } from 'vue'
 import type { Quote } from '@/types/market'
+import { formatPrice, formatVolume } from '@/utils/format'
 
 const props = withDefaults(
   defineProps<{
@@ -46,17 +47,22 @@ function handleClick() {
     </header>
 
     <div class="quote-main">
-      <strong>{{ quote.currentPrice === null ? '--' : quote.currentPrice.toFixed(2) }}</strong>
+      <strong class="mono-number">{{ formatPrice(quote.currentPrice) }}</strong>
       <span :class="changeClass">
         {{ quote.changePercent === null ? '--' : `${quote.changePercent.toFixed(2)}%` }}
       </span>
     </div>
 
+    <div class="quote-subline">
+      <span>开 {{ formatPrice(quote.openPrice) }}</span>
+      <span>昨 {{ formatPrice(quote.closePrice) }}</span>
+    </div>
+
     <footer>
-      <span>高 {{ quote.highPrice === null ? '--' : quote.highPrice.toFixed(2) }}</span>
-      <span>低 {{ quote.lowPrice === null ? '--' : quote.lowPrice.toFixed(2) }}</span>
-      <span>量 {{ quote.volume === null ? '--' : quote.volume }}</span>
-      <span>额 {{ quote.amount === null ? '--' : quote.amount }}</span>
+      <span>高 {{ formatPrice(quote.highPrice) }}</span>
+      <span>低 {{ formatPrice(quote.lowPrice) }}</span>
+      <span>量 {{ formatVolume(quote.volume) }}</span>
+      <span>额 {{ formatVolume(quote.amount) }}</span>
     </footer>
   </article>
 </template>

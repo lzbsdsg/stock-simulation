@@ -50,16 +50,69 @@ async function refreshAll(): Promise<void> {
 
 <template>
   <section class="trade-page">
-    <header class="trade-header">
+    <header class="page-head">
       <div>
-        <h1>交易中心</h1>
-        <p>支持下单、撤单、委托查询与成交记录查看。</p>
+        <h1 class="page-title">交易执行台</h1>
+        <p class="page-subtitle">下单动作与委托成交记录分区展示，降低误操作风险。</p>
       </div>
-      <el-button type="primary" plain @click="refreshAll">刷新</el-button>
+      <div class="trade-head-actions">
+        <el-button type="primary" plain @click="refreshAll">刷新</el-button>
+      </div>
     </header>
 
-    <OrderForm @placed="refreshAll" />
-    <OrderList />
-    <TradeHistory />
+    <section class="trade-main-grid">
+      <div class="trade-left-column">
+        <OrderForm @placed="refreshAll" />
+
+        <section class="section-card trade-tips-panel">
+          <div class="section-card-head">
+            <div>
+              <h2 class="section-card-title">交易提醒</h2>
+              <p class="section-card-subtitle">下单前建议复核价格、数量与可用资金</p>
+            </div>
+          </div>
+
+          <ul class="trade-tips-list">
+            <li>限价单在价格偏离明显时可能无法成交。</li>
+            <li>委托数量需满足 100 股整数倍规则。</li>
+            <li>频繁撤单会影响委托队列稳定性，建议审慎操作。</li>
+          </ul>
+        </section>
+      </div>
+
+      <div class="trade-right-column">
+        <OrderList />
+        <TradeHistory />
+      </div>
+    </section>
   </section>
 </template>
+
+<style scoped>
+.trade-main-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(330px, 0.95fr) minmax(0, 1.45fr);
+  align-items: start;
+}
+
+.trade-left-column,
+.trade-right-column {
+  display: grid;
+  gap: 14px;
+}
+
+.trade-tips-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  font-size: 13px;
+}
+
+@media (max-width: 1120px) {
+  .trade-main-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

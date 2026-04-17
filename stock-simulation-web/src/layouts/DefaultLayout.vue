@@ -46,10 +46,13 @@ async function handleLogout() {
 <template>
   <div class="default-layout">
     <header class="app-header">
-      <button class="brand" @click="router.push('/dashboard')">
-        <span class="brand-mark">S</span>
-        <span class="brand-text">Stock Simulation</span>
-      </button>
+      <div class="app-header-left">
+        <button class="brand" @click="router.push('/dashboard')">
+          <span class="brand-mark">S</span>
+          <span class="brand-text">Stock Simulation</span>
+        </button>
+        <span class="session-chip">模拟交易工作台</span>
+      </div>
       <div class="header-actions">
         <NotificationBell />
         <span class="user-name">{{ displayName }}</span>
@@ -59,6 +62,7 @@ async function handleLogout() {
 
     <div class="layout-body">
       <aside class="app-sidebar">
+        <div class="sidebar-title">交易导航</div>
         <RouterLink to="/dashboard" class="sidebar-link">仪表盘</RouterLink>
         <RouterLink to="/market" class="sidebar-link">行情中心</RouterLink>
         <RouterLink to="/trade" class="sidebar-link">交易中心</RouterLink>

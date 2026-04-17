@@ -30,27 +30,85 @@ async function refreshAll(): Promise<void> {
 
 <template>
   <section class="portfolio-page">
-    <header class="portfolio-header">
+    <header class="page-head">
       <div>
-        <h1>持仓与资产</h1>
-        <p>展示资产概览、实时持仓盈亏与收益曲线。</p>
+        <h1 class="page-title">持仓与资产</h1>
+        <p class="page-subtitle">围绕成本、市值、盈亏和资金流的立体视图。</p>
       </div>
       <el-button type="primary" plain @click="refreshAll">刷新</el-button>
     </header>
 
-    <AssetOverview />
-    <PositionTable />
-
-    <section class="curve-toolbar">
-      <span>收益区间：</span>
-      <el-radio-group v-model="days" size="small">
-        <el-radio-button :label="30">30天</el-radio-button>
-        <el-radio-button :label="90">90天</el-radio-button>
-        <el-radio-button :label="180">180天</el-radio-button>
-      </el-radio-group>
+    <section class="section-card">
+      <div class="section-card-head">
+        <div>
+          <h2 class="section-card-title">账户资产摘要</h2>
+          <p class="section-card-subtitle">总资产、可用资金与收益率快速浏览</p>
+        </div>
+      </div>
+      <AssetOverview />
     </section>
 
-    <EquityCurve :curve="portfolioStore.equityCurve" />
-    <FundFlowTable />
+    <section class="portfolio-main-grid">
+      <div class="portfolio-main-left">
+        <PositionTable />
+        <FundFlowTable />
+      </div>
+
+      <aside class="portfolio-main-right">
+        <section class="section-card curve-toolbar-card">
+          <div class="section-card-head">
+            <div>
+              <h2 class="section-card-title">收益曲线区间</h2>
+              <p class="section-card-subtitle">按时间窗口观察收益波动</p>
+            </div>
+          </div>
+          <section class="curve-toolbar">
+            <span>区间：</span>
+            <el-radio-group v-model="days" size="small">
+              <el-radio-button :label="30">30天</el-radio-button>
+              <el-radio-button :label="90">90天</el-radio-button>
+              <el-radio-button :label="180">180天</el-radio-button>
+            </el-radio-group>
+          </section>
+          <EquityCurve :curve="portfolioStore.equityCurve" />
+        </section>
+      </aside>
+    </section>
   </section>
 </template>
+
+<style scoped>
+.portfolio-main-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr);
+  align-items: start;
+}
+
+.portfolio-main-left,
+.portfolio-main-right {
+  display: grid;
+  gap: 14px;
+}
+
+.curve-toolbar-card {
+  align-content: start;
+}
+
+.curve-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.curve-toolbar span {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+@media (max-width: 1140px) {
+  .portfolio-main-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

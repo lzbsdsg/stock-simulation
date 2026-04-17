@@ -5,6 +5,31 @@ import { formatPrice, percentClass } from '@/utils/format'
 
 const portfolioStore = usePortfolioStore()
 
+function flowTypeLabel(type: string): string {
+  const map: Record<string, string> = {
+    DEPOSIT: '入金',
+    WITHDRAW: '出金',
+    FREEZE: '冻结',
+    UNFREEZE: '解冻',
+    TRADE: '交易结算',
+    DIVIDEND: '分红',
+  }
+  return map[type] ?? type
+}
+
+function flowTagType(type: string): 'success' | 'warning' | 'info' | 'danger' {
+  if (type === 'DEPOSIT' || type === 'DIVIDEND') {
+    return 'success'
+  }
+  if (type === 'FREEZE') {
+    return 'warning'
+  }
+  if (type === 'WITHDRAW') {
+    return 'danger'
+  }
+  return 'info'
+}
+
 function formatTime(value: string): string {
   return dayjs(value).format('MM-DD HH:mm:ss')
 }
@@ -12,9 +37,20 @@ function formatTime(value: string): string {
 
 <template>
   <section class="fund-flow-panel">
-    <h3>资金流水</h3>
+    <div class="panel-head">
+      <div>
+        <h3>资金流水</h3>
+        <p class="section-card-subtitle">记录资金冻结、交易结算与余额变化</p>
+      </div>
+    </div>
     <el-table :data="portfolioStore.fundFlows" size="small">
-      <el-table-column prop="flowType" label="类型" width="120" />
+      <el-table-column label="类型" width="120">
+        <template #default="scope">
+          <el-tag :type="flowTagType(scope.row.flowType)" size="small" effect="plain">
+            {{ flowTypeLabel(scope.row.flowType) }}
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column label="金额" width="120">
         <template #default="scope">
           <span :class="percentClass(scope.row.amount)">{{ formatPrice(scope.row.amount) }}</span>
