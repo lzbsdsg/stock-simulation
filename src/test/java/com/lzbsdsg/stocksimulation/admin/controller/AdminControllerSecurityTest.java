@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.lzbsdsg.stocksimulation.admin.application.AdminApplicationService;
 import com.lzbsdsg.stocksimulation.auth.infrastructure.gateway.JwtTokenProvider;
 import com.lzbsdsg.stocksimulation.config.JwtAuthenticationFilter;
+import com.lzbsdsg.stocksimulation.config.K6BypassAuthenticationFilter;
 import com.lzbsdsg.stocksimulation.config.SecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(AdminController.class)
 @AutoConfigureMockMvc
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class})
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, K6BypassAuthenticationFilter.class})
 @TestPropertySource(
     properties = {
       "DEV_BASIC_AUTH_PASSWORD=test",

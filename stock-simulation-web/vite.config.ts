@@ -13,10 +13,30 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
-  optimizeDeps: {
-    esbuildOptions: {
-      define: {
-        global: 'globalThis',
+  build: {
+    target: 'es2019',
+    cssCodeSplit: true,
+    chunkSizeWarningLimit: 900,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) {
+            return undefined
+          }
+          if (id.includes('echarts')) {
+            return 'vendor-echarts'
+          }
+          if (id.includes('element-plus')) {
+            return 'vendor-element-plus'
+          }
+          if (id.includes('@stomp') || id.includes('sockjs-client')) {
+            return 'vendor-ws'
+          }
+          if (id.includes('/pinia/') || id.includes('/vue-router/') || id.includes('/vue/')) {
+            return 'vendor-vue-core'
+          }
+          return 'vendor-misc'
+        },
       },
     },
   },

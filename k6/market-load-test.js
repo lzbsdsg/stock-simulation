@@ -1,18 +1,25 @@
 // k6 行情接口压测脚本（迭代10联调版）
 // 示例：
 // k6 run -e BASE_URL=http://localhost:8080 -e TOKEN=<accessToken> -e VUS=100 -e DURATION=5m k6/market-load-test.js
+// 无 token 压测（需后端开启 app.security.k6-bypass）：
+// k6 run -e BASE_URL=http://localhost:8080 -e K6_BYPASS_KEY=<bypassKey> k6/market-load-test.js
 
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
 const TOKEN = __ENV.TOKEN || '';
+const K6_BYPASS_KEY = __ENV.K6_BYPASS_KEY || '';
 const VUS = Number(__ENV.VUS || '100');
 const DURATION = __ENV.DURATION || '5m';
 
-const DEFAULT_HEADERS = TOKEN
-    ? { Authorization: `Bearer ${TOKEN}` }
-    : {};
+const DEFAULT_HEADERS = {};
+if (TOKEN) {
+    DEFAULT_HEADERS.Authorization = `Bearer ${TOKEN}`;
+}
+if (K6_BYPASS_KEY) {
+    DEFAULT_HEADERS['X-K6-Bypass-Key'] = K6_BYPASS_KEY;
+}
 
 const KLINE_FROM = __ENV.KLINE_FROM || '2025-01-01';
 const KLINE_TO = __ENV.KLINE_TO || '2025-12-31';

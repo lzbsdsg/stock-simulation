@@ -11,6 +11,7 @@ import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.amqp.SimpleRabbitListenerContainerFactoryConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,6 +32,15 @@ public class RabbitMQConfig {
   public static final String EMAIL_EXCHANGE = "email.exchange";
   public static final String EMAIL_QUEUE = "email.send.queue";
   public static final String EMAIL_ROUTING_KEY = "email.send";
+
+  @Value("${app.rabbit.match.prefetch:10}")
+  private int matchPrefetch;
+
+  @Value("${app.rabbit.match.concurrent-consumers:8}")
+  private int matchConcurrentConsumers;
+
+  @Value("${app.rabbit.match.max-concurrent-consumers:8}")
+  private int matchMaxConcurrentConsumers;
 
   @Bean
   public DirectExchange tradeExchange() {
@@ -122,9 +132,11 @@ public class RabbitMQConfig {
       MessageConverter messageConverter) {
     SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
     configurer.configure(factory, connectionFactory);
-    factory.setPrefetchCount(10);
-    factory.setConcurrentConsumers(8);
-    factory.setMaxConcurrentConsumers(8);
+    int safeConcurrent = Math.max(1, matchConcurrentConsumers);
+    int safeMaxConcurrent = Math.max(safeConcurrent, matchMaxConcurrentConsumers);
+    factory.setPrefetchCount(Math.max(1, matchPrefetch));
+    factory.setConcurrentConsumers(safeConcurrent);
+    factory.setMaxConcurrentConsumers(safeMaxConcurrent);
     factory.setDefaultRequeueRejected(false);
     factory.setMessageConverter(messageConverter);
     return factory;

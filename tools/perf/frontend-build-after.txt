@@ -1,0 +1,61 @@
+﻿[36mvite v8.0.1 [32mbuilding client environment for production...[36m[39m
+[2K
+transforming...✓ 2362 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                   1.29 kB │ gzip:   0.48 kB
+dist/assets/WatchlistPage-YIZgQSw8.css            0.12 kB │ gzip:   0.12 kB
+dist/assets/NotificationPage-BRpfMjsG.css         0.12 kB │ gzip:   0.12 kB
+dist/assets/StockDetailPage-DtzBmqBI.css          0.42 kB │ gzip:   0.21 kB
+dist/assets/TradePage-Ds54swgb.css                0.43 kB │ gzip:   0.25 kB
+dist/assets/PortfolioPage-BqTvIjsf.css            0.53 kB │ gzip:   0.26 kB
+dist/assets/MarketPage-BO7WNs-L.css               0.68 kB │ gzip:   0.26 kB
+dist/assets/AdminConsolePage-DuipWvGN.css         0.99 kB │ gzip:   0.42 kB
+dist/assets/DashboardPage-DWgH-kJc.css            3.59 kB │ gzip:   1.05 kB
+dist/assets/index-BmNOE800.css                   15.53 kB │ gzip:   3.71 kB
+dist/assets/vendor-element-plus-C3WwrwYR.css    356.69 kB │ gzip:  47.38 kB
+dist/assets/format-B7Cdb5pn.js                    0.38 kB │ gzip:   0.21 kB
+dist/assets/AuthLayout-CXK6YaJ8.js                0.42 kB │ gzip:   0.28 kB
+dist/assets/rolldown-runtime-Dw2cE7zH.js          0.68 kB │ gzip:   0.41 kB
+dist/assets/portfolio-CQFPQO_l.js                 0.94 kB │ gzip:   0.46 kB
+dist/assets/QuoteCard-Cxi-s6Wc.js                 1.21 kB │ gzip:   0.64 kB
+dist/assets/LoginPage-BAJO8-t7.js                 1.99 kB │ gzip:   1.13 kB
+dist/assets/auth-D9GJAVak.js                      2.16 kB │ gzip:   0.91 kB
+dist/assets/market-CqazY7EH.js                    2.57 kB │ gzip:   0.95 kB
+dist/assets/ForgotPasswordPage-Du6XNRRI.js        2.63 kB │ gzip:   1.32 kB
+dist/assets/TradePage-OHrZDgpS.js                 2.91 kB │ gzip:   1.62 kB
+dist/assets/RegisterPage-O6Ps85nU.js              3.19 kB │ gzip:   1.55 kB
+dist/assets/useWebSocket-T_NBzYyO.js              3.56 kB │ gzip:   1.72 kB
+dist/assets/UserProfilePage-CJw5Z_hR.js           3.59 kB │ gzip:   1.61 kB
+dist/assets/NotificationPage-ByUudL9b.js          4.13 kB │ gzip:   1.85 kB
+dist/assets/request-BYcjl0Ln.js                   5.31 kB │ gzip:   2.36 kB
+dist/assets/KLineChart-CNBUze6r.js                5.37 kB │ gzip:   2.33 kB
+dist/assets/StockDetailPage-BdJ8ratL.js           6.07 kB │ gzip:   2.60 kB
+dist/assets/WatchlistPage-mn6xtaor.js             6.45 kB │ gzip:   2.78 kB
+dist/assets/DashboardPage-CpNowVcI.js             7.61 kB │ gzip:   2.98 kB
+dist/assets/PortfolioPage-7TXMDlzY.js             7.87 kB │ gzip:   3.16 kB
+dist/assets/TradeHistory-BvWw0LP-.js              8.52 kB │ gzip:   3.29 kB
+dist/assets/AdminConsolePage-B0D27mtL.js         10.09 kB │ gzip:   3.15 kB
+dist/assets/MarketPage-BZQUjp39.js               11.75 kB │ gzip:   4.64 kB
+dist/assets/index-X8GrmqqI.js                    17.59 kB │ gzip:   6.76 kB
+dist/assets/vendor-vue-core-C5dnRH6v.js          30.83 kB │ gzip:  12.08 kB
+dist/assets/vendor-misc-DyszQY8z.js              42.31 kB │ gzip:  16.60 kB
+dist/assets/vendor-ws-sZ8IBXfY.js                61.16 kB │ gzip:  18.15 kB
+dist/assets/vendor-element-plus-CYwLy4x0.js     971.21 kB │ gzip: 311.77 kB
+dist/assets/vendor-echarts-Doywcp4L.js        1,114.34 kB │ gzip: 365.09 kB
+
+[32m✓ built in 1.78s[39m
+node.exe : [33m[plugin builtin:vite-reporter] 
+At C:\Users\lzb25\AppData\Roaming\npm\pnpm.ps1:24 char:5
++     & "node$exe"  "$basedir/node_modules/pnpm/bin/pnpm.cjs" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([33m[plugin builtin:vite-reporter] :String) [], R 
+   emoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+(!) Some chunks are larger than 900 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/refere
+nce/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+

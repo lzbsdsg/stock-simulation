@@ -16,9 +16,13 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
+  private final K6BypassAuthenticationFilter k6BypassAuthenticationFilter;
 
-  public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+  public SecurityConfig(
+      JwtAuthenticationFilter jwtAuthenticationFilter,
+      K6BypassAuthenticationFilter k6BypassAuthenticationFilter) {
     this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    this.k6BypassAuthenticationFilter = k6BypassAuthenticationFilter;
   }
 
   @Bean
@@ -41,6 +45,7 @@ public class SecurityConfig {
                     .authenticated());
 
     http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+    http.addFilterBefore(k6BypassAuthenticationFilter, JwtAuthenticationFilter.class);
 
     return http.build();
   }

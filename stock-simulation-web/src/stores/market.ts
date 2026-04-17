@@ -65,8 +65,8 @@ export const useMarketStore = defineStore('market', () => {
   const ws = useWebSocket({
     endpoint: '/ws/market',
     getToken: () => authStore.accessToken || null,
-    onQuote: (quote) => {
-      upsertQuote(quote)
+    onQuotes: (quotes) => {
+      mergeQuotes(quotes)
     },
   })
 

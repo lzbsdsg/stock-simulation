@@ -1,0 +1,11 @@
+﻿CREATE FUNCTION
+        metric        | avg_ms 
+----------------------+--------
+ Q1_USER_LIST         |  0.412
+ Q2_USER_ROLE_COUNT   |  0.066
+ Q3_TRADE_1D_COUNT    |  1.271
+ Q4_ARCHIVE_CANDIDATE |  1.565
+ Q5_POSITION_POSITIVE |  0.976
+(5 rows)
+
+

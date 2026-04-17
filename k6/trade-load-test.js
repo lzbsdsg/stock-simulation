@@ -4,6 +4,7 @@ import { Rate } from 'k6/metrics';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
 const TOKEN = __ENV.TOKEN || '';
+const K6_BYPASS_KEY = __ENV.K6_BYPASS_KEY || '';
 const STOCK_CODE = __ENV.STOCK_CODE || 'sh600519';
 const ORDER_PRICE = Number(__ENV.ORDER_PRICE || '1688.88');
 const ORDER_QUANTITY = Number(__ENV.ORDER_QUANTITY || '100');
@@ -34,6 +35,9 @@ function authHeaders() {
   };
   if (TOKEN) {
     headers['Authorization'] = `Bearer ${TOKEN}`;
+  }
+  if (K6_BYPASS_KEY) {
+    headers['X-K6-Bypass-Key'] = K6_BYPASS_KEY;
   }
   return headers;
 }

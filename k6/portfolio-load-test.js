@@ -3,6 +3,7 @@ import { check, fail, sleep } from 'k6';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
 const TOKEN = __ENV.TOKEN || '';
+const K6_BYPASS_KEY = __ENV.K6_BYPASS_KEY || '';
 const DAYS = Number(__ENV.DAYS || '30');
 const VUS = Number(__ENV.VUS || '100');
 const DURATION = __ENV.DURATION || '5m';
@@ -23,6 +24,9 @@ function authHeaders() {
   const headers = { 'Content-Type': 'application/json' };
   if (TOKEN) {
     headers.Authorization = `Bearer ${TOKEN}`;
+  }
+  if (K6_BYPASS_KEY) {
+    headers['X-K6-Bypass-Key'] = K6_BYPASS_KEY;
   }
   return headers;
 }

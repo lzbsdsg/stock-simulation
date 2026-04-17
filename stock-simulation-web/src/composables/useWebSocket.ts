@@ -33,6 +33,7 @@ interface UseWebSocketOptions {
   degradedRenderIntervalMs?: number
   onStatusChange?: (status: WsConnectionStatus) => void
   onQuote?: (quote: Quote) => void
+  onQuotes?: (quotes: Quote[]) => void
   onError?: (message: string) => void
 }
 
@@ -80,7 +81,9 @@ export function useWebSocket(options: UseWebSocketOptions) {
   const degradedRenderIntervalMs = options.degradedRenderIntervalMs ?? 5000
   const activeTopics = new Set<string>()
   const subscriptions = new Map<string, StompSubscription>()
+  const pendingQuotesByCode = new Map<string, Quote>()
   let lastDeliveredAtMs = 0
+  let flushHandle: number | null = null
 
   let reconnectTimer: number | null = null
   let stompClient: Client | null = null
@@ -97,6 +100,43 @@ export function useWebSocket(options: UseWebSocketOptions) {
     }
     window.clearTimeout(reconnectTimer)
     reconnectTimer = null
+  }
+
+  function flushPendingQuotes(): void {
+    flushHandle = null
+    if (pendingQuotesByCode.size === 0) {
+      return
+    }
+    const quotes = Array.from(pendingQuotesByCode.values())
+    pendingQuotesByCode.clear()
+    options.onQuotes?.(quotes)
+  }
+
+  function scheduleFlush(): void {
+    if (flushHandle !== null) {
+      return
+    }
+    if (typeof window.requestAnimationFrame === 'function') {
+      flushHandle = window.requestAnimationFrame(() => {
+        flushPendingQuotes()
+      })
+      return
+    }
+    flushHandle = window.setTimeout(() => {
+      flushPendingQuotes()
+    }, 16)
+  }
+
+  function clearFlushHandle(): void {
+    if (flushHandle === null) {
+      return
+    }
+    if (typeof window.cancelAnimationFrame === 'function') {
+      window.cancelAnimationFrame(flushHandle)
+    } else {
+      window.clearTimeout(flushHandle)
+    }
+    flushHandle = null
   }
 
   function scheduleReconnect(): void {
@@ -141,7 +181,12 @@ export function useWebSocket(options: UseWebSocketOptions) {
       const quote = normalizeQuote(payload)
       if (quote) {
         lastDeliveredAtMs = now
-        options.onQuote?.(quote)
+        if (options.onQuotes) {
+          pendingQuotesByCode.set(quote.stockCode, quote)
+          scheduleFlush()
+        } else {
+          options.onQuote?.(quote)
+        }
       }
     } catch (_error) {
       options.onError?.('行情推送解析失败')
@@ -220,6 +265,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
   function disconnect(): void {
     manualDisconnected = true
     clearReconnectTimer()
+    clearFlushHandle()
+    pendingQuotesByCode.clear()
 
     for (const [topic, subscription] of subscriptions.entries()) {
       subscription.unsubscribe()

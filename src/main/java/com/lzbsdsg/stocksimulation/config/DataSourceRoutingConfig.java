@@ -29,6 +29,11 @@ public class DataSourceRoutingConfig {
   private static final int MASTER_MAX_POOL = 30;
   private static final int SLAVE_MIN_IDLE = 20;
   private static final int SLAVE_MAX_POOL = 50;
+  private static final long DEFAULT_CONNECTION_TIMEOUT_MS = 3000L;
+  private static final long DEFAULT_IDLE_TIMEOUT_MS = 600000L;
+  private static final long DEFAULT_MAX_LIFETIME_MS = 1800000L;
+  private static final long DEFAULT_KEEPALIVE_TIME_MS = 120000L;
+  private static final long DEFAULT_LEAK_DETECTION_MS = 30000L;
 
   @Bean(name = "masterDataSource")
   public DataSource masterDataSource(Environment environment) {
@@ -84,8 +89,8 @@ public class DataSourceRoutingConfig {
       Environment environment,
       String preferredPrefix,
       String fallbackPrefix,
-      int minIdle,
-      int maxPoolSize,
+      int defaultMinIdle,
+      int defaultMaxPoolSize,
       String poolName) {
     HikariDataSource ds = new HikariDataSource();
     ds.setDriverClassName(
@@ -104,12 +109,63 @@ public class DataSourceRoutingConfig {
         get(environment, preferredPrefix + ".username", fallbackPrefix + ".username", "postgres"));
     ds.setPassword(
         get(environment, preferredPrefix + ".password", fallbackPrefix + ".password", ""));
-    ds.setMinimumIdle(minIdle);
-    ds.setMaximumPoolSize(maxPoolSize);
-    ds.setConnectionTimeout(3000);
-    ds.setIdleTimeout(600000);
-    ds.setMaxLifetime(1800000);
-    ds.setLeakDetectionThreshold(30000);
+
+    String preferredHikariPrefix = preferredPrefix + ".hikari";
+    String fallbackHikariPrefix = fallbackPrefix + ".hikari";
+    int minIdle =
+        getInt(
+            environment,
+            preferredHikariPrefix + ".minimum-idle",
+            fallbackHikariPrefix + ".minimum-idle",
+            defaultMinIdle);
+    int maxPoolSize =
+        getInt(
+            environment,
+            preferredHikariPrefix + ".maximum-pool-size",
+            fallbackHikariPrefix + ".maximum-pool-size",
+            defaultMaxPoolSize);
+    long connectionTimeout =
+        getLong(
+            environment,
+            preferredHikariPrefix + ".connection-timeout",
+            fallbackHikariPrefix + ".connection-timeout",
+            DEFAULT_CONNECTION_TIMEOUT_MS);
+    long idleTimeout =
+        getLong(
+            environment,
+            preferredHikariPrefix + ".idle-timeout",
+            fallbackHikariPrefix + ".idle-timeout",
+            DEFAULT_IDLE_TIMEOUT_MS);
+    long maxLifetime =
+        getLong(
+            environment,
+            preferredHikariPrefix + ".max-lifetime",
+            fallbackHikariPrefix + ".max-lifetime",
+            DEFAULT_MAX_LIFETIME_MS);
+    long keepaliveTime =
+        getLong(
+            environment,
+            preferredHikariPrefix + ".keepalive-time",
+            fallbackHikariPrefix + ".keepalive-time",
+            DEFAULT_KEEPALIVE_TIME_MS);
+    long leakDetectionThreshold =
+        getLong(
+            environment,
+            preferredHikariPrefix + ".leak-detection-threshold",
+            fallbackHikariPrefix + ".leak-detection-threshold",
+            DEFAULT_LEAK_DETECTION_MS);
+
+    ds.setMinimumIdle(Math.max(1, minIdle));
+    ds.setMaximumPoolSize(Math.max(Math.max(1, minIdle), maxPoolSize));
+    ds.setConnectionTimeout(Math.max(1000L, connectionTimeout));
+    ds.setIdleTimeout(Math.max(30000L, idleTimeout));
+    ds.setMaxLifetime(Math.max(60000L, maxLifetime));
+    if (keepaliveTime > 0) {
+      ds.setKeepaliveTime(keepaliveTime);
+    }
+    if (leakDetectionThreshold > 0) {
+      ds.setLeakDetectionThreshold(leakDetectionThreshold);
+    }
     ds.setPoolName(poolName);
     return ds;
   }
@@ -124,5 +180,23 @@ public class DataSourceRoutingConfig {
       return fallback;
     }
     return defaultValue;
+  }
+
+  private int getInt(Environment environment, String key, String fallbackKey, int defaultValue) {
+    String value = get(environment, key, fallbackKey, String.valueOf(defaultValue));
+    try {
+      return Integer.parseInt(value);
+    } catch (NumberFormatException ignored) {
+      return defaultValue;
+    }
+  }
+
+  private long getLong(Environment environment, String key, String fallbackKey, long defaultValue) {
+    String value = get(environment, key, fallbackKey, String.valueOf(defaultValue));
+    try {
+      return Long.parseLong(value);
+    } catch (NumberFormatException ignored) {
+      return defaultValue;
+    }
   }
 }
