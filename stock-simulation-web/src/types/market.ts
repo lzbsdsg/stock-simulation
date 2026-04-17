@@ -54,3 +54,28 @@ export interface MarketIndexQuote {
   volume: number | null
   amount: number | null
 }
+
+export interface MarketLatencyMetric {
+  metric: string
+  count: number
+  meanMs: number | null
+  maxMs: number | null
+  p95Ms: number | null
+  p99Ms: number | null
+}
+
+export interface MarketRealtimeMetrics {
+  sampledAt: string
+  activeCodeCount: number
+  lastIngestCodeCount: number
+  lastPublishedQuoteCount: number
+  lastIngestDurationMs: number
+  wsActiveConnections: number
+  wsQueuedTasks: number
+  wsDegradedMode: boolean
+  wsDroppedTotal: number
+  ingestCycleLatency: MarketLatencyMetric | null
+  pubSubFanoutLatency: MarketLatencyMetric | null
+  wsQueueLatency: MarketLatencyMetric | null
+  wsPushLatency: MarketLatencyMetric | null
+}

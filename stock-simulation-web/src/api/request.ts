@@ -10,6 +10,7 @@ import {
   getAccessToken,
   getRefreshToken,
   loadAuthSession,
+  parseAccessTokenRole,
   saveAuthSession,
 } from '@/utils/auth-storage'
 
@@ -87,6 +88,7 @@ function buildSessionFromTokenPayload(payload: TokenPayload): AuthSession {
     expiresIn: payload.expiresIn,
     userId: payload.userId,
     nickname: payload.nickname,
+    role: payload.role ?? parseAccessTokenRole(payload.accessToken),
   }
 }
 

@@ -36,6 +36,8 @@ public class SecurityConfig {
                         "/actuator/**",
                         "/ws/**")
                     .permitAll()
+                      .requestMatchers("/api/v1/admin/**")
+                      .hasRole("ADMIN")
                     .anyRequest()
                     .authenticated());
 

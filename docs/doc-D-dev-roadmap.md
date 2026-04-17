@@ -1,7 +1,7 @@
 # 文档 D：开发路线图
 
-> 版本：2.0 | 日期：2026-02-13 | 状态：初稿
-> 目标：一人全栈，20 周完成 MVP → Beta 发布（含百万用户高并发架构）
+> 版本：2.1 | 日期：2026-04-17 | 状态：更新
+> 目标：一人全栈，21 周完成 MVP → Beta 发布（含百万用户高并发架构）
 > 变更：v2.0 整合多级缓存、读写分离、行情扇出、WS背压、分布式基础设施
 
 ---
@@ -22,13 +22,14 @@ Week 10  ████ 持仓与资产模块 (Portfolio) — 分区表 + 分批�
 Week 11  ████ 前端 MVP — 认证 + 行情页面 + WS实时推送
 Week 12  ████ 前端 MVP — 交易 + 持仓页面 + 背压降级展示
 Week 13  ████ WebSocket完善 + 自选股 + 消息通知
-Week 14  ████ 部署 — Docker集群 + Nginx LB + PG主从 + Redis Cluster
-Week 15  ████ 监控 — Prometheus + Grafana + Loki + Tempo + 告警规则
-Week 16  ████ CI/CD — GitHub Actions + 轻量压测门禁 + 镜像安全扫描
-Week 17  ████ 性能调优 — 慢SQL + 缓存命中率 + 连接池 + JVM
-Week 18  ████ k6 压测 + 安全加固
-Week 19  ████ 细节打磨 + Bug 修复
-Week 20  ████ Beta 发布 + 文档收尾
+Week 14  ████ 管理员模块 — RBAC + 管理后台 + 实时性能面板
+Week 15  ████ 部署 — Docker集群 + Nginx LB + PG主从 + Redis Cluster
+Week 16  ████ 监控 — Prometheus + Grafana + Loki + Tempo + 告警规则
+Week 17  ████ CI/CD — GitHub Actions + 轻量压测门禁 + 镜像安全扫描
+Week 18  ████ 性能调优 — 慢SQL + 缓存命中率 + 连接池 + JVM
+Week 19  ████ k6 压测 + 安全加固
+Week 20  ████ 细节打磨 + Bug 修复
+Week 21  ████ Beta 发布 + 文档收尾
 ```
 
 ---
@@ -613,7 +614,29 @@ Week 20  ████ Beta 发布 + 文档收尾
 
 ---
 
-### Iteration 13 — Week 14：部署 — Docker集群 + Nginx LB + PG主从 + Redis Cluster
+### Iteration 13 — Week 14：管理员模块 + 管理端实时性能面板
+
+**目标**：补齐管理员权限闭环、管理后台基础能力与管理员前端实时观测入口。
+
+**任务**：
+- [x] 后端安全收敛：`/api/v1/admin/**` 仅 `ROLE_ADMIN` 可访问。
+- [x] JWT 鉴权链路补齐角色注入（`JwtAuthenticationFilter` 写入 `ROLE_*`）。
+- [x] Access Token 严格校验（HTTP/WS 均拒绝 refresh token 直连）。
+- [x] 管理应用服务实现：用户列表、用户状态切换、系统统计、排行榜。
+- [x] 前端鉴权补齐 role 持久化与 `isAdmin` 角色判断。
+- [x] 前端路由守卫新增 `requiresAdmin`，非管理员禁止访问 `/admin`。
+- [x] 默认布局新增“管理后台”导航，仅管理员可见。
+- [x] 新增管理员控制台页面，接入系统统计与行情实时性能指标。
+
+**验收标准**：
+- 普通用户调用 `/api/v1/admin/**` 返回 403。
+- 管理员用户可访问 `/api/v1/admin/**` 并返回业务数据。
+- 普通用户前端不可见管理入口，直接访问 `/admin` 被拦截。
+- 管理员可在控制台实时查看行情链路关键指标（连接数/队列/延迟分位）。
+
+---
+
+### Iteration 14 — Week 15：部署 — Docker集群 + Nginx LB + PG主从 + Redis Cluster
 
 **目标**：容器化全栈高可用部署
 
@@ -658,7 +681,7 @@ Week 20  ████ Beta 发布 + 文档收尾
 
 ---
 
-### Iteration 14 — Week 15：监控 — Prometheus + Grafana + Loki + Tempo + 告警
+### Iteration 15 — Week 16：监控 — Prometheus + Grafana + Loki + Tempo + 告警
 
 **目标**：构建可观测性全栈（指标+日志+链路+告警）
 
@@ -701,7 +724,7 @@ Week 20  ████ Beta 发布 + 文档收尾
 
 ---
 
-### Iteration 15 — Week 16：CI/CD — GitHub Actions + 门禁
+### Iteration 16 — Week 17：CI/CD — GitHub Actions + 门禁
 
 **目标**：自动化 CI/CD 流水线 + 轻量压测门禁
 
@@ -725,7 +748,7 @@ Week 20  ████ Beta 发布 + 文档收尾
 
 ---
 
-### Iteration 16 — Week 17：性能调优
+### Iteration 17 — Week 18：性能调优
 
 **目标**：基于监控数据，系统性调优
 
@@ -765,11 +788,11 @@ Week 20  ████ Beta 发布 + 文档收尾
 
 ---
 
-### Iteration 17 — Week 18：k6 压测 + 安全加固
+### Iteration 18 — Week 19：k6 压测 + 安全加固
 
 **目标**：完整压测达标 + 安全全面加固
 
-**Week 18 前半 — k6 完整压测**：
+**Week 19 前半 — k6 完整压测**：
 - [ ] 编写 k6 压测脚本 (5 个场景):
   - k6/market-load-test.js — 行情查询 500VU / 5min
   - k6/trade-load-test.js — 下单接口 200VU / 5min
@@ -784,7 +807,7 @@ Week 20  ████ Beta 发布 + 文档收尾
   - 登录 P99 < 300ms
 - [ ] 压测不达标 → 定位瓶颈 → 调优 → 重测
 
-**Week 18 后半 — 安全加固**：
+**Week 19 后半 — 安全加固**：
 - [ ] 安全测试（越权/注入/暴力破解/Token安全）
 - [ ] Trivy 镜像扫描 → 修复 Critical 漏洞
 - [ ] OWASP ZAP 快速扫描（可选）
@@ -803,9 +826,9 @@ Week 20  ████ Beta 发布 + 文档收尾
 
 ---
 
-### Iteration 18 — Week 19-20：打磨 + 发布
+### Iteration 19 — Week 20-21：打磨 + 发布
 
-**Week 19 — Bug 修复 + UX 打磨**：
+**Week 20 — Bug 修复 + UX 打磨**：
 - [ ] 修复积累的 Bug
 - [ ] 前端动画/过渡效果优化
 - [ ] 加载状态 + 空状态 + 错误状态一致性
@@ -814,7 +837,7 @@ Week 20  ████ Beta 发布 + 文档收尾
 - [ ] Error Boundary 组件
 - [ ] Playwright E2E 测试: 注册→登录→下单→持仓 完整流程
 
-**Week 20 — Beta 发布**：
+**Week 21 — Beta 发布**：
 - [ ] README.md 完善（项目介绍/截图/快速启动/技术栈/架构图/高并发设计亮点）
 - [ ] CONTRIBUTING.md
 - [ ] 用户操作手册（简要版）
@@ -878,10 +901,10 @@ Week 20  ████ Beta 发布 + 文档收尾
                           │
                ┌──────────┼──────────┐
                ▼          ▼          ▼
-           watchlist  notification  admin   (Week 13+)
+            watchlist  notification  admin   (Week 13-14)
                           │
                           ▼
-              部署+监控+CI/CD+压测         (Week 14-18)  ← 5周，质量保障
+              部署+监控+CI/CD+压测         (Week 15-19)  ← 5周，质量保障
 ```
 
 ---
@@ -898,7 +921,7 @@ Week 20  ████ Beta 发布 + 文档收尾
 | Redis Cluster 故障 | 低 | 高 | 降级为本地 Caffeine only + 告警 |
 | PG 主从复制延迟 | 中 | 中 | 写后读强制主库 + 复制延迟监控(>1s告警) |
 | MQ 消息堆积 | 中 | 中 | DLQ + 队列深度告警 + 消费者水平扩展 |
-| k6 压测不达标 | 中 | 高 | 预留 Week 17 专门调优，瓶颈定位工具链就绪 |
+| k6 压测不达标 | 中 | 高 | 预留 Week 18 专门调优，瓶颈定位工具链就绪 |
 | 部署环境问题 | 低 | 中 | Docker 隔离 + 本地与生产一致 |
 | 数据库性能瓶颈 | 中 | 高 | 分区表 + 读写分离 + 索引优化 + 连接池调参 |
 
@@ -945,7 +968,7 @@ Week 20  ████ Beta 发布 + 文档收尾
 - 测试覆盖率: ___%
 - Bug 数量: ___
 
-### 高并发指标 (Week 14+ 开始填写)
+### 高并发指标 (Week 15+ 开始填写)
 - L1 缓存命中率: ___%
 - L2 缓存命中率: ___%
 - WS 连接数峰值: ___
@@ -972,8 +995,9 @@ Week 20  ████ Beta 发布 + 文档收尾
 | **M3 — 可交易** | Week 9 末 | 下单+撤单+MQ异步撮合+幂等+乐观锁重试+成交+持仓 |
 | **M4 — 前端 MVP** | Week 12 末 | 全栈可用（认证+行情+交易+持仓+WS实时推送） |
 | **M5 — 功能完整** | Week 13 末 | 自选股+通知+推送 |
-| **M6 — 可部署(高可用)** | Week 14 末 | Docker集群(2+App)+Nginx LB+PG主从+Redis Cluster |
-| **M7 — 可观测** | Week 15 末 | Prometheus+Grafana+Loki+Tempo+告警规则 |
-| **M8 — CI/CD就绪** | Week 16 末 | GitHub Actions+轻量压测门禁+镜像安全扫描 |
-| **M9 — 性能达标** | Week 18 末 | k6全场景压测达标+安全加固 |
-| **M10 — Beta 发布** | Week 20 末 | 线上可访问 v0.1.0-beta，高并发架构就绪 |
+| **M6 — 管理端就绪** | Week 14 末 | 管理员权限闭环 + 管理后台 + 实时性能面板 |
+| **M7 — 可部署(高可用)** | Week 15 末 | Docker集群(2+App)+Nginx LB+PG主从+Redis Cluster |
+| **M8 — 可观测** | Week 16 末 | Prometheus+Grafana+Loki+Tempo+告警规则 |
+| **M9 — CI/CD就绪** | Week 17 末 | GitHub Actions+轻量压测门禁+镜像安全扫描 |
+| **M10 — 性能达标** | Week 19 末 | k6全场景压测达标+安全加固 |
+| **M11 — Beta 发布** | Week 21 末 | 线上可访问 v0.1.0-beta，高并发架构就绪 |

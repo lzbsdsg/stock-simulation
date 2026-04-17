@@ -81,6 +81,24 @@ public class JwtTokenProvider {
     return parseUserId(parts);
   }
 
+  /** 解析 Token，获取角色（仅 Access Token 有效） */
+  public String getRoleFromToken(String token) {
+    TokenParts parts = decodeAndVerify(token);
+    if (!ACCESS_TYPE.equals(parts.type)) {
+      return "";
+    }
+    return parts.role;
+  }
+
+  /** 判断是否为 Access Token。 */
+  public boolean isAccessToken(String token) {
+    try {
+      return ACCESS_TYPE.equals(decodeAndVerify(token).type);
+    } catch (Exception ex) {
+      return false;
+    }
+  }
+
   /** 验证 Token 有效性（签名 + 过期 + 黑名单） */
   public boolean validateToken(String token) {
     try {

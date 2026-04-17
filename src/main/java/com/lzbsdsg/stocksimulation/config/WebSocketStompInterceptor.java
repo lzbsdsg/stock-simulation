@@ -71,7 +71,7 @@ public class WebSocketStompInterceptor implements ChannelInterceptor {
     }
 
     String token = authorization.substring(7).trim();
-    if (!jwtTokenProvider.validateToken(token)) {
+    if (!jwtTokenProvider.validateToken(token) || !jwtTokenProvider.isAccessToken(token)) {
       return null;
     }
     return String.valueOf(jwtTokenProvider.getUserIdFromToken(token));

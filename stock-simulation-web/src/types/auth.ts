@@ -4,6 +4,7 @@
   expiresIn: number
   userId: number | null
   nickname: string | null
+  role?: string | null
 }
 
 export interface AuthSession {
@@ -12,6 +13,7 @@ export interface AuthSession {
   expiresIn: number
   userId: number | null
   nickname: string | null
+  role: string | null
 }
 
 export interface LoginRequest {

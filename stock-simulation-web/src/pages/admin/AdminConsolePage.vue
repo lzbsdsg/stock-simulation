@@ -1,0 +1,307 @@
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import { getDashboardStats } from '@/api/admin'
+import { getRealtimeMetrics } from '@/api/market'
+import type { AdminDashboardStats } from '@/types/admin'
+import type { MarketLatencyMetric, MarketRealtimeMetrics } from '@/types/market'
+import { formatPrice } from '@/utils/format'
+
+const REFRESH_INTERVAL_MS = 3000
+
+const loading = ref(false)
+const refreshing = ref(false)
+const stats = ref<AdminDashboardStats | null>(null)
+const metrics = ref<MarketRealtimeMetrics | null>(null)
+
+let refreshTimer: number | null = null
+
+const latencyRows = computed(() => {
+  const data = metrics.value
+  if (!data) {
+    return []
+  }
+  return [
+    data.ingestCycleLatency,
+    data.pubSubFanoutLatency,
+    data.wsQueueLatency,
+    data.wsPushLatency,
+  ].filter((item): item is MarketLatencyMetric => Boolean(item))
+})
+
+const sampledAtText = computed(() => {
+  if (!metrics.value?.sampledAt) {
+    return '--'
+  }
+  const date = new Date(metrics.value.sampledAt)
+  if (Number.isNaN(date.getTime())) {
+    return metrics.value.sampledAt
+  }
+  return date.toLocaleString('zh-CN', { hour12: false })
+})
+
+onMounted(async () => {
+  await loadData(false)
+  startAutoRefresh()
+})
+
+onBeforeUnmount(() => {
+  stopAutoRefresh()
+})
+
+async function loadData(silent: boolean) {
+  if (silent) {
+    refreshing.value = true
+  } else {
+    loading.value = true
+  }
+
+  try {
+    const [statsPayload, metricsPayload] = await Promise.all([getDashboardStats(), getRealtimeMetrics()])
+    stats.value = statsPayload
+    metrics.value = metricsPayload
+  } catch (error) {
+    if (!silent) {
+      ElMessage.error('管理员面板加载失败，请稍后重试')
+    }
+    console.error('[admin] load dashboard failed', error)
+  } finally {
+    loading.value = false
+    refreshing.value = false
+  }
+}
+
+function startAutoRefresh() {
+  stopAutoRefresh()
+  refreshTimer = window.setInterval(() => {
+    void loadData(true)
+  }, REFRESH_INTERVAL_MS)
+}
+
+function stopAutoRefresh() {
+  if (refreshTimer !== null) {
+    window.clearInterval(refreshTimer)
+    refreshTimer = null
+  }
+}
+
+function formatNumber(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return '--'
+  }
+  return new Intl.NumberFormat('zh-CN').format(value)
+}
+
+function formatMs(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return '--'
+  }
+  return `${value.toFixed(2)} ms`
+}
+
+function formatLatencyValue(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return '--'
+  }
+  return value.toFixed(2)
+}
+</script>
+
+<template>
+  <section class="admin-page" v-loading="loading">
+    <header class="admin-head">
+      <div>
+        <h1>管理员控制台</h1>
+        <p>仅管理员可访问，面向系统运营和实时链路观测。</p>
+      </div>
+      <div class="admin-actions">
+        <span class="sample-time">采样时间：{{ sampledAtText }}</span>
+        <el-button :loading="refreshing" type="primary" plain @click="loadData(false)">立即刷新</el-button>
+      </div>
+    </header>
+
+    <section class="admin-section">
+      <h2>系统概览</h2>
+      <div class="admin-grid">
+        <article class="metric-card">
+          <span class="metric-label">总用户数</span>
+          <strong>{{ formatNumber(stats?.totalUsers) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">活跃用户</span>
+          <strong>{{ formatNumber(stats?.activeUsers) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">禁用用户</span>
+          <strong>{{ formatNumber(stats?.disabledUsers) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">管理员数量</span>
+          <strong>{{ formatNumber(stats?.adminUsers) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">今日新增用户</span>
+          <strong>{{ formatNumber(stats?.todayNewUsers) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">总成交笔数</span>
+          <strong>{{ formatNumber(stats?.totalTradeCount) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">今日成交笔数</span>
+          <strong>{{ formatNumber(stats?.todayTradeCount) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">总成交额</span>
+          <strong>{{ formatPrice(stats?.totalTradeAmount) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">今日成交额</span>
+          <strong>{{ formatPrice(stats?.todayTradeAmount) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">系统可用资金</span>
+          <strong>{{ formatPrice(stats?.totalAvailableBalance) }}</strong>
+        </article>
+      </div>
+    </section>
+
+    <section class="admin-section">
+      <h2>实时性能面板</h2>
+      <div class="admin-grid">
+        <article class="metric-card">
+          <span class="metric-label">活跃代码数</span>
+          <strong>{{ formatNumber(metrics?.activeCodeCount) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">最近抓取代码数</span>
+          <strong>{{ formatNumber(metrics?.lastIngestCodeCount) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">最近推送行情数</span>
+          <strong>{{ formatNumber(metrics?.lastPublishedQuoteCount) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">最近抓取耗时</span>
+          <strong>{{ formatMs(metrics?.lastIngestDurationMs) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">WebSocket连接数</span>
+          <strong>{{ formatNumber(metrics?.wsActiveConnections) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">WebSocket队列任务</span>
+          <strong>{{ formatNumber(metrics?.wsQueuedTasks) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">降级模式</span>
+          <strong :class="metrics?.wsDegradedMode ? 'down' : 'up'">
+            {{ metrics?.wsDegradedMode ? '已启用' : '正常' }}
+          </strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">累计丢弃推送</span>
+          <strong>{{ formatNumber(metrics?.wsDroppedTotal) }}</strong>
+        </article>
+      </div>
+
+      <div class="latency-table-wrap">
+        <el-table :data="latencyRows" stripe>
+          <el-table-column prop="metric" label="指标" min-width="220" />
+          <el-table-column prop="count" label="样本数" width="100" />
+          <el-table-column label="均值(ms)" width="120">
+            <template #default="scope">
+              {{ formatLatencyValue(scope.row.meanMs) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="最大(ms)" width="120">
+            <template #default="scope">
+              {{ formatLatencyValue(scope.row.maxMs) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="P95(ms)" width="120">
+            <template #default="scope">
+              {{ formatLatencyValue(scope.row.p95Ms) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="P99(ms)" width="120">
+            <template #default="scope">
+              {{ formatLatencyValue(scope.row.p99Ms) }}
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+    </section>
+  </section>
+</template>
+
+<style scoped>
+.admin-page {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.admin-head h1 {
+  margin: 0;
+  font-size: 32px;
+}
+
+.admin-head p {
+  margin: 10px 0 0;
+  color: var(--text-subtle);
+}
+
+.admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sample-time {
+  font-size: 13px;
+  color: var(--text-subtle);
+}
+
+.admin-section {
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.admin-section h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.latency-table-wrap {
+  overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .admin-head {
+    flex-direction: column;
+  }
+
+  .admin-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+</style>

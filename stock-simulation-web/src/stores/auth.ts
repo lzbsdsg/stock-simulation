@@ -6,6 +6,7 @@ import {
   AUTH_SESSION_EVENT,
   clearAuthSession,
   loadAuthSession,
+  parseAccessTokenRole,
   saveAuthSession,
 } from '@/utils/auth-storage'
 
@@ -16,6 +17,7 @@ function toSession(payload: TokenPayload): AuthSession {
     expiresIn: payload.expiresIn,
     userId: payload.userId,
     nickname: payload.nickname,
+    role: payload.role ?? parseAccessTokenRole(payload.accessToken),
   }
 }
 
@@ -25,9 +27,11 @@ export const useAuthStore = defineStore('auth', () => {
   const expiresIn = ref(0)
   const userId = ref<number | null>(null)
   const nickname = ref<string | null>(null)
+  const role = ref<string | null>(null)
   const initialized = ref(false)
 
   const isAuthenticated = computed(() => accessToken.value.length > 0)
+  const isAdmin = computed(() => role.value === 'ADMIN')
 
   let eventBound = false
 
@@ -38,6 +42,7 @@ export const useAuthStore = defineStore('auth', () => {
       expiresIn.value = 0
       userId.value = null
       nickname.value = null
+      role.value = null
       return
     }
 
@@ -46,6 +51,7 @@ export const useAuthStore = defineStore('auth', () => {
     expiresIn.value = session.expiresIn
     userId.value = session.userId
     nickname.value = session.nickname
+    role.value = session.role
   }
 
   function hydrateFromStorage(): void {
@@ -127,8 +133,10 @@ export const useAuthStore = defineStore('auth', () => {
     expiresIn,
     userId,
     nickname,
+    role,
     initialized,
     isAuthenticated,
+    isAdmin,
     ensureInitialized,
     hydrateFromStorage,
     applyTokenPayload,

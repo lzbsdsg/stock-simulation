@@ -69,6 +69,12 @@ const router = createRouter({
           name: 'notifications',
           component: () => import('@/pages/notification/NotificationPage.vue'),
         },
+        {
+          path: 'admin',
+          name: 'admin-console',
+          meta: { requiresAdmin: true },
+          component: () => import('@/pages/admin/AdminConsolePage.vue'),
+        },
       ],
     },
     {
@@ -87,6 +93,10 @@ router.beforeEach((to) => {
   }
 
   if (to.meta.guestOnly && authStore.isAuthenticated) {
+    return { path: '/dashboard' }
+  }
+
+  if (to.meta.requiresAdmin && !authStore.isAdmin) {
     return { path: '/dashboard' }
   }
 

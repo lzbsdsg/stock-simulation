@@ -4,6 +4,8 @@ import type {
   KLinePoint,
   MarketIndexQuote,
   MarketListedPagePayload,
+  MarketLatencyMetric,
+  MarketRealtimeMetrics,
   Quote,
 } from '@/types/market'
 import type { PageResult } from '@/types/http'
@@ -42,6 +44,20 @@ function normalizeKLinePoint(point: KLinePoint): KLinePoint {
     low: toNumber(point.low) ?? 0,
     volume: toNumber(point.volume) ?? 0,
     amount: toNumber(point.amount) ?? 0,
+  }
+}
+
+function normalizeLatencyMetric(input: MarketLatencyMetric | null | undefined): MarketLatencyMetric | null {
+  if (!input) {
+    return null
+  }
+  return {
+    metric: input.metric,
+    count: Number(input.count ?? 0),
+    meanMs: toNumber(input.meanMs),
+    maxMs: toNumber(input.maxMs),
+    p95Ms: toNumber(input.p95Ms),
+    p99Ms: toNumber(input.p99Ms),
   }
 }
 
@@ -118,4 +134,23 @@ export async function getOfficialIndexQuotes(): Promise<MarketIndexQuote[]> {
     volume: toNumber(item.volume),
     amount: toNumber(item.amount),
   }))
+}
+
+export async function getRealtimeMetrics(): Promise<MarketRealtimeMetrics> {
+  const data = await unwrapResponse<MarketRealtimeMetrics>(request.get('/market/realtime-metrics'))
+  return {
+    sampledAt: data.sampledAt,
+    activeCodeCount: Number(data.activeCodeCount ?? 0),
+    lastIngestCodeCount: Number(data.lastIngestCodeCount ?? 0),
+    lastPublishedQuoteCount: Number(data.lastPublishedQuoteCount ?? 0),
+    lastIngestDurationMs: Number(data.lastIngestDurationMs ?? 0),
+    wsActiveConnections: Number(data.wsActiveConnections ?? 0),
+    wsQueuedTasks: Number(data.wsQueuedTasks ?? 0),
+    wsDegradedMode: Boolean(data.wsDegradedMode),
+    wsDroppedTotal: Number(data.wsDroppedTotal ?? 0),
+    ingestCycleLatency: normalizeLatencyMetric(data.ingestCycleLatency),
+    pubSubFanoutLatency: normalizeLatencyMetric(data.pubSubFanoutLatency),
+    wsQueueLatency: normalizeLatencyMetric(data.wsQueueLatency),
+    wsPushLatency: normalizeLatencyMetric(data.wsPushLatency),
+  }
 }
