@@ -1,7 +1,95 @@
 {
   "annotations": { "list": [] },
+  "editable": true,
+  "id": null,
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "targets": [
+        {
+          "expr": "sum(rate(trade_order_created_total[1m]))",
+          "legendFormat": "Order Created",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(trade_order_filled_total[1m]))",
+          "legendFormat": "Order Filled",
+          "refId": "B"
+        }
+      ],
+      "title": "下单/成交吞吐",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "1000 * histogram_quantile(0.95, sum by (le) (rate(trade_match_duration_seconds_bucket[5m])))",
+          "legendFormat": "P95",
+          "refId": "A"
+        },
+        {
+          "expr": "1000 * histogram_quantile(0.99, sum by (le) (rate(trade_match_duration_seconds_bucket[5m])))",
+          "legendFormat": "P99",
+          "refId": "B"
+        }
+      ],
+      "title": "撮合延迟分位",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "none" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "id": 3,
+      "targets": [
+        {
+          "expr": "sum(rabbitmq_queue_messages{queue=~\"trade.match.queue|trade.notification.queue\"})",
+          "legendFormat": "Trade Queues",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rabbitmq_queue_messages{queue=~\".*dlq.*\"})",
+          "legendFormat": "DLQ",
+          "refId": "B"
+        }
+      ],
+      "title": "MQ 队列深度",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "sum(increase(trade_order_created_total[1h]))",
+          "legendFormat": "Created (1h)",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(increase(trade_order_filled_total[1h]))",
+          "legendFormat": "Filled (1h)",
+          "refId": "B"
+        }
+      ],
+      "title": "小时级交易量",
+      "type": "stat"
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 39,
+  "tags": ["stock-simulation", "trade"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
   "title": "Trade Dashboard — Stock Simulation",
-  "description": "交易监控: 下单TPS、撮合延迟、乐观锁重试率、MQ消费速率、DLQ",
-  "panels": [],
-  "_comment": "TODO: 面板 — 下单TPS、撮合P99、乐观锁冲突率、MQ消费延迟、死信队列长度、资金冻结/解冻流水"
+  "uid": "stock-trade",
+  "version": 1
 }

@@ -11,6 +11,13 @@ const size = ref(20)
 const notifications = computed(() => notificationStore.notifications)
 const unreadCount = computed(() => notifications.value.filter((item) => !item.read).length)
 const readCount = computed(() => notifications.value.filter((item) => item.read).length)
+const unreadRatio = computed(() => {
+  const total = notifications.value.length
+  if (total === 0) {
+    return null
+  }
+  return (unreadCount.value / total) * 100
+})
 
 onMounted(async () => {
   await refresh()
@@ -62,10 +69,21 @@ async function markAllRead(): Promise<void> {
       </div>
       <div class="notification-page-actions">
         <el-tag type="danger" effect="dark">未读 {{ notificationStore.unreadCount }}</el-tag>
-        <el-button type="primary" plain @click="refresh">刷新</el-button>
-        <el-button type="primary" @click="markAllRead">全部已读</el-button>
+        <el-button plain @click="refresh">刷新</el-button>
+        <el-button type="primary" plain @click="markAllRead">全部已读</el-button>
       </div>
     </header>
+
+    <section class="kpi-strip">
+      <span class="kpi-pill pill-risk">
+        未读占比
+        <strong :class="(unreadRatio ?? 0) > 40 ? 'down' : 'up'">{{ unreadRatio == null ? '--' : `${unreadRatio.toFixed(2)}%` }}</strong>
+      </span>
+      <span class="kpi-pill pill-brand">
+        通知总数
+        <strong class="mono-number">{{ notifications.length }}</strong>
+      </span>
+    </section>
 
     <section class="notification-summary-grid">
       <article class="metric-tile">

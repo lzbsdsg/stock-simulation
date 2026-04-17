@@ -7,12 +7,17 @@ import com.lzbsdsg.stocksimulation.auth.infrastructure.persistence.UserMapper;
 import com.lzbsdsg.stocksimulation.common.exception.BizException;
 import com.lzbsdsg.stocksimulation.common.result.ErrorCode;
 import com.lzbsdsg.stocksimulation.common.result.PageResult;
+import com.lzbsdsg.stocksimulation.trade.infrastructure.persistence.OrderMapper;
 import com.lzbsdsg.stocksimulation.portfolio.infrastructure.persistence.PositionDO;
 import com.lzbsdsg.stocksimulation.portfolio.infrastructure.persistence.PositionMapper;
 import com.lzbsdsg.stocksimulation.trade.infrastructure.persistence.TradeDO;
 import com.lzbsdsg.stocksimulation.trade.infrastructure.persistence.TradeMapper;
 import com.lzbsdsg.stocksimulation.user.infrastructure.persistence.AccountDO;
 import com.lzbsdsg.stocksimulation.user.infrastructure.persistence.AccountMapper;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.distribution.HistogramSnapshot;
+import io.micrometer.core.instrument.distribution.ValueAtPercentile;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -40,7 +45,9 @@ public class AdminApplicationService {
   private final UserMapper userMapper;
   private final AccountMapper accountMapper;
   private final PositionMapper positionMapper;
+  private final OrderMapper orderMapper;
   private final TradeMapper tradeMapper;
+  private final MeterRegistry meterRegistry;
 
   public PageResult<Map<String, Object>> listUsers(int page, int size) {
     int safePage = normalizePage(page);
@@ -131,6 +138,7 @@ public class AdminApplicationService {
         userMapper.selectCount(new LambdaQueryWrapper<UserDO>().ge(UserDO::getCreatedAt, todayStart));
 
     var todayTradeStart = LocalDate.now(ZONE_SHANGHAI).atStartOfDay(ZONE_SHANGHAI).toOffsetDateTime();
+    long totalOrderCount = orderMapper.selectCount(null);
     long totalTradeCount = tradeMapper.selectCount(null);
     long todayTradeCount =
         tradeMapper.selectCount(new LambdaQueryWrapper<TradeDO>().ge(TradeDO::getTradedAt, todayTradeStart));
@@ -149,6 +157,24 @@ public class AdminApplicationService {
     stats.put("totalTradeAmount", totalTradeAmount);
     stats.put("todayTradeAmount", todayTradeAmount);
     stats.put("totalAvailableBalance", totalAvailableBalance);
+    stats.put("tradeOrderCreatedTotal", metricCounterWithFallback("trade_order_created_total", totalOrderCount));
+    stats.put("tradeOrderFilledTotal", metricCounterWithFallback("trade_order_filled_total", totalTradeCount));
+    stats.put("tradeMatchDurationP95Ms", metricTimerPercentileMs("trade_match_duration_seconds", 0.95));
+    stats.put("tradeMatchDurationP99Ms", metricTimerPercentileMs("trade_match_duration_seconds", 0.99));
+    stats.put(
+      "marketQuoteCacheHitL1Total",
+      metricCounterWithTag("market_quote_cache_hit_total", "level", "L1"));
+    stats.put(
+      "marketQuoteCacheHitL2Total",
+      metricCounterWithTag("market_quote_cache_hit_total", "level", "L2"));
+    stats.put("wsActiveConnections", metricGauge("ws_active_connections"));
+    stats.put("wsPushDroppedTotal", metricCounter("ws_push_dropped_total"));
+    stats.put(
+      "dbPoolMasterActiveConnections",
+      metricGaugeWithTag("db_pool_active_connections", "source", "master"));
+    stats.put(
+      "dbPoolSlaveActiveConnections",
+      metricGaugeWithTag("db_pool_active_connections", "source", "slave"));
     return stats;
   }
 
@@ -264,5 +290,62 @@ public class AdminApplicationService {
       return bigDecimal;
     }
     return new BigDecimal(String.valueOf(raw));
+  }
+
+  private double metricCounter(String name) {
+    var counter = meterRegistry.find(name).counter();
+    return counter == null ? 0d : counter.count();
+  }
+
+  private double metricCounterWithTag(String name, String tagKey, String tagValue) {
+    var counter = meterRegistry.find(name).tag(tagKey, tagValue).counter();
+    return counter == null ? 0d : counter.count();
+  }
+
+  private double metricCounterWithFallback(String name, long fallbackValue) {
+    double metricValue = metricCounter(name);
+    if (metricValue > 0d) {
+      return metricValue;
+    }
+    return Math.max(fallbackValue, 0L);
+  }
+
+  private double metricGauge(String name) {
+    var gauge = meterRegistry.find(name).gauge();
+    if (gauge == null) {
+      return 0d;
+    }
+    double value = gauge.value();
+    if (Double.isNaN(value) || Double.isInfinite(value)) {
+      return 0d;
+    }
+    return value;
+  }
+
+  private double metricGaugeWithTag(String name, String tagKey, String tagValue) {
+    var gauge = meterRegistry.find(name).tag(tagKey, tagValue).gauge();
+    if (gauge == null) {
+      return 0d;
+    }
+    double value = gauge.value();
+    if (Double.isNaN(value) || Double.isInfinite(value)) {
+      return 0d;
+    }
+    return value;
+  }
+
+  private Double metricTimerPercentileMs(String name, double percentile) {
+    Timer timer = meterRegistry.find(name).timer();
+    if (timer == null) {
+      return null;
+    }
+    HistogramSnapshot snapshot = timer.takeSnapshot();
+    for (ValueAtPercentile valueAtPercentile : snapshot.percentileValues()) {
+      if (Math.abs(valueAtPercentile.percentile() - percentile) < 0.0001d) {
+        double valueMs = valueAtPercentile.value(java.util.concurrent.TimeUnit.MILLISECONDS);
+        return Double.isNaN(valueMs) || Double.isInfinite(valueMs) ? null : valueMs;
+      }
+    }
+    return null;
   }
 }

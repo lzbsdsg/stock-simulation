@@ -681,9 +681,11 @@ Week 21  ████ Beta 发布 + 文档收尾
 
 **目标**：构建可观测性全栈（指标+日志+链路+告警）
 
+**状态**：✅ 已完成（实现与验收口径见 `iteration-15-delivery.md`）
+
 **任务**：
-- [ ] 编写 prometheus/prometheus.yml（抓取所有 App 实例 `/actuator/prometheus`）
-- [ ] 编写 prometheus/alert-rules.yml — 10+ 告警规则:
+- [x] 编写 prometheus/prometheus.yml（抓取所有 App 实例 `/actuator/prometheus`）
+- [x] 编写 prometheus/alert-rules.yml — 10+ 告警规则:
   - HTTP 5xx rate > 1% → Critical
   - API P99 > 500ms → Warning
   - JVM heap > 80% → Warning
@@ -694,15 +696,15 @@ Week 21  ████ Beta 发布 + 文档收尾
   - WS 连接数 > 8000/实例 → Warning (扩容)
   - PG 复制延迟 > 1s → Warning
   - 登录失败率 > 30% → Warning (安全)
-- [ ] 导入/自定义 Grafana Dashboard:
+- [x] 导入/自定义 Grafana Dashboard:
   - JVM Dashboard (heap/GC/thread)
   - HTTP Dashboard (QPS/P95/P99/错误率)
   - Trade Dashboard (下单量/成交量/撮合延迟)
   - Market Dashboard (缓存命中率/Provider延迟/WS连接数)
   - DB Dashboard (连接池/慢查询/复制延迟)
-- [ ] 配置 Loki + Promtail（收集容器日志）
-- [ ] 配置 Micrometer Tracing → Tempo（全链路追踪）
-- [ ] 配置自定义业务指标:
+- [x] 配置 Loki + Promtail（收集容器日志）
+- [x] 配置 Micrometer Tracing → Tempo（全链路追踪）
+- [x] 配置自定义业务指标:
   - `trade_order_created_total` Counter
   - `trade_order_filled_total` Counter
   - `trade_match_duration_seconds` Histogram

@@ -39,6 +39,8 @@ public class MarketDataFacade {
   private final MarketCacheGateway marketCacheGateway;
   private final HistoricalKLineService historicalKLineService;
   private final Counter providerFallbackCounter;
+  private final Counter quoteCacheHitL1Counter;
+  private final Counter quoteCacheHitL2Counter;
   private final Map<String, ProviderCircuitBreaker> circuitBreakers = new ConcurrentHashMap<>();
   private static final long PROVIDER_READ_TIMEOUT_MS = 1200L;
 
@@ -52,6 +54,16 @@ public class MarketDataFacade {
     this.marketCacheGateway = marketCacheGateway;
     this.historicalKLineService = historicalKLineService;
     this.providerFallbackCounter = meterRegistry.counter("market.provider.fallback.total");
+    this.quoteCacheHitL1Counter =
+      Counter.builder("market_quote_cache_hit_total")
+        .description("Market quote cache hit counter")
+        .tag("level", "L1")
+        .register(meterRegistry);
+    this.quoteCacheHitL2Counter =
+      Counter.builder("market_quote_cache_hit_total")
+        .description("Market quote cache hit counter")
+        .tag("level", "L2")
+        .register(meterRegistry);
   }
 
   MarketDataFacade(
@@ -66,6 +78,7 @@ public class MarketDataFacade {
     String normalizedCode = normalizeStockCode(stockCode);
     MarketCacheGateway.CacheResult<QuoteSnapshot> cacheResult = marketCacheGateway.getQuote(normalizedCode);
     if (cacheResult.hit()) {
+      recordQuoteCacheHit(cacheResult.status());
       marketCacheGateway.setCacheStatusHeader(cacheResult.status());
       if (cacheResult.nullValue()) {
         throw new BizException(ErrorCode.MARKET_STOCK_NOT_FOUND);
@@ -78,6 +91,7 @@ public class MarketDataFacade {
       sleepSilently(80);
       MarketCacheGateway.CacheResult<QuoteSnapshot> lockWaitResult = marketCacheGateway.getQuote(normalizedCode);
       if (lockWaitResult.hit()) {
+        recordQuoteCacheHit(lockWaitResult.status());
         marketCacheGateway.setCacheStatusHeader(lockWaitResult.status());
         if (lockWaitResult.nullValue()) {
           throw new BizException(ErrorCode.MARKET_STOCK_NOT_FOUND);
@@ -125,6 +139,7 @@ public class MarketDataFacade {
     for (String code : normalizedCodes) {
       MarketCacheGateway.CacheResult<QuoteSnapshot> cacheResult = marketCacheGateway.getQuote(code);
       if (cacheResult.hit()) {
+        recordQuoteCacheHit(cacheResult.status());
         if (cacheResult.nullValue()) {
           continue;
         }
@@ -340,5 +355,15 @@ public class MarketDataFacade {
     String providerKey = provider.getClass().getName();
     return circuitBreakers.computeIfAbsent(
         providerKey, key -> new ProviderCircuitBreaker(3, Duration.ofSeconds(30)));
+  }
+
+  private void recordQuoteCacheHit(String cacheStatus) {
+    if (MarketCacheGateway.HIT_L1.equals(cacheStatus)) {
+      quoteCacheHitL1Counter.increment();
+      return;
+    }
+    if (MarketCacheGateway.HIT_L2.equals(cacheStatus)) {
+      quoteCacheHitL2Counter.increment();
+    }
   }
 }

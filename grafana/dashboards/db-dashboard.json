@@ -1,0 +1,74 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "id": null,
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "none" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "targets": [
+        { "expr": "db_pool_active_connections{source=\"master\"}", "legendFormat": "master", "refId": "A" },
+        { "expr": "db_pool_active_connections{source=\"slave\"}", "legendFormat": "slave", "refId": "B" }
+      ],
+      "title": "活跃连接数（主从）",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percent" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "100 * max(hikaricp_connections_active{pool=\"master-pool\"}) / clamp_min(max(hikaricp_connections_max{pool=\"master-pool\"}), 1)",
+          "legendFormat": "Master Utilization",
+          "refId": "A"
+        },
+        {
+          "expr": "100 * max(hikaricp_connections_active{pool=\"slave-pool\"}) / clamp_min(max(hikaricp_connections_max{pool=\"slave-pool\"}), 1)",
+          "legendFormat": "Slave Utilization",
+          "refId": "B"
+        }
+      ],
+      "title": "连接池使用率",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "id": 3,
+      "targets": [
+        { "expr": "max(pg_replication_lag)", "legendFormat": "pg_replication_lag", "refId": "A" },
+        { "expr": "max(pg_stat_replication_replay_lag_seconds)", "legendFormat": "replay_lag", "refId": "B" }
+      ],
+      "title": "PostgreSQL 复制延迟",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "sum(rate(hikaricp_connections_timeout_total[5m]))",
+          "legendFormat": "Timeout/s",
+          "refId": "A"
+        }
+      ],
+      "title": "连接池超时速率",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 39,
+  "tags": ["stock-simulation", "database"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "title": "DB Dashboard — Stock Simulation",
+  "uid": "stock-db",
+  "version": 1
+}

@@ -48,6 +48,27 @@ const latencyClass = computed(() => {
 
 const marketQuotes = computed(() => marketStore.watchQuotes)
 
+const riseCount = computed(() => marketQuotes.value.filter((item) => (item.changePercent ?? 0) > 0).length)
+const fallCount = computed(() => marketQuotes.value.filter((item) => (item.changePercent ?? 0) < 0).length)
+
+const avgChangePercent = computed(() => {
+  if (marketQuotes.value.length === 0) {
+    return null
+  }
+  const total = marketQuotes.value.reduce((sum, item) => sum + (item.changePercent ?? 0), 0)
+  return total / marketQuotes.value.length
+})
+
+const pulseClass = computed(() => {
+  if ((avgChangePercent.value ?? 0) > 0) {
+    return 'pill-safe'
+  }
+  if ((avgChangePercent.value ?? 0) < 0) {
+    return 'pill-risk'
+  }
+  return 'pill-brand'
+})
+
 const quoteGridLoading = computed(() => loadingPageQuotes.value || marketStore.loadingQuotes)
 
 const totalPages = computed(() => {
@@ -244,9 +265,28 @@ async function handleRefresh(): Promise<void> {
         <p class="page-subtitle">按市场状态分区展示，提升盘中扫描效率与重点识别速度。</p>
       </div>
       <div class="market-head-actions">
-        <el-button type="primary" plain @click="handleRefresh">刷新行情</el-button>
+        <el-button plain @click="handleRefresh">刷新行情</el-button>
       </div>
     </header>
+
+    <section class="kpi-strip">
+      <span class="kpi-pill" :class="pulseClass">
+        市场脉冲
+        <strong :class="(avgChangePercent ?? 0) >= 0 ? 'up' : 'down'">{{ formatPercent(avgChangePercent) }}</strong>
+      </span>
+      <span class="kpi-pill pill-safe">
+        上涨数量
+        <strong class="mono-number up">{{ riseCount }}</strong>
+      </span>
+      <span class="kpi-pill pill-risk">
+        下跌数量
+        <strong class="mono-number down">{{ fallCount }}</strong>
+      </span>
+      <span class="kpi-pill pill-brand">
+        当前扫描
+        <strong class="mono-number">{{ pageStart }} - {{ pageEnd }}</strong>
+      </span>
+    </section>
 
     <section class="market-top-grid">
       <section class="section-card market-search-panel">

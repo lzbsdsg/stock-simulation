@@ -1,7 +1,86 @@
 {
   "annotations": { "list": [] },
+  "editable": true,
+  "id": null,
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percent" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "targets": [
+        {
+          "expr": "100 * sum(rate(market_quote_cache_hit_total{level=\"L1\"}[5m])) / clamp_min(sum(rate(market_quote_cache_hit_total{level=~\"L1|L2\"}[5m])), 0.000001)",
+          "legendFormat": "L1 Hit Rate",
+          "refId": "A"
+        },
+        {
+          "expr": "100 * sum(rate(market_quote_cache_hit_total{level=\"L2\"}[5m])) / clamp_min(sum(rate(market_quote_cache_hit_total{level=~\"L1|L2\"}[5m])), 0.000001)",
+          "legendFormat": "L2 Hit Rate",
+          "refId": "B"
+        }
+      ],
+      "title": "缓存命中率",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "none" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "targets": [
+        { "expr": "max(ws_active_connections)", "legendFormat": "WS Active", "refId": "A" }
+      ],
+      "title": "WS 活跃连接数",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "id": 3,
+      "targets": [
+        {
+          "expr": "1000 * histogram_quantile(0.99, sum by (le) (rate(ws_push_duration_seconds_bucket[5m])))",
+          "legendFormat": "WS Push P99",
+          "refId": "A"
+        },
+        {
+          "expr": "1000 * histogram_quantile(0.99, sum by (le) (rate(market_pubsub_fanout_delay_bucket[5m])))",
+          "legendFormat": "PubSub Fanout P99",
+          "refId": "B"
+        }
+      ],
+      "title": "推送与扇出延迟 P99",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "sum(rate(market_provider_fallback_total[5m]))",
+          "legendFormat": "Provider Fallback",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(ws_push_dropped_total[5m]))",
+          "legendFormat": "WS Dropped",
+          "refId": "B"
+        }
+      ],
+      "title": "降级与背压指标",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 39,
+  "tags": ["stock-simulation", "market"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
   "title": "Market Dashboard — Stock Simulation",
-  "description": "行情监控: 缓存命中率、WS连接数、推送延迟、Provider可用性",
-  "panels": [],
-  "_comment": "TODO: 面板 — L1/L2 缓存命中率、WS活跃连接、推送队列深度、Provider断路器状态、Pub/Sub扇出延迟"
+  "uid": "stock-market",
+  "version": 1
 }

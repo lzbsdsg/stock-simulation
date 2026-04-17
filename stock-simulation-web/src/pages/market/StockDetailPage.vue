@@ -32,6 +32,12 @@ let refreshTimer: number | null = null
 const stockCode = computed(() => String(route.params.stockCode || '').toLowerCase())
 const referenceClose = computed(() => marketStore.selectedQuote?.closePrice ?? null)
 const isInWatchlist = computed(() => watchlistStore.items.some((item) => item.stockCode === stockCode.value))
+const statusPillClass = computed(() => {
+  if (marketStore.wsDegraded) {
+    return 'pill-risk'
+  }
+  return 'pill-safe'
+})
 
 async function loadDetail(code: string): Promise<void> {
   if (!code) {
@@ -130,7 +136,6 @@ async function addCurrentStockToWatchlist(): Promise<void> {
         <p class="page-subtitle">实时报价、技术图表与交易动作同屏联动。</p>
       </div>
       <el-button
-        type="primary"
         plain
         :disabled="isInWatchlist"
         @click="addCurrentStockToWatchlist"
@@ -138,6 +143,21 @@ async function addCurrentStockToWatchlist(): Promise<void> {
         {{ isInWatchlist ? '已在自选股' : '添加到自选股' }}
       </el-button>
     </header>
+
+    <section class="kpi-strip">
+      <span class="kpi-pill" :class="statusPillClass">
+        链路状态
+        <strong>{{ marketStore.wsStatus }}</strong>
+      </span>
+      <span class="kpi-pill pill-brand">
+        推送延迟
+        <strong class="mono-number">{{ marketStore.wsLagMs }} ms</strong>
+      </span>
+      <span class="kpi-pill" :class="isInWatchlist ? 'pill-safe' : 'pill-brand'">
+        自选状态
+        <strong>{{ isInWatchlist ? '已关注' : '未关注' }}</strong>
+      </span>
+    </section>
 
     <section class="detail-top-grid">
       <section class="section-card detail-quote-section">

@@ -40,6 +40,16 @@ const sampledAtText = computed(() => {
   return date.toLocaleString('zh-CN', { hour12: false })
 })
 
+const quoteCacheHitRatio = computed(() => {
+  const l1 = stats.value?.marketQuoteCacheHitL1Total ?? 0
+  const l2 = stats.value?.marketQuoteCacheHitL2Total ?? 0
+  const total = l1 + l2
+  if (total <= 0) {
+    return null
+  }
+  return (l1 / total) * 100
+})
+
 onMounted(async () => {
   await loadData(false)
   startAutoRefresh()
@@ -99,6 +109,13 @@ function formatMs(value: number | null | undefined): string {
   return `${value.toFixed(2)} ms`
 }
 
+function formatPercent(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return '--'
+  }
+  return `${value.toFixed(2)}%`
+}
+
 function formatLatencyValue(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) {
     return '--'
@@ -108,7 +125,7 @@ function formatLatencyValue(value: number | null | undefined): string {
 </script>
 
 <template>
-  <section class="admin-page" v-loading="loading">
+  <section v-loading="loading" class="admin-page">
     <header class="admin-head">
       <div>
         <h1>管理员控制台</h1>
@@ -116,7 +133,7 @@ function formatLatencyValue(value: number | null | undefined): string {
       </div>
       <div class="admin-actions">
         <span class="sample-time">采样时间：{{ sampledAtText }}</span>
-        <el-button :loading="refreshing" type="primary" plain @click="loadData(false)">立即刷新</el-button>
+        <el-button :loading="refreshing" plain @click="loadData(false)">立即刷新</el-button>
       </div>
     </header>
 
@@ -232,6 +249,56 @@ function formatLatencyValue(value: number | null | undefined): string {
         </el-table>
       </div>
     </section>
+
+    <section class="admin-section">
+      <h2>可观测指标总览</h2>
+      <div class="admin-grid">
+        <article class="metric-card">
+          <span class="metric-label">累计下单数(持久化)</span>
+          <strong>{{ formatNumber(stats?.tradeOrderCreatedTotal) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">累计成交数(持久化)</span>
+          <strong>{{ formatNumber(stats?.tradeOrderFilledTotal) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">撮合耗时 P95</span>
+          <strong>{{ formatMs(stats?.tradeMatchDurationP95Ms) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">撮合耗时 P99</span>
+          <strong>{{ formatMs(stats?.tradeMatchDurationP99Ms) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">行情缓存命中 L1</span>
+          <strong>{{ formatNumber(stats?.marketQuoteCacheHitL1Total) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">行情缓存命中 L2</span>
+          <strong>{{ formatNumber(stats?.marketQuoteCacheHitL2Total) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">L1 命中占比</span>
+          <strong>{{ formatPercent(quoteCacheHitRatio) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">WS 活跃连接</span>
+          <strong>{{ formatNumber(stats?.wsActiveConnections) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">WS 累计丢弃</span>
+          <strong>{{ formatNumber(stats?.wsPushDroppedTotal) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">DB 主库活跃连接</span>
+          <strong>{{ formatNumber(stats?.dbPoolMasterActiveConnections) }}</strong>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">DB 从库活跃连接</span>
+          <strong>{{ formatNumber(stats?.dbPoolSlaveActiveConnections) }}</strong>
+        </article>
+      </div>
+    </section>
   </section>
 </template>
 
@@ -255,7 +322,7 @@ function formatLatencyValue(value: number | null | undefined): string {
 
 .admin-head p {
   margin: 10px 0 0;
-  color: var(--text-subtle);
+  color: var(--text-secondary);
 }
 
 .admin-actions {
@@ -266,12 +333,12 @@ function formatLatencyValue(value: number | null | undefined): string {
 
 .sample-time {
   font-size: 13px;
-  color: var(--text-subtle);
+  color: var(--text-secondary);
 }
 
 .admin-section {
   background: var(--bg-panel);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-default);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   padding: 14px;

@@ -28,6 +28,31 @@ const avgFocusChangePercent = computed(() => {
   return total / focusQuotes.value.length
 })
 
+const strongestQuote = computed(() => {
+  if (focusQuotes.value.length === 0) {
+    return null
+  }
+  return [...focusQuotes.value].sort((a, b) => (b.changePercent ?? -Infinity) - (a.changePercent ?? -Infinity))[0]
+})
+
+const weakestQuote = computed(() => {
+  if (focusQuotes.value.length === 0) {
+    return null
+  }
+  return [...focusQuotes.value].sort((a, b) => (a.changePercent ?? Infinity) - (b.changePercent ?? Infinity))[0]
+})
+
+const cacheToneClass = computed(() => {
+  const cacheStatus = (appStore.lastCacheStatus || '').toUpperCase()
+  if (cacheStatus.includes('HIT')) {
+    return 'pill-safe'
+  }
+  if (cacheStatus.includes('MISS')) {
+    return 'pill-risk'
+  }
+  return 'pill-brand'
+})
+
 const wsStatusClass = computed(() => (marketStore.wsStatus === 'CONNECTED' ? 'up' : 'down'))
 const lagStatusClass = computed(() => {
   if (marketStore.wsLagMs > 5000) {
@@ -69,6 +94,13 @@ function openPortfolio() {
   router.push('/portfolio')
 }
 
+function quotePulseText(code?: string, changePercent?: number | null): string {
+  if (!code || changePercent == null) {
+    return '--'
+  }
+  return `${code.toUpperCase()} ${formatPercent(changePercent)}`
+}
+
 // 提取涨跌幅样式为纯净的 class 属性
 function getChangeClass(percent: number | null | undefined): string {
   if (percent == null) return 'text-secondary'
@@ -88,6 +120,29 @@ function getChangeClass(percent: number | null | undefined): string {
         <el-button plain @click="openTrade">发起交易</el-button>
       </div>
     </header>
+
+    <section class="kpi-strip dashboard-kpi-strip">
+      <span class="kpi-pill pill-brand">
+        组合均幅
+        <strong :class="getChangeClass(avgFocusChangePercent)">{{ formatPercent(avgFocusChangePercent) }}</strong>
+      </span>
+      <span class="kpi-pill pill-safe">
+        最强标的
+        <strong class="mono-number" :class="getChangeClass(strongestQuote?.changePercent)">
+          {{ quotePulseText(strongestQuote?.stockCode, strongestQuote?.changePercent) }}
+        </strong>
+      </span>
+      <span class="kpi-pill pill-risk">
+        弱势标的
+        <strong class="mono-number" :class="getChangeClass(weakestQuote?.changePercent)">
+          {{ quotePulseText(weakestQuote?.stockCode, weakestQuote?.changePercent) }}
+        </strong>
+      </span>
+      <span class="kpi-pill" :class="cacheToneClass">
+        缓存态
+        <strong>{{ appStore.lastCacheStatus || 'N/A' }}</strong>
+      </span>
+    </section>
 
     <section class="dashboard-command-grid">
       <article class="capital-hero">
@@ -168,7 +223,7 @@ function getChangeClass(percent: number | null | undefined): string {
               <span class="stock-code">{{ quote.stockCode.toUpperCase() }}</span>
             </div>
             <div class="stock-price" :class="getChangeClass(quote.changePercent)">
-              {{ formatPrice(quote.currentPrice) }}
+              <span class="mono-number">{{ formatPrice(quote.currentPrice) }}</span>
             </div>
             <div class="stock-change" :class="getChangeClass(quote.changePercent)">
               {{ formatPercent(quote.changePercent) }}
@@ -217,6 +272,10 @@ function getChangeClass(percent: number | null | undefined): string {
 .dashboard-page {
   display: grid;
   gap: 18px;
+}
+
+.dashboard-kpi-strip {
+  margin-top: -4px;
 }
 
 .dashboard-command-grid {

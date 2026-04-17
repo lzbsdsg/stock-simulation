@@ -1,13 +1,29 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import dayjs from 'dayjs'
 import OrderForm from '@/components/trade/OrderForm.vue'
 import OrderList from '@/components/trade/OrderList.vue'
 import TradeHistory from '@/components/trade/TradeHistory.vue'
 import { useTradeStore } from '@/stores/trade'
+import { formatPrice } from '@/utils/format'
 
 const tradeStore = useTradeStore()
 let refreshTimer: number | null = null
+
+const pendingOrders = computed(
+  () => tradeStore.orders.filter((item) => item.status === 'PENDING' || item.status === 'PARTIAL_FILLED').length,
+)
+
+const filledToday = computed(() => tradeStore.trades.length)
+
+const lastTradeInfo = computed(() => {
+  if (tradeStore.trades.length === 0) {
+    return '--'
+  }
+  const latest = tradeStore.trades[0]
+  return `${latest.stockCode.toUpperCase()} ${formatPrice(latest.tradePrice)} ${dayjs(latest.tradedAt).format('HH:mm:ss')}`
+})
 
 onMounted(async () => {
   try {
@@ -56,9 +72,24 @@ async function refreshAll(): Promise<void> {
         <p class="page-subtitle">下单动作与委托成交记录分区展示，降低误操作风险。</p>
       </div>
       <div class="trade-head-actions">
-        <el-button type="primary" plain @click="refreshAll">刷新</el-button>
+        <el-button plain @click="refreshAll">刷新</el-button>
       </div>
     </header>
+
+    <section class="kpi-strip">
+      <span class="kpi-pill pill-risk">
+        待处理委托
+        <strong class="mono-number">{{ pendingOrders }}</strong>
+      </span>
+      <span class="kpi-pill pill-safe">
+        本批成交条数
+        <strong class="mono-number">{{ filledToday }}</strong>
+      </span>
+      <span class="kpi-pill pill-brand">
+        最近成交
+        <strong class="mono-number">{{ lastTradeInfo }}</strong>
+      </span>
+    </section>
 
     <section class="trade-main-grid">
       <div class="trade-left-column">

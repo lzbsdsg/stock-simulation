@@ -47,6 +47,7 @@ services:
       RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-stock_app}
       RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
       JWT_SECRET: ${JWT_SECRET}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4318/v1/traces
     depends_on:
       pg-master:
         condition: service_healthy
@@ -59,6 +60,8 @@ services:
     ports:
       - "18080:8080"
       - "18081:8081"
+    volumes:
+      - ./logs/app-1:/app/logs
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8081/actuator/health"]
       interval: 15s
@@ -93,6 +96,7 @@ services:
       RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-stock_app}
       RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
       JWT_SECRET: ${JWT_SECRET}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4318/v1/traces
     depends_on:
       pg-master:
         condition: service_healthy
@@ -105,6 +109,8 @@ services:
     ports:
       - "28080:8080"
       - "28081:8081"
+    volumes:
+      - ./logs/app-2:/app/logs
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8081/actuator/health"]
       interval: 15s
@@ -402,6 +408,20 @@ services:
     networks:
       - stock-network
 
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: stock-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: postgresql://stock_app:${POSTGRES_PASSWORD}@pg-master:5432/stock_simulation?sslmode=disable
+    ports:
+      - "9187:9187"
+    depends_on:
+      pg-master:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - stock-network
+
   # ============================================================
   # Observability
   # ============================================================
@@ -432,6 +452,7 @@ services:
       - "3000:3000"
     volumes:
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana-data:/var/lib/grafana
     depends_on:
       prometheus:
@@ -443,9 +464,39 @@ services:
   loki:
     image: grafana/loki:2.9.0
     container_name: stock-loki
-    command: -config.file=/etc/loki/local-config.yaml
+    command: -config.file=/etc/loki/loki-config.yml
     ports:
       - "3100:3100"
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+    restart: unless-stopped
+    networks:
+      - stock-network
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: stock-promtail
+    command: -config.file=/etc/promtail/promtail.yml
+    volumes:
+      - ./promtail/promtail.yml:/etc/promtail/promtail.yml:ro
+      - ./logs/app-1:/var/log/stock/app-1:ro
+      - ./logs/app-2:/var/log/stock/app-2:ro
+    depends_on:
+      loki:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - stock-network
+
+  tempo:
+    image: grafana/tempo:2.5.0
+    container_name: stock-tempo
+    command: ["-config.file=/etc/tempo/tempo.yml"]
+    ports:
+      - "3200:3200"
+      - "4318:4318"
+    volumes:
+      - ./tempo/tempo.yml:/etc/tempo/tempo.yml:ro
     restart: unless-stopped
     networks:
       - stock-network

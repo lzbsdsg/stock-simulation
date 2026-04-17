@@ -1,14 +1,31 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import AssetOverview from '@/components/portfolio/AssetOverview.vue'
 import PositionTable from '@/components/portfolio/PositionTable.vue'
 import EquityCurve from '@/components/portfolio/EquityCurve.vue'
 import FundFlowTable from '@/components/portfolio/FundFlowTable.vue'
 import { usePortfolioStore } from '@/stores/portfolio'
+import { formatPercent, formatPrice } from '@/utils/format'
 
 const portfolioStore = usePortfolioStore()
 const days = ref(30)
+
+const exposureRate = computed(() => {
+  const overview = portfolioStore.overview
+  if (!overview || !overview.totalAssets) {
+    return null
+  }
+  return (overview.marketValue / overview.totalAssets) * 100
+})
+
+const cashRate = computed(() => {
+  const overview = portfolioStore.overview
+  if (!overview || !overview.totalAssets) {
+    return null
+  }
+  return (overview.availableBalance / overview.totalAssets) * 100
+})
 
 onMounted(async () => {
   try {
@@ -35,8 +52,25 @@ async function refreshAll(): Promise<void> {
         <h1 class="page-title">持仓与资产</h1>
         <p class="page-subtitle">围绕成本、市值、盈亏和资金流的立体视图。</p>
       </div>
-      <el-button type="primary" plain @click="refreshAll">刷新</el-button>
+      <el-button plain @click="refreshAll">刷新</el-button>
     </header>
+
+    <section class="kpi-strip">
+      <span class="kpi-pill pill-brand">
+        持仓暴露度
+        <strong>{{ formatPercent(exposureRate) }}</strong>
+      </span>
+      <span class="kpi-pill pill-safe">
+        现金占比
+        <strong>{{ formatPercent(cashRate) }}</strong>
+      </span>
+      <span class="kpi-pill pill-risk">
+        今日盈亏
+        <strong class="mono-number" :class="(portfolioStore.overview?.todayProfit ?? 0) >= 0 ? 'up' : 'down'">
+          {{ formatPrice(portfolioStore.overview?.todayProfit) }}
+        </strong>
+      </span>
+    </section>
 
     <section class="section-card">
       <div class="section-card-head">

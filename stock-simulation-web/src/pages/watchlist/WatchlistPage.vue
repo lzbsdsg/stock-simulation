@@ -35,6 +35,13 @@ const strongestItem = computed(() => {
   return [...watchlistStore.items].sort((a, b) => (b.changePercent ?? -Infinity) - (a.changePercent ?? -Infinity))[0]
 })
 
+const riseRatio = computed(() => {
+  if (watchlistStore.items.length === 0) {
+    return null
+  }
+  return (riseCount.value / watchlistStore.items.length) * 100
+})
+
 watch(inputKeyword, (value) => {
   if (value !== selectedKeywordLabel.value) {
     selectedStockCode.value = ''
@@ -176,8 +183,23 @@ async function onDrop(targetCode: string): Promise<void> {
         <h1 class="page-title">观察列表</h1>
         <p class="page-subtitle">构建你的重点跟踪池，支持拖拽排序与实时更新。</p>
       </div>
-      <el-button type="primary" plain @click="refresh">刷新</el-button>
+      <el-button plain @click="refresh">刷新</el-button>
     </header>
+
+    <section class="kpi-strip">
+      <span class="kpi-pill pill-brand">
+        上涨占比
+        <strong :class="(riseRatio ?? 0) >= 50 ? 'up' : 'down'">{{ formatPercent(riseRatio) }}</strong>
+      </span>
+      <span class="kpi-pill pill-safe">
+        当前最强
+        <strong class="mono-number">{{ strongestItem?.stockCode?.toUpperCase() || '--' }}</strong>
+      </span>
+      <span class="kpi-pill pill-risk">
+        重点跟踪数
+        <strong class="mono-number">{{ watchlistStore.items.length }}</strong>
+      </span>
+    </section>
 
     <section class="watchlist-summary-grid">
       <article class="metric-tile">

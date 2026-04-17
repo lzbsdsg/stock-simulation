@@ -34,6 +34,7 @@ import com.lzbsdsg.stocksimulation.trade.infrastructure.mq.TradeFilledEvent;
 import com.lzbsdsg.stocksimulation.user.application.AccountApplicationService;
 import com.lzbsdsg.stocksimulation.user.domain.entity.Account;
 import com.lzbsdsg.stocksimulation.user.domain.repository.AccountRepository;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -92,7 +93,8 @@ class TradeApplicationServiceTest {
             fundFlowRepository,
             positionRepository,
             new ConcurrentMapCacheManager(),
-            tradeRuleConfig);
+            tradeRuleConfig,
+            new SimpleMeterRegistry());
   }
 
   @AfterEach

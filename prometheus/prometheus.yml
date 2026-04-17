@@ -22,6 +22,21 @@ scrape_configs:
     static_configs:
       - targets: ["rabbitmq:15692"]
 
+  # PostgreSQL exporter
+  - job_name: "postgres"
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+
+  # Tempo metrics
+  - job_name: "tempo"
+    static_configs:
+      - targets: ["tempo:3200"]
+
+  # Promtail metrics
+  - job_name: "promtail"
+    static_configs:
+      - targets: ["promtail:9080"]
+
   - job_name: "prometheus"
     static_configs:
       - targets: ["localhost:9090"]

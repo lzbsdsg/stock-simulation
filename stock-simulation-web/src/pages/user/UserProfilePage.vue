@@ -29,6 +29,20 @@ const statusTagType = computed(() => {
   return 'info'
 })
 
+const statusLabel = computed(() => {
+  const status = profile.value?.status
+  if (status === 'ACTIVE') {
+    return '正常'
+  }
+  if (status === 'LOCKED') {
+    return '锁定'
+  }
+  if (status === 'DISABLED') {
+    return '禁用'
+  }
+  return '未知'
+})
+
 onMounted(() => {
   loadProfile().catch(() => undefined)
 })
@@ -85,7 +99,22 @@ async function saveProfile(): Promise<void> {
       <el-button plain :loading="loading" @click="loadProfile">刷新</el-button>
     </header>
 
-    <section class="profile-panel" v-loading="loading">
+    <section class="kpi-strip">
+      <span class="kpi-pill pill-brand">
+        账号角色
+        <strong>{{ profile?.role || '--' }}</strong>
+      </span>
+      <span class="kpi-pill" :class="statusTagType === 'success' ? 'pill-safe' : 'pill-risk'">
+        当前状态
+        <strong>{{ statusLabel }}</strong>
+      </span>
+      <span class="kpi-pill pill-brand">
+        用户 ID
+        <strong class="mono-number">{{ profile?.userId ?? '--' }}</strong>
+      </span>
+    </section>
+
+    <section v-loading="loading" class="profile-panel">
       <el-form class="profile-form" label-position="top" @submit.prevent="saveProfile">
         <div class="profile-form-grid">
           <el-form-item label="用户 ID">

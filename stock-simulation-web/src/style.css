@@ -10,6 +10,7 @@
   --text-tertiary: #6d7990;
   --brand: #0f4d80;
   --brand-emphasis: #113a5d;
+  --brand-soft: #e8eff7;
   --rise: #c53b3b;
   --fall: #20754e;
   --flat: #6f7b8e;
@@ -93,6 +94,7 @@ a {
   margin: var(--space-2) 0 0;
   font-size: var(--font-size-md);
   color: var(--text-secondary);
+  max-width: 760px;
 }
 
 .section-card {
@@ -150,6 +152,12 @@ a {
   padding: var(--space-3) var(--space-4);
   display: grid;
   gap: 6px;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.metric-tile:hover {
+  border-color: #bfc9d8;
+  background: #f7f9fc;
 }
 
 .metric-label {
@@ -176,6 +184,47 @@ a {
 .flat,
 .text-secondary {
   color: var(--flat);
+}
+
+.kpi-strip {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.kpi-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  border: 1px solid var(--line-default);
+  background: var(--bg-panel);
+  padding: 6px 11px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-xs);
+}
+
+.kpi-pill strong {
+  font-size: 12px;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.kpi-pill.pill-brand {
+  border-color: #b6c8dc;
+  background: var(--brand-soft);
+}
+
+.kpi-pill.pill-risk {
+  border-color: #e1c5c5;
+  background: #fbf2f2;
+}
+
+.kpi-pill.pill-safe {
+  border-color: #c7dfcf;
+  background: #f2f9f4;
 }
 
 .default-layout {
@@ -645,6 +694,7 @@ a {
   justify-content: space-between;
   align-items: center;
   gap: var(--space-3);
+  flex-wrap: wrap;
 }
 
 .position-panel .el-table .cell,
@@ -865,6 +915,14 @@ a {
   --el-button-hover-bg-color: #e8f0f8;
 }
 
+.el-button--default.is-plain {
+  --el-button-border-color: #cad2de;
+  --el-button-bg-color: #f8fafd;
+  --el-button-text-color: #4d5c73;
+  --el-button-hover-border-color: #aab8cb;
+  --el-button-hover-bg-color: #eff3f9;
+}
+
 .el-table {
   --el-table-header-bg-color: #eef2f7;
   --el-table-header-text-color: #354660;
@@ -878,6 +936,16 @@ a {
 .el-table th {
   padding-top: 7px !important;
   padding-bottom: 7px !important;
+}
+
+.el-table th {
+  letter-spacing: 0.15px;
+}
+
+.el-segmented {
+  --el-segmented-item-selected-bg-color: #dde8f5;
+  --el-segmented-item-selected-color: #213b5a;
+  --el-border-radius-base: 8px;
 }
 
 .el-form-item__label {

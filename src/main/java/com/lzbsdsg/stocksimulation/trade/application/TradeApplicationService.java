@@ -34,6 +34,10 @@ import com.lzbsdsg.stocksimulation.trade.infrastructure.mq.TradeFilledEvent;
 import com.lzbsdsg.stocksimulation.user.application.AccountApplicationService;
 import com.lzbsdsg.stocksimulation.user.domain.entity.Account;
 import com.lzbsdsg.stocksimulation.user.domain.repository.AccountRepository;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import jakarta.annotation.PostConstruct;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -84,11 +88,36 @@ public class TradeApplicationService {
   private final PositionRepository positionRepository;
   private final CacheManager cacheManager;
   private final TradeRuleConfig tradeRuleConfig;
+  private final MeterRegistry meterRegistry;
 
   private final OrderDomainService orderDomainService = new OrderDomainService();
   private final FeeCalculator feeCalculator = new FeeCalculator();
   private final MatchEngine matchEngine = new MatchEngine();
   private final PositionDomainService positionDomainService = new PositionDomainService();
+  private Counter tradeOrderCreatedCounter;
+  private Counter tradeOrderFilledCounter;
+  private Timer tradeMatchDurationTimer;
+
+  @PostConstruct
+  void initMetrics() {
+    tradeOrderCreatedCounter = Counter.builder("trade_order_created_total").register(meterRegistry);
+    tradeOrderFilledCounter = Counter.builder("trade_order_filled_total").register(meterRegistry);
+    tradeMatchDurationTimer =
+        Timer.builder("trade_match_duration_seconds")
+            .description("Duration of single order match flow")
+            .publishPercentiles(0.95, 0.99)
+            .publishPercentileHistogram()
+        .register(meterRegistry);
+  }
+
+  private void ensureMetricsInitialized() {
+    if (tradeOrderCreatedCounter != null
+        && tradeOrderFilledCounter != null
+        && tradeMatchDurationTimer != null) {
+      return;
+    }
+    initMetrics();
+  }
 
   public enum MatchResult {
     MATCHED,
@@ -105,6 +134,7 @@ public class TradeApplicationService {
    */
   @Transactional
   public OrderVO placeOrder(PlaceOrderCommand command) {
+    ensureMetricsInitialized();
     long startNano = System.nanoTime();
     Long userId = currentUserId();
     String clientOrderId = command.clientOrderId();
@@ -133,6 +163,7 @@ public class TradeApplicationService {
         accountApplicationService.freezeBalance(userId, freezeAmount);
         order.setFrozenAmount(freezeAmount);
         orderRepository.save(order);
+        tradeOrderCreatedCounter.increment();
         recordFundFlow(
             userId,
             FundFlow.FundFlowType.FREEZE,
@@ -143,6 +174,7 @@ public class TradeApplicationService {
         freezeSellPosition(userId, order.getStockCode(), command.quantity());
         order.setFrozenAmount(BigDecimal.ZERO);
         orderRepository.save(order);
+        tradeOrderCreatedCounter.increment();
       }
 
       publishMatchMessageAfterCommit(order.getId());
@@ -281,62 +313,69 @@ public class TradeApplicationService {
   /** 撮合单笔订单（由 MQ Consumer 调用） */
   @Transactional
   public MatchResult matchOrder(Long orderId) {
-    Order order = orderRepository.findById(orderId).orElse(null);
-    if (order == null) {
-      log.warn("trade.match.skip_not_found orderId={}", orderId);
-      return MatchResult.SKIPPED_NOT_FOUND;
-    }
-    if (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.PARTIAL_FILLED) {
-      log.info("trade.match.idempotent_skip orderId={} status={}", orderId, order.getStatus());
-      return MatchResult.SKIPPED_ALREADY_DONE;
-    }
+    ensureMetricsInitialized();
+    long startNano = System.nanoTime();
+    try {
+      Order order = orderRepository.findById(orderId).orElse(null);
+      if (order == null) {
+        log.warn("trade.match.skip_not_found orderId={}", orderId);
+        return MatchResult.SKIPPED_NOT_FOUND;
+      }
+      if (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.PARTIAL_FILLED) {
+        log.info("trade.match.idempotent_skip orderId={} status={}", orderId, order.getStatus());
+        return MatchResult.SKIPPED_ALREADY_DONE;
+      }
 
-    QuoteSnapshot quote = marketDataFacade.getQuote(order.getStockCode());
-    if (quote.getCurrentPrice() == null) {
-      throw new BizException(ErrorCode.MARKET_DATA_UNAVAILABLE);
-    }
-    BigDecimal marketPrice = quote.getCurrentPrice();
-    if (!orderDomainService.canMatch(order, marketPrice)) {
-      return MatchResult.SKIPPED_PRICE_NOT_MATCHED;
-    }
+      QuoteSnapshot quote = marketDataFacade.getQuote(order.getStockCode());
+      if (quote.getCurrentPrice() == null) {
+        throw new BizException(ErrorCode.MARKET_DATA_UNAVAILABLE);
+      }
+      BigDecimal marketPrice = quote.getCurrentPrice();
+      if (!orderDomainService.canMatch(order, marketPrice)) {
+        return MatchResult.SKIPPED_PRICE_NOT_MATCHED;
+      }
 
-    int matchQuantity = order.remainingQuantity();
-    if (matchQuantity <= 0) {
-      return MatchResult.SKIPPED_ALREADY_DONE;
+      int matchQuantity = order.remainingQuantity();
+      if (matchQuantity <= 0) {
+        return MatchResult.SKIPPED_ALREADY_DONE;
+      }
+
+      BigDecimal tradeAmount = marketPrice.multiply(BigDecimal.valueOf(matchQuantity));
+      BigDecimal fee =
+          order.getSide() == OrderSide.BUY
+              ? feeCalculator.calculateBuyFee(tradeAmount)
+              : feeCalculator.calculateSellFee(tradeAmount);
+
+      Trade trade = matchEngine.tryMatch(order, marketPrice, fee);
+      if (trade == null) {
+        return MatchResult.SKIPPED_PRICE_NOT_MATCHED;
+      }
+
+      if (!orderRepository.updateWithVersion(order)) {
+        throw new BizException(ErrorCode.TRADE_OPTIMISTIC_LOCK_CONFLICT);
+      }
+
+      tradeRepository.save(trade);
+      if (order.getSide() == OrderSide.BUY) {
+        settleBuyMatch(order, trade);
+      } else {
+        settleSellMatch(order, trade);
+      }
+      publishTradeFilledEventAfterCommit(order, trade);
+      tradeOrderFilledCounter.increment();
+
+      log.info(
+          "trade.match.ok orderId={} tradeId={} userId={} side={} price={} qty={}",
+          order.getId(),
+          trade.getId(),
+          order.getUserId(),
+          order.getSide(),
+          trade.getTradePrice(),
+          trade.getTradeQuantity());
+      return MatchResult.MATCHED;
+    } finally {
+      tradeMatchDurationTimer.record(System.nanoTime() - startNano, java.util.concurrent.TimeUnit.NANOSECONDS);
     }
-
-    BigDecimal tradeAmount = marketPrice.multiply(BigDecimal.valueOf(matchQuantity));
-    BigDecimal fee =
-        order.getSide() == OrderSide.BUY
-            ? feeCalculator.calculateBuyFee(tradeAmount)
-            : feeCalculator.calculateSellFee(tradeAmount);
-
-    Trade trade = matchEngine.tryMatch(order, marketPrice, fee);
-    if (trade == null) {
-      return MatchResult.SKIPPED_PRICE_NOT_MATCHED;
-    }
-
-    if (!orderRepository.updateWithVersion(order)) {
-      throw new BizException(ErrorCode.TRADE_OPTIMISTIC_LOCK_CONFLICT);
-    }
-
-    tradeRepository.save(trade);
-    if (order.getSide() == OrderSide.BUY) {
-      settleBuyMatch(order, trade);
-    } else {
-      settleSellMatch(order, trade);
-    }
-    publishTradeFilledEventAfterCommit(order, trade);
-
-    log.info(
-        "trade.match.ok orderId={} tradeId={} userId={} side={} price={} qty={}",
-        order.getId(),
-        trade.getId(),
-        order.getUserId(),
-        order.getSide(),
-        trade.getTradePrice(),
-        trade.getTradeQuantity());
-    return MatchResult.MATCHED;
   }
 
   /** 收盘后批量过期待成交订单（每次最多处理 batchSize 条） */
