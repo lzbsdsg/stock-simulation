@@ -12,7 +12,8 @@ import { formatPercent, formatPrice, formatVolume, percentClass } from '@/utils/
 import type { MarketIndexQuote, MarketListedItem } from '@/types/market'
 
 const PAGE_SIZE_OPTIONS = [30, 40]
-const BOARD_REFRESH_MS = 30000
+const BOARD_REFRESH_MS = 5000
+const QUOTE_REFRESH_MS = 3000
 const LIST_FETCH_BATCH_SIZE = 200
 
 const router = useRouter()
@@ -26,6 +27,7 @@ const loadingOfficialBoard = ref(false)
 const marketIndexes = ref<MarketIndexQuote[]>([])
 const listedUniverse = ref<MarketListedItem[]>([])
 let boardRefreshTimer: number | null = null
+let quoteRefreshTimer: number | null = null
 
 const rateLimitText = computed(() => {
   const info = appStore.lastRateLimit
@@ -49,6 +51,7 @@ onMounted(async () => {
     await Promise.all([loadListedUniverse(), loadOfficialBoard()])
     await applyLocalPage(1)
     startBoardRefresh()
+    startQuoteRefresh()
   } catch (error) {
     const message = error instanceof Error ? error.message : '行情初始化失败'
     ElMessage.error(message)
@@ -57,6 +60,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   stopBoardRefresh()
+  stopQuoteRefresh()
   marketStore.setMarketPageCodes([])
   void marketStore.loadWatchlistQuotes()
 })
@@ -79,6 +83,26 @@ function stopBoardRefresh(): void {
   }
   window.clearInterval(boardRefreshTimer)
   boardRefreshTimer = null
+}
+
+function startQuoteRefresh(): void {
+  if (quoteRefreshTimer !== null) {
+    return
+  }
+  quoteRefreshTimer = window.setInterval(() => {
+    if (document.hidden) {
+      return
+    }
+    void marketStore.loadWatchQuotes(true)
+  }, QUOTE_REFRESH_MS)
+}
+
+function stopQuoteRefresh(): void {
+  if (quoteRefreshTimer === null) {
+    return
+  }
+  window.clearInterval(quoteRefreshTimer)
+  quoteRefreshTimer = null
 }
 
 function handleSelectStock(stockCode: string): void {

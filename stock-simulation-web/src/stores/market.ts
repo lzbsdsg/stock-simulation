@@ -83,7 +83,14 @@ export const useMarketStore = defineStore('market', () => {
   let subscribedRealtimeCodes: string[] = []
 
   function upsertQuote(quote: Quote): void {
-    quoteMap.value[normalizeCode(quote.stockCode)] = quote
+    const code = normalizeCode(quote.stockCode)
+    const existing = quoteMap.value[code]
+    const normalizedName = quote.stockName?.trim()
+    quoteMap.value[code] = {
+      ...quote,
+      stockCode: code,
+      stockName: normalizedName && normalizedName.length > 0 ? normalizedName : (existing?.stockName ?? code),
+    }
   }
 
   function mergeQuotes(quotes: Quote[]): void {
@@ -185,16 +192,20 @@ export const useMarketStore = defineStore('market', () => {
     visibleHeartbeatTimer = null
   }
 
-  async function loadWatchQuotes(): Promise<void> {
+  async function loadWatchQuotes(silent = false): Promise<void> {
     if (displayCodes.value.length === 0) {
       return
     }
-    loadingQuotes.value = true
+    if (!silent) {
+      loadingQuotes.value = true
+    }
     try {
       const quotes = await marketApi.batchGetQuotes(displayCodes.value)
       mergeQuotes(quotes)
     } finally {
-      loadingQuotes.value = false
+      if (!silent) {
+        loadingQuotes.value = false
+      }
     }
   }
 

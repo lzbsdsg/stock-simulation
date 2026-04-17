@@ -37,13 +37,16 @@ interface UseWebSocketOptions {
 }
 
 function normalizeQuote(payload: WsQuotePayload): Quote | null {
-  if (!payload.stockCode || !payload.stockName) {
+  if (!payload.stockCode) {
     return null
   }
 
+  const normalizedCode = payload.stockCode.trim().toLowerCase()
+  const normalizedName = typeof payload.stockName === 'string' ? payload.stockName.trim() : ''
+
   return {
-    stockCode: payload.stockCode,
-    stockName: payload.stockName,
+    stockCode: normalizedCode,
+    stockName: normalizedName || normalizedCode,
     currentPrice: toNumber(payload.currentPrice),
     openPrice: toNumber(payload.openPrice),
     closePrice: toNumber(payload.closePrice),
