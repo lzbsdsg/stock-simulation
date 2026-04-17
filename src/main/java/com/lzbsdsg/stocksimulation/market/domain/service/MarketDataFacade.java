@@ -14,11 +14,14 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,6 +40,7 @@ public class MarketDataFacade {
   private final HistoricalKLineService historicalKLineService;
   private final Counter providerFallbackCounter;
   private final Map<String, ProviderCircuitBreaker> circuitBreakers = new ConcurrentHashMap<>();
+  private static final long PROVIDER_READ_TIMEOUT_MS = 1200L;
 
   @Autowired
   public MarketDataFacade(
@@ -191,14 +195,17 @@ public class MarketDataFacade {
     }
 
     String code = stockCode.trim().toLowerCase(Locale.ROOT);
-    if (code.startsWith("sh") || code.startsWith("sz")) {
+    if (code.startsWith("sh") || code.startsWith("sz") || code.startsWith("bj")) {
       return code;
     }
-    if (code.matches("^6\\d{5}$")) {
+    if (code.matches("^[569]\\d{5}$")) {
       return "sh" + code;
     }
     if (code.matches("^[03]\\d{5}$")) {
       return "sz" + code;
+    }
+    if (code.matches("^[48]\\d{5}$")) {
+      return "bj" + code;
     }
     return code;
   }
@@ -212,68 +219,121 @@ public class MarketDataFacade {
   }
 
   private QuoteSnapshot loadQuoteFromProviders(String stockCode) {
+    List<CompletableFuture<QuoteSnapshot>> futures = new ArrayList<>();
     for (MarketDataProvider provider : providers) {
-      ProviderCircuitBreaker breaker = circuitBreakerOf(provider);
-      if (!breaker.allowRequest()) {
-        continue;
-      }
+      futures.add(
+          CompletableFuture
+              .supplyAsync(() -> fetchProviderQuote(provider, stockCode))
+              .completeOnTimeout(null, PROVIDER_READ_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+              .exceptionally(_ex -> null));
+    }
 
-      try {
-        QuoteSnapshot quote = provider.getQuote(stockCode);
-        if (quote != null) {
-          breaker.onSuccess();
-          return quote;
-        }
-        breaker.onFailure();
-        providerFallbackCounter.increment();
-      } catch (Exception e) {
-        breaker.onFailure();
-        providerFallbackCounter.increment();
-        log.warn(
-            "Provider {} getQuote failed for {}: {}",
-            provider.getClass().getSimpleName(),
-            stockCode,
-            e.getMessage());
+    QuoteSnapshot best = null;
+    for (CompletableFuture<QuoteSnapshot> future : futures) {
+      QuoteSnapshot quote = future.join();
+      if (QuoteMergePolicy.shouldReplace(best, quote)) {
+        best = quote;
       }
     }
-    return null;
+    return best;
   }
 
   private Map<String, QuoteSnapshot> loadBatchFromProviders(List<String> stockCodes) {
+    List<CompletableFuture<Map<String, QuoteSnapshot>>> futures = new ArrayList<>();
     for (MarketDataProvider provider : providers) {
-      ProviderCircuitBreaker breaker = circuitBreakerOf(provider);
-      if (!breaker.allowRequest()) {
-        continue;
-      }
+      futures.add(
+          CompletableFuture
+              .supplyAsync(() -> fetchProviderBatch(provider, stockCodes))
+              .completeOnTimeout(Map.of(), PROVIDER_READ_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+              .exceptionally(_ex -> Map.of()));
+    }
 
-      try {
-        List<QuoteSnapshot> quotes = provider.batchGetQuotes(stockCodes);
-        if (quotes == null || quotes.isEmpty()) {
-          breaker.onFailure();
-          providerFallbackCounter.increment();
-          continue;
+    Map<String, QuoteSnapshot> merged = new HashMap<>();
+    for (CompletableFuture<Map<String, QuoteSnapshot>> future : futures) {
+      Map<String, QuoteSnapshot> providerMap = future.join();
+      for (Map.Entry<String, QuoteSnapshot> entry : providerMap.entrySet()) {
+        QuoteSnapshot existing = merged.get(entry.getKey());
+        QuoteSnapshot candidate = entry.getValue();
+        if (QuoteMergePolicy.shouldReplace(existing, candidate)) {
+          merged.put(entry.getKey(), candidate);
         }
-
-        breaker.onSuccess();
-        Map<String, QuoteSnapshot> mapped = new LinkedHashMap<>();
-        for (QuoteSnapshot quote : quotes) {
-          if (quote == null || quote.getStockCode() == null) {
-            continue;
-          }
-          mapped.put(normalizeStockCode(quote.getStockCode()), quote);
-        }
-        return mapped;
-      } catch (Exception e) {
-        breaker.onFailure();
-        providerFallbackCounter.increment();
-        log.warn(
-            "Provider {} batchGetQuotes failed for {} codes: {}",
-            provider.getClass().getSimpleName(),
-            stockCodes.size(),
-            e.getMessage());
       }
     }
-    return Map.of();
+
+    if (merged.isEmpty()) {
+      return Map.of();
+    }
+
+    Map<String, QuoteSnapshot> ordered = new LinkedHashMap<>();
+    for (String stockCode : stockCodes) {
+      QuoteSnapshot quote = merged.get(stockCode);
+      if (quote != null) {
+        ordered.put(stockCode, quote);
+      }
+    }
+    return ordered;
+  }
+
+  private QuoteSnapshot fetchProviderQuote(MarketDataProvider provider, String stockCode) {
+    ProviderCircuitBreaker breaker = circuitBreakerOf(provider);
+    if (!breaker.allowRequest()) {
+      return null;
+    }
+    try {
+      QuoteSnapshot quote = provider.getQuote(stockCode);
+      if (quote != null) {
+        breaker.onSuccess();
+        return quote;
+      }
+      breaker.onFailure();
+      providerFallbackCounter.increment();
+      return null;
+    } catch (Exception e) {
+      breaker.onFailure();
+      providerFallbackCounter.increment();
+      log.warn(
+          "Provider {} getQuote failed for {}: {}",
+          provider.getClass().getSimpleName(),
+          stockCode,
+          e.getMessage());
+      return null;
+    }
+  }
+
+  private Map<String, QuoteSnapshot> fetchProviderBatch(
+      MarketDataProvider provider, List<String> stockCodes) {
+    ProviderCircuitBreaker breaker = circuitBreakerOf(provider);
+    if (!breaker.allowRequest()) {
+      return Map.of();
+    }
+
+    try {
+      List<QuoteSnapshot> quotes = provider.batchGetQuotes(stockCodes);
+      if (quotes == null || quotes.isEmpty()) {
+        breaker.onFailure();
+        providerFallbackCounter.increment();
+        return Map.of();
+      }
+
+      breaker.onSuccess();
+      Map<String, QuoteSnapshot> mapped = new LinkedHashMap<>();
+      for (QuoteSnapshot quote : quotes) {
+        if (quote == null || quote.getStockCode() == null) {
+          continue;
+        }
+        mapped.put(normalizeStockCode(quote.getStockCode()), quote);
+      }
+      return mapped;
+    } catch (Exception e) {
+      breaker.onFailure();
+      providerFallbackCounter.increment();
+      log.warn(
+          "Provider {} batchGetQuotes failed for {} codes: {}",
+          provider.getClass().getSimpleName(),
+          stockCodes.size(),
+          e.getMessage());
+      return Map.of();
+    }
   }
 
   private ProviderCircuitBreaker circuitBreakerOf(MarketDataProvider provider) {

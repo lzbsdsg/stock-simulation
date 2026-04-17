@@ -62,7 +62,10 @@ public class MockMarketDataAdapter implements MarketDataProvider {
             .getClosePrice()
             .multiply(BigDecimal.valueOf(0.90))
             .setScale(2, java.math.RoundingMode.HALF_UP));
-    snapshot.setTimestamp(LocalDateTime.now());
+    LocalDateTime sourceTs = LocalDateTime.now();
+    snapshot.setTimestamp(sourceTs);
+    snapshot.setSource("MOCK");
+    snapshot.setSourceTimestamp(sourceTs);
     return snapshot;
   }
 

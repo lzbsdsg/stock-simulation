@@ -1,11 +1,14 @@
 package com.lzbsdsg.stocksimulation.market.controller;
 
 import com.lzbsdsg.stocksimulation.common.annotation.RateLimit;
+import com.lzbsdsg.stocksimulation.common.result.PageResult;
 import com.lzbsdsg.stocksimulation.common.result.Result;
 import com.lzbsdsg.stocksimulation.market.application.MarketApplicationService;
 import com.lzbsdsg.stocksimulation.market.application.vo.KLineVO;
+import com.lzbsdsg.stocksimulation.market.application.vo.MarketIndexQuoteVO;
 import com.lzbsdsg.stocksimulation.market.application.vo.MarketRealtimeMetricsVO;
 import com.lzbsdsg.stocksimulation.market.application.vo.QuoteVO;
+import com.lzbsdsg.stocksimulation.market.application.vo.StockListedItemVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.LocalDate;
@@ -53,6 +56,19 @@ public class MarketController {
   @GetMapping("/search")
   public Result<List<QuoteVO>> searchStock(@RequestParam String keyword) {
     return Result.success(marketApplicationService.searchStock(keyword));
+  }
+
+  @Operation(summary = "分页获取上市股票代码列表")
+  @GetMapping("/listed")
+  public Result<PageResult<StockListedItemVO>> getListedStocks(
+      @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "40") int size) {
+    return Result.success(marketApplicationService.getListedStocks(page, size));
+  }
+
+  @Operation(summary = "获取大盘指数行情")
+  @GetMapping("/indexes")
+  public Result<List<MarketIndexQuoteVO>> getOfficialIndexQuotes() {
+    return Result.success(marketApplicationService.getOfficialIndexQuotes());
   }
 
   @Operation(summary = "上报当前页面可见股票集合")

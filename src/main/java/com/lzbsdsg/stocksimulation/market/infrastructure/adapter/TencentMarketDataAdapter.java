@@ -140,7 +140,10 @@ public class TencentMarketDataAdapter implements MarketDataProvider {
       snapshot.setUpperLimitPrice(close.multiply(BigDecimal.valueOf(1.10)).setScale(2, RoundingMode.HALF_UP));
       snapshot.setLowerLimitPrice(close.multiply(BigDecimal.valueOf(0.90)).setScale(2, RoundingMode.HALF_UP));
     }
-    snapshot.setTimestamp(LocalDateTime.now());
+    LocalDateTime sourceTs = LocalDateTime.now();
+    snapshot.setTimestamp(sourceTs);
+    snapshot.setSource("TENCENT");
+    snapshot.setSourceTimestamp(sourceTs);
     return snapshot;
   }
 
@@ -379,14 +382,17 @@ public class TencentMarketDataAdapter implements MarketDataProvider {
       return "";
     }
     String code = stockCode.trim().toLowerCase(Locale.ROOT);
-    if (code.startsWith("sh") || code.startsWith("sz")) {
+    if (code.startsWith("sh") || code.startsWith("sz") || code.startsWith("bj")) {
       return code;
     }
-    if (code.matches("^6\\d{5}$")) {
+    if (code.matches("^[569]\\d{5}$")) {
       return "sh" + code;
     }
     if (code.matches("^[03]\\d{5}$")) {
       return "sz" + code;
+    }
+    if (code.matches("^[48]\\d{5}$")) {
+      return "bj" + code;
     }
     return code;
   }

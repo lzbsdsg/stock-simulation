@@ -4,17 +4,21 @@ import com.lzbsdsg.stocksimulation.market.domain.entity.QuoteSnapshot;
 import com.lzbsdsg.stocksimulation.market.domain.entity.StockInfo;
 import com.lzbsdsg.stocksimulation.market.domain.gateway.MarketDataProvider;
 import com.lzbsdsg.stocksimulation.market.domain.repository.StockInfoRepository;
+import com.lzbsdsg.stocksimulation.market.domain.service.QuoteMergePolicy;
 import com.lzbsdsg.stocksimulation.market.infrastructure.gateway.MarketCacheGateway;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PostConstruct;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.RequiredArgsConstructor;
@@ -51,6 +55,7 @@ public class MarketIngestService {
   private static final int DEFAULT_ROUND_ROBIN_BATCH_SIZE = 100;
   private static final long DEFAULT_ACTIVE_WINDOW_MS = 8000L;
   private static final long DEFAULT_STOCK_UNIVERSE_REFRESH_MS = 300000L;
+  private static final long PROVIDER_BATCH_TIMEOUT_MS = 1400L;
 
   private static final String INGEST_CYCLE_TIMER_METRIC = "market.ingest.cycle.duration";
 
@@ -116,7 +121,10 @@ public class MarketIngestService {
           continue;
         }
         String normalizedCode = quote.getStockCode().trim().toLowerCase();
-        marketCacheGateway.cacheQuote(normalizedCode, quote);
+        boolean changed = marketCacheGateway.cacheQuoteIfFresh(normalizedCode, quote);
+        if (!changed) {
+          continue;
+        }
         if (latencySampleEnabled) {
           long publishTs = System.currentTimeMillis();
           redisTemplate
@@ -235,20 +243,55 @@ public class MarketIngestService {
   }
 
   private List<QuoteSnapshot> loadQuotes(List<String> stockCodes) {
+    List<CompletableFuture<List<QuoteSnapshot>>> futures = new ArrayList<>();
     for (MarketDataProvider provider : providers) {
-      try {
-        List<QuoteSnapshot> quotes = provider.batchGetQuotes(stockCodes);
-        if (quotes != null && !quotes.isEmpty()) {
-          return quotes;
+      futures.add(
+          CompletableFuture
+              .supplyAsync(() -> fetchProviderBatch(provider, stockCodes))
+              .completeOnTimeout(List.of(), PROVIDER_BATCH_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+              .exceptionally(_ex -> List.of()));
+    }
+
+    Map<String, QuoteSnapshot> merged = new HashMap<>();
+    for (CompletableFuture<List<QuoteSnapshot>> future : futures) {
+      List<QuoteSnapshot> quotes = future.join();
+      for (QuoteSnapshot quote : quotes) {
+        if (quote == null || quote.getStockCode() == null || quote.getStockCode().isBlank()) {
+          continue;
         }
-      } catch (Exception ex) {
-        log.warn(
-            "Provider {} batch ingest failed: {}",
-            provider.getClass().getSimpleName(),
-            ex.getMessage());
+        String normalizedCode = quote.getStockCode().trim().toLowerCase(Locale.ROOT);
+        QuoteSnapshot current = merged.get(normalizedCode);
+        if (QuoteMergePolicy.shouldReplace(current, quote)) {
+          merged.put(normalizedCode, quote);
+        }
       }
     }
-    return List.of();
+
+    if (merged.isEmpty()) {
+      return List.of();
+    }
+
+    List<QuoteSnapshot> ordered = new ArrayList<>();
+    for (String code : stockCodes) {
+      QuoteSnapshot quote = merged.get(code);
+      if (quote != null) {
+        ordered.add(quote);
+      }
+    }
+    return ordered;
+  }
+
+  private List<QuoteSnapshot> fetchProviderBatch(MarketDataProvider provider, List<String> stockCodes) {
+    try {
+      List<QuoteSnapshot> quotes = provider.batchGetQuotes(stockCodes);
+      return quotes == null ? List.of() : quotes;
+    } catch (Exception ex) {
+      log.warn(
+          "Provider {} batch ingest failed: {}",
+          provider.getClass().getSimpleName(),
+          ex.getMessage());
+      return List.of();
+    }
   }
 
   public long getLastIngestAtMs() {

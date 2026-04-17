@@ -4,7 +4,6 @@ import type {
   KLinePoint,
   MarketIndexQuote,
   MarketListedPagePayload,
-  MarketRankPayload,
   Quote,
 } from '@/types/market'
 import type { PageResult } from '@/types/http'
@@ -119,16 +118,4 @@ export async function getOfficialIndexQuotes(): Promise<MarketIndexQuote[]> {
     volume: toNumber(item.volume),
     amount: toNumber(item.amount),
   }))
-}
-
-export async function getOfficialRankBoard(limit = 10): Promise<MarketRankPayload> {
-  const data = await unwrapResponse<MarketRankPayload>(
-    request.get('/market/rank-board', {
-      params: { limit },
-    }),
-  )
-  return {
-    gainers: data.gainers.map(normalizeQuote),
-    losers: data.losers.map(normalizeQuote),
-  }
 }

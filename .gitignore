@@ -63,3 +63,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Codex Project Config ###
+.codex/

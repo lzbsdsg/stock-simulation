@@ -47,6 +47,12 @@ public class QuoteSnapshot {
   /** 行情时间 */
   private LocalDateTime timestamp;
 
+  /** 来源标识（如 SINA / TENCENT / EASTMONEY / MOCK） */
+  private String source;
+
+  /** 数据源原始时间（若缺失则回落到 timestamp） */
+  private LocalDateTime sourceTimestamp;
+
   /** 判断是否涨停 */
   public boolean isUpperLimit() {
     return currentPrice != null

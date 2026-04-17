@@ -9,10 +9,9 @@ import * as marketApi from '@/api/market'
 import { useAppStore } from '@/stores/app'
 import { useMarketStore } from '@/stores/market'
 import { formatPercent, formatPrice, formatVolume, percentClass } from '@/utils/format'
-import type { MarketIndexQuote, MarketListedItem, MarketRankPayload } from '@/types/market'
+import type { MarketIndexQuote, MarketListedItem } from '@/types/market'
 
 const PAGE_SIZE_OPTIONS = [30, 40]
-const RANK_LIMIT = 10
 const BOARD_REFRESH_MS = 30000
 const LIST_FETCH_BATCH_SIZE = 200
 
@@ -25,10 +24,7 @@ const totalStocks = ref(0)
 const loadingPageQuotes = ref(false)
 const loadingOfficialBoard = ref(false)
 const marketIndexes = ref<MarketIndexQuote[]>([])
-const rankBoard = ref<MarketRankPayload>({ gainers: [], losers: [] })
 const listedUniverse = ref<MarketListedItem[]>([])
-const boardDataSource = ref<'official' | 'unavailable'>('official')
-const officialBoardUnavailable = ref(false)
 let boardRefreshTimer: number | null = null
 
 const rateLimitText = computed(() => {
@@ -39,10 +35,6 @@ const rateLimitText = computed(() => {
 const marketQuotes = computed(() => marketStore.watchQuotes)
 
 const quoteGridLoading = computed(() => loadingPageQuotes.value || marketStore.loadingQuotes)
-
-const riseRankList = computed(() => rankBoard.value.gainers)
-
-const fallRankList = computed(() => rankBoard.value.losers)
 
 const totalPages = computed(() => {
   if (totalStocks.value <= 0) {
@@ -77,7 +69,7 @@ function startBoardRefresh(): void {
     if (document.hidden) {
       return
     }
-    void loadOfficialBoard({ showError: false, showLoading: false, allowOfficialRetry: true })
+    void loadOfficialBoard({ showError: false, showLoading: false })
   }, BOARD_REFRESH_MS)
 }
 
@@ -109,27 +101,9 @@ function isSameIndexes(left: MarketIndexQuote[], right: MarketIndexQuote[]): boo
   })
 }
 
-function isSameRankBoard(left: MarketRankPayload, right: MarketRankPayload): boolean {
-  const leftItems = [...left.gainers, ...left.losers]
-  const rightItems = [...right.gainers, ...right.losers]
-  if (leftItems.length !== rightItems.length) {
-    return false
-  }
-  return leftItems.every((item, index) => {
-    const target = rightItems[index]
-    return target
-      && item.stockCode === target.stockCode
-      && item.currentPrice === target.currentPrice
-      && item.changePercent === target.changePercent
-  })
-}
-
-function patchBoardData(indexes: MarketIndexQuote[], rank: MarketRankPayload): void {
+function patchBoardData(indexes: MarketIndexQuote[]): void {
   if (!isSameIndexes(marketIndexes.value, indexes)) {
     marketIndexes.value = indexes
-  }
-  if (!isSameRankBoard(rankBoard.value, rank)) {
-    rankBoard.value = rank
   }
 }
 
@@ -168,32 +142,19 @@ async function applyLocalPage(page: number): Promise<void> {
 async function loadOfficialBoard(options?: {
   showError?: boolean
   showLoading?: boolean
-  allowOfficialRetry?: boolean
 }): Promise<void> {
   const showError = options?.showError ?? true
   const showLoading = options?.showLoading ?? true
-  const allowOfficialRetry = options?.allowOfficialRetry ?? true
-
-  if (officialBoardUnavailable.value && !allowOfficialRetry) {
-    return
-  }
 
   if (showLoading) {
     loadingOfficialBoard.value = true
   }
   try {
-    const [indexes, rank] = await Promise.all([
-      marketApi.getOfficialIndexQuotes(),
-      marketApi.getOfficialRankBoard(RANK_LIMIT),
-    ])
-    boardDataSource.value = 'official'
-    officialBoardUnavailable.value = false
-    patchBoardData(indexes, rank)
+    const indexes = await marketApi.getOfficialIndexQuotes()
+    patchBoardData(indexes)
   } catch (_error) {
-    officialBoardUnavailable.value = true
-    boardDataSource.value = 'unavailable'
     if (showError) {
-      ElMessage.warning('官方涨跌榜暂时不可用，页面已保留上次成功数据。')
+      ElMessage.warning('大盘指数暂时不可用，页面已保留上次成功数据。')
     }
   } finally {
     if (showLoading) {
@@ -215,7 +176,7 @@ async function handleRefresh(): Promise<void> {
   try {
     await Promise.all([
       marketStore.loadWatchQuotes(),
-      loadOfficialBoard({ showError: false, showLoading: false, allowOfficialRetry: true }),
+      loadOfficialBoard({ showError: false, showLoading: false }),
     ])
     ElMessage.success('行情已刷新')
   } catch (error) {
@@ -279,32 +240,6 @@ async function handleRefresh(): Promise<void> {
       </article>
     </section>
 
-    <section v-loading="loadingOfficialBoard" class="market-rank-grid">
-      <article class="market-rank-panel">
-        <header>
-          <h3>涨幅榜 TOP {{ RANK_LIMIT }}</h3>
-        </header>
-        <ul>
-          <li v-for="item in riseRankList" :key="`rise-${item.stockCode}`" @click="handleSelectStock(item.stockCode)">
-            <span>{{ item.stockCode.toUpperCase() }} {{ item.stockName }}</span>
-            <b class="up">{{ formatPercent(item.changePercent) }}</b>
-          </li>
-        </ul>
-      </article>
-
-      <article class="market-rank-panel">
-        <header>
-          <h3>跌幅榜 TOP {{ RANK_LIMIT }}</h3>
-        </header>
-        <ul>
-          <li v-for="item in fallRankList" :key="`fall-${item.stockCode}`" @click="handleSelectStock(item.stockCode)">
-            <span>{{ item.stockCode.toUpperCase() }} {{ item.stockName }}</span>
-            <b class="down">{{ formatPercent(item.changePercent) }}</b>
-          </li>
-        </ul>
-      </article>
-    </section>
-
     <MarketOverview :quotes="marketQuotes" />
 
     <section v-loading="quoteGridLoading" class="quote-grid">
@@ -328,7 +263,6 @@ async function handleRefresh(): Promise<void> {
         @size-change="handlePageSizeChange"
       />
       <small>分页策略：本地分页（股票池加载后按当前页切换实时订阅）。</small>
-      <small>榜单数据源：{{ boardDataSource === 'official' ? '官方源' : '官方源暂不可用（保留上次成功结果）' }}</small>
       <small>共 {{ totalPages }} 页，当前页股票会实时订阅，切页后自动切换订阅集合。</small>
     </section>
   </section>

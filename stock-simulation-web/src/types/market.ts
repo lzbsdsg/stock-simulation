@@ -54,8 +54,3 @@ export interface MarketIndexQuote {
   volume: number | null
   amount: number | null
 }
-
-export interface MarketRankPayload {
-  gainers: Quote[]
-  losers: Quote[]
-}

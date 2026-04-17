@@ -3,6 +3,7 @@ package com.lzbsdsg.stocksimulation.market.infrastructure.gateway;
 import com.lzbsdsg.stocksimulation.config.CaffeineConfig;
 import com.lzbsdsg.stocksimulation.market.domain.entity.KLinePoint;
 import com.lzbsdsg.stocksimulation.market.domain.entity.QuoteSnapshot;
+import com.lzbsdsg.stocksimulation.market.domain.service.QuoteMergePolicy;
 import jakarta.servlet.http.HttpServletResponse;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -95,6 +96,29 @@ public class MarketCacheGateway {
             quoteSnapshot,
             STALE_QUOTE_TTL_SECONDS,
             TimeUnit.SECONDS);
+  }
+
+  /**
+   * 条件覆盖写缓存：仅当候选快照更新（更新或更完整）时才写入。
+   *
+   * @return true 表示行情发生有效变化，建议继续广播推送；false 表示无需推送。
+   */
+  public boolean cacheQuoteIfFresh(String stockCode, QuoteSnapshot candidate) {
+    if (candidate == null) {
+      return false;
+    }
+
+    String normalizedCode = normalizeStockCode(stockCode);
+    QuoteSnapshot existing = getQuote(normalizedCode).value();
+    if (!QuoteMergePolicy.shouldReplace(existing, candidate)) {
+      return false;
+    }
+
+    cacheQuote(normalizedCode, candidate);
+    if (existing == null) {
+      return true;
+    }
+    return QuoteMergePolicy.isMeaningfulChange(existing, candidate);
   }
 
   public void cacheNullQuote(String stockCode) {

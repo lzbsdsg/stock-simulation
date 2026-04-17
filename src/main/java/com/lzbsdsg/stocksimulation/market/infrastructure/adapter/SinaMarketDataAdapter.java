@@ -143,7 +143,10 @@ public class SinaMarketDataAdapter implements MarketDataProvider {
       snapshot.setLowerLimitPrice(
           snapshot.getClosePrice().multiply(BigDecimal.valueOf(0.90)).setScale(2, RoundingMode.HALF_UP));
     }
-    snapshot.setTimestamp(parseTimestamp(fields));
+    LocalDateTime sourceTs = parseTimestamp(fields);
+    snapshot.setTimestamp(sourceTs != null ? sourceTs : LocalDateTime.now());
+    snapshot.setSource("SINA");
+    snapshot.setSourceTimestamp(sourceTs);
     return snapshot;
   }
 
@@ -371,14 +374,17 @@ public class SinaMarketDataAdapter implements MarketDataProvider {
       return "";
     }
     String code = stockCode.trim().toLowerCase(Locale.ROOT);
-    if (code.startsWith("sh") || code.startsWith("sz")) {
+    if (code.startsWith("sh") || code.startsWith("sz") || code.startsWith("bj")) {
       return code;
     }
-    if (code.matches("^6\\d{5}$")) {
+    if (code.matches("^[569]\\d{5}$")) {
       return "sh" + code;
     }
     if (code.matches("^[03]\\d{5}$")) {
       return "sz" + code;
+    }
+    if (code.matches("^[48]\\d{5}$")) {
+      return "bj" + code;
     }
     return code;
   }

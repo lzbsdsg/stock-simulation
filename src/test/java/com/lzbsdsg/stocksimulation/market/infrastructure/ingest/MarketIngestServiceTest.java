@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -67,12 +68,47 @@ class MarketIngestServiceTest {
     when(stockInfoRepository.findAllListed()).thenReturn(List.of(stock("sh600519")));
     QuoteSnapshot quote = quote("sh600519", "1688.88");
     when(provider.batchGetQuotes(List.of("sh600519"))).thenReturn(List.of(quote));
+    when(marketCacheGateway.cacheQuoteIfFresh(anyString(), any())).thenReturn(true);
 
     ingestService.pullAndBroadcast();
 
     verify(marketActiveQuoteRegistry).evictStale(any(Duration.class));
-    verify(marketCacheGateway).cacheQuote("sh600519", quote);
+    verify(marketCacheGateway).cacheQuoteIfFresh("sh600519", quote);
     verify(redisTemplate).convertAndSend(MarketIngestService.BROADCAST_CHANNEL, quote);
+  }
+
+  @Test
+  void should_merge_quotes_from_multiple_providers_during_ingest() {
+    MarketDataProvider providerA = org.mockito.Mockito.mock(MarketDataProvider.class);
+    MarketDataProvider providerB = org.mockito.Mockito.mock(MarketDataProvider.class);
+
+    MarketIngestService multiProviderIngestService = new MarketIngestService(
+        List.of(providerA, providerB),
+        stockInfoRepository,
+        marketCacheGateway,
+        redisTemplate,
+        marketActiveQuoteRegistry,
+        new SimpleMeterRegistry());
+
+    when(valueOperations.setIfAbsent(
+        eq(MarketIngestService.INGEST_LEADER_KEY), any(), anyLong(), eq(TimeUnit.SECONDS)))
+        .thenReturn(Boolean.TRUE);
+
+    when(stockInfoRepository.findAllListed()).thenReturn(List.of(stock("sh600519"), stock("sz000001")));
+
+    QuoteSnapshot quoteA = quote("sh600519", "1688.88");
+    QuoteSnapshot quoteB = quote("sz000001", "12.34");
+
+    when(providerA.batchGetQuotes(List.of("sh600519", "sz000001"))).thenReturn(List.of(quoteA));
+    when(providerB.batchGetQuotes(List.of("sh600519", "sz000001"))).thenReturn(List.of(quoteB));
+    when(marketCacheGateway.cacheQuoteIfFresh(anyString(), any())).thenReturn(true);
+
+    multiProviderIngestService.pullAndBroadcast();
+
+    verify(marketCacheGateway).cacheQuoteIfFresh("sh600519", quoteA);
+    verify(marketCacheGateway).cacheQuoteIfFresh("sz000001", quoteB);
+    verify(redisTemplate).convertAndSend(MarketIngestService.BROADCAST_CHANNEL, quoteA);
+    verify(redisTemplate).convertAndSend(MarketIngestService.BROADCAST_CHANNEL, quoteB);
   }
 
   @Test

@@ -12,6 +12,7 @@ import com.lzbsdsg.stocksimulation.auth.infrastructure.gateway.JwtTokenProvider;
 import com.lzbsdsg.stocksimulation.market.application.MarketApplicationService;
 import com.lzbsdsg.stocksimulation.market.application.vo.KLineVO;
 import com.lzbsdsg.stocksimulation.market.application.vo.MarketLatencyMetricVO;
+import com.lzbsdsg.stocksimulation.market.application.vo.MarketIndexQuoteVO;
 import com.lzbsdsg.stocksimulation.market.application.vo.MarketRealtimeMetricsVO;
 import com.lzbsdsg.stocksimulation.market.application.vo.QuoteVO;
 import java.math.BigDecimal;
@@ -119,6 +120,27 @@ class MarketControllerApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data[0].date").value("2026-03-01"));
+    }
+
+    @Test
+    void should_get_official_indexes() throws Exception {
+        when(marketApplicationService.getOfficialIndexQuotes())
+                .thenReturn(
+                        List.of(
+                                new MarketIndexQuoteVO(
+                                        "sh000001",
+                                        "上证指数",
+                                        new BigDecimal("3210.15"),
+                                        new BigDecimal("12.30"),
+                                        new BigDecimal("0.38"),
+                                        123456789L,
+                                        new BigDecimal("1234567890.00"))));
+
+        mockMvc
+                .perform(get("/api/v1/market/indexes"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data[0].stockCode").value("sh000001"));
     }
 
     @Test

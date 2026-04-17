@@ -85,6 +85,22 @@ public class MarketActiveQuoteRegistry {
         if (stockCode == null) {
             return "";
         }
-        return stockCode.trim().toLowerCase(Locale.ROOT);
+        String code = stockCode.trim().toLowerCase(Locale.ROOT);
+        if (code.isBlank()) {
+            return "";
+        }
+        if (code.startsWith("sh") || code.startsWith("sz") || code.startsWith("bj")) {
+            return code;
+        }
+        if (code.matches("^[569]\\d{5}$")) {
+            return "sh" + code;
+        }
+        if (code.matches("^[03]\\d{5}$")) {
+            return "sz" + code;
+        }
+        if (code.matches("^[48]\\d{5}$")) {
+            return "bj" + code;
+        }
+        return code;
     }
 }

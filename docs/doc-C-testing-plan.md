@@ -750,6 +750,47 @@ curl "http://localhost:8080/api/v1/market/realtime-metrics" ^
 - `pubSubFanoutLatency.p99Ms < 200`（若有分位统计）
 - `wsQueueLatency.p99Ms < 500`（若有分位统计）
 
+#### 3.5.7 行情中心分页与榜单验证（新增）
+
+1) 分页列表能力：
+
+```cmd
+curl "http://localhost:8080/api/v1/market/listed?page=1&size=40" ^
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+通过标准：
+- 返回 `code=200`。
+- `data.records.length <= 40`，且含 `stockCode`、`stockName`。
+
+2) 前端分页切换：
+- 打开 `/market`，将每页容量在 30/40 间切换。
+- 翻页前后记录某只上一页股票的推送频率。
+
+通过标准：
+- 页面数量与分页参数一致。
+- 切页后，上一页股票不再作为“当前页来源”持续推送；当前页股票保持实时推送。
+- 实时订阅范围保持为：自选股 + 当前页 + 热点集合（并集去重）。
+
+3) 榜单与大盘展示：
+- 正常网络：校验大盘卡片、涨幅榜、跌幅榜可见且数据刷新。
+- 使用后端接口校验：
+
+```cmd
+curl "http://localhost:8080/api/v1/market/indexes" ^
+  -H "Authorization: Bearer <TOKEN>"
+
+curl "http://localhost:8080/api/v1/market/rank-board?limit=10" ^
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+- 模拟官方源不可用：校验后端优先回退缓存，页面仍可展示分页与榜单。
+
+通过标准：
+- 官方源可用时：后端接口返回官方榜单与大盘数据。
+- 官方源不可用时：后端先返回多源融合榜单/指数；若多源也不可用，则返回最近一次成功缓存。
+- 整个降级过程中前端不做本地榜单排序，页面无明显闪烁，功能不中断。
+
 ---
 
 ## 四、安全测试方案

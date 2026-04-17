@@ -79,6 +79,45 @@
   - src/main/java/com/lzbsdsg/stocksimulation/market/infrastructure/ingest/MarketPubSubListener.java
   - src/main/java/com/lzbsdsg/stocksimulation/market/infrastructure/websocket/MarketWebSocketHandler.java
 
+### 2.6 行情中心增强（2026-04）
+
+- 新增行情页大盘数据与榜单展示：
+  - 大盘卡片：上证/深证/沪深300（价格、涨跌、成交量、成交额）
+  - 涨幅榜/跌幅榜：由后端统一抓取官方源并返回
+- 新增全市场分页展示：
+  - 单页容量可选 30 / 40 只股票
+  - 切页后更新“当前页来源”集合，避免全量实时订阅带来的无效推送
+- 新增实时订阅口径解耦：
+  - 展示口径：仪表盘“关注股票”仅按自选股展示
+  - 实时订阅口径：自选股 + 行情中心当前页 + 热点集合（并集去重）
+- 新增运行时兜底策略：
+  - 大盘与涨跌幅榜：优先后端官方代理，失败时回退后端多源融合结果，再回退最近一次成功缓存
+  - 股票分页：固定走本地分页（先加载股票池，再按 30/40 本地切页）
+  - 当前页切换时仅更新当前页来源集合，控制实时推送压力
+- 新增行情融合与去抖策略：
+  - 抓取链路并发读取新浪/腾讯等 Provider，按新鲜度 + 完整度融合
+  - Redis/L1 缓存写入改为条件覆盖（仅新鲜或更完整数据可覆盖）
+  - Pub/Sub 与 WS 链路仅在“有效变化”时广播，减少页面闪烁
+- 相关实现：
+  - 前端：
+    - stock-simulation-web/src/pages/market/MarketPage.vue
+    - stock-simulation-web/src/api/market.ts
+    - stock-simulation-web/src/stores/market.ts
+    - stock-simulation-web/src/pages/DashboardPage.vue
+    - stock-simulation-web/src/types/market.ts
+    - stock-simulation-web/src/style.css
+  - 后端：
+    - src/main/java/com/lzbsdsg/stocksimulation/market/controller/MarketController.java
+    - src/main/java/com/lzbsdsg/stocksimulation/market/application/MarketApplicationService.java
+    - src/main/java/com/lzbsdsg/stocksimulation/market/domain/service/QuoteMergePolicy.java
+    - src/main/java/com/lzbsdsg/stocksimulation/market/infrastructure/gateway/EastMoneyOfficialBoardGateway.java
+    - src/main/java/com/lzbsdsg/stocksimulation/market/infrastructure/ingest/MarketIngestService.java
+    - src/main/java/com/lzbsdsg/stocksimulation/market/infrastructure/ingest/MarketPubSubListener.java
+    - src/main/java/com/lzbsdsg/stocksimulation/market/infrastructure/gateway/MarketCacheGateway.java
+    - src/main/java/com/lzbsdsg/stocksimulation/market/application/vo/MarketIndexQuoteVO.java
+    - src/main/java/com/lzbsdsg/stocksimulation/market/application/vo/MarketRankBoardVO.java
+    - src/main/java/com/lzbsdsg/stocksimulation/market/application/vo/StockListedItemVO.java
+
 ## 3. 核心接口验收点
 
 - GET /api/v1/watchlist
@@ -89,7 +128,15 @@
 - PUT /api/v1/notifications/{id}/read
 - PUT /api/v1/notifications/read-all
 - GET /api/v1/notifications/unread-count
+- GET /api/v1/market/listed
+- GET /api/v1/market/indexes
 - WS: /user/queue/notification
+
+## 3.2 功能调整（2026-04-16）
+
+- 行情中心“涨跌幅榜”功能已下线。
+- 后端不再提供 `GET /api/v1/market/rank-board`。
+- 前端市场页仅保留大盘指数、分页行情与实时订阅能力。
 
 ## 3.1 遗漏补齐（2026-04）
 
@@ -187,6 +234,12 @@ curl "http://localhost:8080/api/v1/market/realtime-metrics" ^
 - `ingestCycleLatency.count`、`wsPushLatency.count` 在有流量时持续增长。
 - `wsQueuedTasks` 在稳定压测下不持续增长。
 
+1. 行情中心分页与榜单验收：
+- 打开 `/market`，确认可见大盘卡片与涨跌幅榜。
+- 切换分页大小到 30 / 40，确认单页股票数量对应变化。
+- 翻页后仅更新“当前页来源集合”，并保持实时订阅范围=自选股+当前页+热点集合。
+- 断开官方源后，确认后端接口按“多源融合 → 最近成功缓存”降级，分页与榜单仍可用。
+
 ## 6. 通过标准
 
 - 自选股增删改序可用
@@ -197,3 +250,4 @@ curl "http://localhost:8080/api/v1/market/realtime-metrics" ^
 - 可见股票集合更新周期达到 1~2 秒（正常负载）
 - WebSocket 推送延迟 P99 < 500ms
 - 实时观测接口可直接返回各项延迟性能数据
+- 官方榜单不可用时，后端仍能返回多源融合榜单或最近成功榜单缓存

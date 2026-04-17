@@ -3,6 +3,7 @@ package com.lzbsdsg.stocksimulation.market.infrastructure.ingest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lzbsdsg.stocksimulation.config.CaffeineConfig;
 import com.lzbsdsg.stocksimulation.market.domain.entity.QuoteSnapshot;
+import com.lzbsdsg.stocksimulation.market.domain.service.QuoteMergePolicy;
 import com.lzbsdsg.stocksimulation.market.infrastructure.websocket.MarketWebSocketHandler;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -71,8 +72,21 @@ public class MarketPubSubListener implements MessageListener {
 
       String stockCode = quote.getStockCode().trim().toLowerCase();
       Cache quoteCache = cacheManager.getCache(CaffeineConfig.CACHE_QUOTE);
+      QuoteSnapshot existing = null;
       if (quoteCache != null) {
+        Object cached = quoteCache.get(stockCode, Object.class);
+        if (cached instanceof QuoteSnapshot cachedQuote) {
+          existing = cachedQuote;
+        }
+
+        if (!QuoteMergePolicy.shouldReplace(existing, quote)) {
+          return;
+        }
         quoteCache.put(stockCode, quote);
+      }
+
+      if (existing != null && !QuoteMergePolicy.isMeaningfulChange(existing, quote)) {
+        return;
       }
 
       if (latencySampleEnabled) {
