@@ -234,8 +234,13 @@ public class MarketDataFacade {
   }
 
   private QuoteSnapshot loadQuoteFromProviders(String stockCode) {
+    List<MarketDataProvider> activeProviders = activeProviders();
+    if (activeProviders.isEmpty()) {
+      return null;
+    }
+
     List<CompletableFuture<QuoteSnapshot>> futures = new ArrayList<>();
-    for (MarketDataProvider provider : providers) {
+    for (MarketDataProvider provider : activeProviders) {
       futures.add(
           CompletableFuture
               .supplyAsync(() -> fetchProviderQuote(provider, stockCode))
@@ -254,8 +259,13 @@ public class MarketDataFacade {
   }
 
   private Map<String, QuoteSnapshot> loadBatchFromProviders(List<String> stockCodes) {
+    List<MarketDataProvider> activeProviders = activeProviders();
+    if (activeProviders.isEmpty()) {
+      return Map.of();
+    }
+
     List<CompletableFuture<Map<String, QuoteSnapshot>>> futures = new ArrayList<>();
-    for (MarketDataProvider provider : providers) {
+    for (MarketDataProvider provider : activeProviders) {
       futures.add(
           CompletableFuture
               .supplyAsync(() -> fetchProviderBatch(provider, stockCodes))
@@ -355,6 +365,15 @@ public class MarketDataFacade {
     String providerKey = provider.getClass().getName();
     return circuitBreakers.computeIfAbsent(
         providerKey, key -> new ProviderCircuitBreaker(3, Duration.ofSeconds(30)));
+  }
+
+  private List<MarketDataProvider> activeProviders() {
+    return providers.stream().filter(this::isNotDeprecatedProvider).toList();
+  }
+
+  private boolean isNotDeprecatedProvider(MarketDataProvider provider) {
+    String providerName = provider.getClass().getSimpleName().toLowerCase(Locale.ROOT);
+    return !providerName.contains("akshare");
   }
 
   private void recordQuoteCacheHit(String cacheStatus) {

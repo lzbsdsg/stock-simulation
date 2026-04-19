@@ -1,12 +1,12 @@
 package com.lzbsdsg.stocksimulation.market.domain.service;
 
-import com.lzbsdsg.stocksimulation.common.exception.BizException;
-import com.lzbsdsg.stocksimulation.common.result.ErrorCode;
 import com.lzbsdsg.stocksimulation.market.domain.entity.KLinePeriod;
 import com.lzbsdsg.stocksimulation.market.domain.entity.KLinePoint;
 import com.lzbsdsg.stocksimulation.market.domain.entity.MarketKLineSyncState;
 import com.lzbsdsg.stocksimulation.market.domain.repository.MarketKLineDailyRepository;
 import com.lzbsdsg.stocksimulation.market.domain.repository.MarketKLineSyncStateRepository;
+import com.lzbsdsg.stocksimulation.market.infrastructure.adapter.SinaMarketDataAdapter;
+import com.lzbsdsg.stocksimulation.market.infrastructure.adapter.TencentMarketDataAdapter;
 import com.lzbsdsg.stocksimulation.market.infrastructure.gateway.EastMoneyKLineGateway;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
@@ -29,11 +29,15 @@ public class HistoricalKLineService {
 
   private static final ZoneId ZONE_SHANGHAI = ZoneId.of("Asia/Shanghai");
   private static final String DATA_SOURCE = "EASTMONEY";
+  private static final String DATA_SOURCE_SINA = "SINA";
+  private static final String DATA_SOURCE_TENCENT = "TENCENT";
   private static final int RETAIN_YEARS = 3;
 
   private final MarketKLineDailyRepository marketKLineDailyRepository;
   private final MarketKLineSyncStateRepository marketKLineSyncStateRepository;
   private final EastMoneyKLineGateway eastMoneyKLineGateway;
+  private final SinaMarketDataAdapter sinaMarketDataAdapter;
+  private final TencentMarketDataAdapter tencentMarketDataAdapter;
 
   public List<KLinePoint> getKLine(String stockCode, KLinePeriod period, LocalDate from, LocalDate to) {
     if (from == null || to == null || from.isAfter(to)) {
@@ -103,7 +107,9 @@ public class HistoricalKLineService {
       List<KLinePoint> fetched = eastMoneyKLineGateway.fetchDailyKLine(stockCode, from, to);
       if (!fetched.isEmpty()) {
         marketKLineDailyRepository.upsertBatch(stockCode, fetched, DATA_SOURCE);
+        return;
       }
+      fetchAndUpsertFromFallbackProviders(stockCode, from, to);
     } catch (Exception ex) {
       log.warn(
           "Fetch real daily kline failed stockCode={} from={} to={} reason={}",
@@ -111,7 +117,48 @@ public class HistoricalKLineService {
           from,
           to,
           ex.getMessage());
-      throw new BizException(ErrorCode.MARKET_DATA_UNAVAILABLE, ex);
+      fetchAndUpsertFromFallbackProviders(stockCode, from, to);
+    }
+  }
+
+  private void fetchAndUpsertFromFallbackProviders(String stockCode, LocalDate from, LocalDate to) {
+    List<KLinePoint> sinaPoints = fetchKLineFromSina(stockCode, from, to);
+    if (!sinaPoints.isEmpty()) {
+      marketKLineDailyRepository.upsertBatch(stockCode, sinaPoints, DATA_SOURCE_SINA);
+      return;
+    }
+
+    List<KLinePoint> tencentPoints = fetchKLineFromTencent(stockCode, from, to);
+    if (!tencentPoints.isEmpty()) {
+      marketKLineDailyRepository.upsertBatch(stockCode, tencentPoints, DATA_SOURCE_TENCENT);
+    }
+  }
+
+  private List<KLinePoint> fetchKLineFromSina(String stockCode, LocalDate from, LocalDate to) {
+    try {
+      return sinaMarketDataAdapter.getKLine(stockCode, KLinePeriod.DAILY, from, to);
+    } catch (Exception ex) {
+      log.warn(
+          "Sina kline fallback failed stockCode={} from={} to={} reason={}",
+          stockCode,
+          from,
+          to,
+          ex.getMessage());
+      return List.of();
+    }
+  }
+
+  private List<KLinePoint> fetchKLineFromTencent(String stockCode, LocalDate from, LocalDate to) {
+    try {
+      return tencentMarketDataAdapter.getKLine(stockCode, KLinePeriod.DAILY, from, to);
+    } catch (Exception ex) {
+      log.warn(
+          "Tencent kline fallback failed stockCode={} from={} to={} reason={}",
+          stockCode,
+          from,
+          to,
+          ex.getMessage());
+      return List.of();
     }
   }
 

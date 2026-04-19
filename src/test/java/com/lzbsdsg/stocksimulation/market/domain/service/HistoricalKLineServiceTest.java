@@ -11,6 +11,8 @@ import com.lzbsdsg.stocksimulation.market.domain.entity.KLinePoint;
 import com.lzbsdsg.stocksimulation.market.domain.entity.MarketKLineSyncState;
 import com.lzbsdsg.stocksimulation.market.domain.repository.MarketKLineDailyRepository;
 import com.lzbsdsg.stocksimulation.market.domain.repository.MarketKLineSyncStateRepository;
+import com.lzbsdsg.stocksimulation.market.infrastructure.adapter.SinaMarketDataAdapter;
+import com.lzbsdsg.stocksimulation.market.infrastructure.adapter.TencentMarketDataAdapter;
 import com.lzbsdsg.stocksimulation.market.infrastructure.gateway.EastMoneyKLineGateway;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -29,6 +31,8 @@ class HistoricalKLineServiceTest {
   @Mock private MarketKLineDailyRepository marketKLineDailyRepository;
   @Mock private MarketKLineSyncStateRepository marketKLineSyncStateRepository;
   @Mock private EastMoneyKLineGateway eastMoneyKLineGateway;
+  @Mock private SinaMarketDataAdapter sinaMarketDataAdapter;
+  @Mock private TencentMarketDataAdapter tencentMarketDataAdapter;
 
   private HistoricalKLineService historicalKLineService;
 
@@ -36,7 +40,11 @@ class HistoricalKLineServiceTest {
   void setUp() {
     historicalKLineService =
         new HistoricalKLineService(
-            marketKLineDailyRepository, marketKLineSyncStateRepository, eastMoneyKLineGateway);
+        marketKLineDailyRepository,
+        marketKLineSyncStateRepository,
+        eastMoneyKLineGateway,
+        sinaMarketDataAdapter,
+        tencentMarketDataAdapter);
   }
 
   @Test
@@ -109,6 +117,27 @@ class HistoricalKLineServiceTest {
 
     verify(eastMoneyKLineGateway).fetchDailyKLine("sh600519", lowerBound, to);
     verify(marketKLineDailyRepository).deleteOlderThan(eq("sh600519"), eq(lowerBound));
+  }
+
+  @Test
+  void should_fallback_to_sina_when_eastmoney_failed() {
+    LocalDate from = LocalDate.parse("2026-03-01");
+    LocalDate to = LocalDate.parse("2026-03-05");
+
+    when(marketKLineDailyRepository.findEarliestTradeDate("sh600519")).thenReturn(Optional.empty());
+    when(marketKLineDailyRepository.findLatestTradeDate("sh600519")).thenReturn(Optional.of(to));
+    when(eastMoneyKLineGateway.fetchDailyKLine("sh600519", from, to))
+        .thenThrow(new IllegalStateException("network error"));
+    when(sinaMarketDataAdapter.getKLine("sh600519", KLinePeriod.DAILY, from, to))
+        .thenReturn(List.of(point(from, "10.00", "10.20", "10.30", "9.90", 1000L, "10000.00")));
+    when(marketKLineDailyRepository.findByStockCodeAndDateRange("sh600519", from, to)).thenReturn(List.of());
+
+    historicalKLineService.getKLine("sh600519", KLinePeriod.DAILY, from, to);
+
+    verify(sinaMarketDataAdapter, org.mockito.Mockito.atLeastOnce())
+      .getKLine("sh600519", KLinePeriod.DAILY, from, to);
+    verify(marketKLineDailyRepository)
+        .upsertBatch(eq("sh600519"), org.mockito.ArgumentMatchers.anyList(), eq("SINA"));
   }
 
   private KLinePoint point(
