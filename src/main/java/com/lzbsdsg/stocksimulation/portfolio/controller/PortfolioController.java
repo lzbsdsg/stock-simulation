@@ -10,7 +10,6 @@ import com.lzbsdsg.stocksimulation.portfolio.application.vo.OverviewVO;
 import com.lzbsdsg.stocksimulation.portfolio.application.vo.PositionVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,8 +32,9 @@ public class PortfolioController {
   @Operation(summary = "获取持仓列表")
   @GetMapping("/positions")
   @RateLimit(limit = 100, window = 60, key = "portfolio:positions")
-  public Result<List<PositionVO>> getPositions() {
-    return Result.success(portfolioApplicationService.getPositions());
+  public Result<PageResult<PositionVO>> getPositions(
+      @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size) {
+    return Result.success(portfolioApplicationService.getPositions(page, size));
   }
 
   @Operation(summary = "获取资金流水")

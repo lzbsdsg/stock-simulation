@@ -11,8 +11,12 @@ export async function getOverview(): Promise<PortfolioOverview> {
   return unwrapResponse<PortfolioOverview>(request.get('/portfolio/overview'))
 }
 
-export async function getPositions(): Promise<PositionItem[]> {
-  return unwrapResponse<PositionItem[]>(request.get('/portfolio/positions'))
+export async function getPositions(page = 1, size = 20): Promise<PageResult<PositionItem>> {
+  return unwrapResponse<PageResult<PositionItem>>(
+    request.get('/portfolio/positions', {
+      params: { page, size },
+    }),
+  )
 }
 
 export async function getFundFlows(page = 1, size = 20): Promise<PageResult<FundFlowItem>> {

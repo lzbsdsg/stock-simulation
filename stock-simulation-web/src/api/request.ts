@@ -18,8 +18,19 @@ interface RetriableRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean
 }
 
+function resolveApiBaseURL(): string {
+  if (typeof window === 'undefined') {
+    return '/api/v1'
+  }
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  if (window.location.protocol === 'https:' && isLocalhost) {
+    return 'http://localhost/api/v1'
+  }
+  return '/api/v1'
+}
+
 const request = axios.create({
-  baseURL: '/api/v1',
+  baseURL: resolveApiBaseURL(),
   timeout: 10000,
 })
 

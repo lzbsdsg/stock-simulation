@@ -1,6 +1,7 @@
 package com.lzbsdsg.stocksimulation.portfolio.infrastructure.persistence;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.lzbsdsg.stocksimulation.portfolio.domain.entity.Position;
 import com.lzbsdsg.stocksimulation.portfolio.domain.repository.PositionRepository;
 import java.time.LocalDate;
@@ -42,6 +43,23 @@ public class PositionRepositoryImpl implements PositionRepository {
         positionMapper.selectList(
             new LambdaQueryWrapper<PositionDO>().eq(PositionDO::getUserId, userId));
     return list.stream().map(this::toDomain).collect(Collectors.toList());
+  }
+
+  @Override
+  public List<Position> findByUserId(Long userId, int page, int size) {
+    Page<PositionDO> p =
+        positionMapper.selectPage(
+            new Page<>(page, size),
+            new LambdaQueryWrapper<PositionDO>()
+                .eq(PositionDO::getUserId, userId)
+                .orderByDesc(PositionDO::getCreatedAt));
+    return p.getRecords().stream().map(this::toDomain).collect(Collectors.toList());
+  }
+
+  @Override
+  public long countByUserId(Long userId) {
+    return positionMapper.selectCount(
+        new LambdaQueryWrapper<PositionDO>().eq(PositionDO::getUserId, userId));
   }
 
   @Override

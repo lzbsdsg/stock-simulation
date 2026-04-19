@@ -46,6 +46,7 @@ public class PortfolioApplicationService {
   private static final int MIN_PAGE = 1;
   private static final int DEFAULT_PAGE_SIZE = 20;
   private static final int MAX_PAGE_SIZE = 200;
+  private static final int OVERVIEW_QUOTE_LIMIT = 500;
   private static final int DEFAULT_EQUITY_DAYS = 30;
   private static final int MAX_EQUITY_DAYS = 365;
   private static final ZoneId ZONE_SHANGHAI = ZoneId.of("Asia/Shanghai");
@@ -71,7 +72,7 @@ public class PortfolioApplicationService {
             .orElseThrow(() -> new BizException(ErrorCode.USER_ACCOUNT_NOT_FOUND));
 
     List<Position> positions = positionRepository.findByUserId(userId);
-    Map<String, QuoteSnapshot> quoteMap = loadQuoteMap(positions);
+    Map<String, QuoteSnapshot> quoteMap = loadQuoteMap(positions, OVERVIEW_QUOTE_LIMIT, true);
 
     BigDecimal marketValue = calcMarketValue(positions, quoteMap, false);
     BigDecimal available = defaultMoney(account.getAvailableBalance());
@@ -101,15 +102,19 @@ public class PortfolioApplicationService {
   }
 
   /** 获取持仓列表（含实时盈亏） */
-  public List<PositionVO> getPositions() {
+  public PageResult<PositionVO> getPositions(int page, int size) {
     Long userId = currentUserId();
-    List<Position> positions = positionRepository.findByUserId(userId);
+    int safePage = sanitizePage(page);
+    int safeSize = sanitizeSize(size);
+    List<Position> positions = positionRepository.findByUserId(userId, safePage, safeSize);
+    long total = positionRepository.countByUserId(userId);
     if (positions.isEmpty()) {
-      return List.of();
+      return new PageResult<>(List.of(), total, safePage, safeSize);
     }
 
     Map<String, QuoteSnapshot> quoteMap = loadQuoteMap(positions);
-    return positions.stream().map(position -> toPositionVO(position, quoteMap)).toList();
+    List<PositionVO> records = positions.stream().map(position -> toPositionVO(position, quoteMap)).toList();
+    return new PageResult<>(records, total, safePage, safeSize);
   }
 
   /** 获取资金流水 */
@@ -233,6 +238,11 @@ public class PortfolioApplicationService {
   }
 
   private Map<String, QuoteSnapshot> loadQuoteMap(List<Position> positions) {
+    return loadQuoteMap(positions, Integer.MAX_VALUE, false);
+  }
+
+  private Map<String, QuoteSnapshot> loadQuoteMap(
+      List<Position> positions, int quoteLimit, boolean allowFallbackByLimit) {
     List<String> stockCodes =
         positions.stream()
             .map(Position::getStockCode)
@@ -241,6 +251,13 @@ public class PortfolioApplicationService {
             .distinct()
             .toList();
     if (stockCodes.isEmpty()) {
+      return Collections.emptyMap();
+    }
+    if (allowFallbackByLimit && stockCodes.size() > quoteLimit) {
+      log.warn(
+          "portfolio.quote.skip_large_set code_size={} quote_limit={} fallback_to_cost=true",
+          stockCodes.size(),
+          quoteLimit);
       return Collections.emptyMap();
     }
 

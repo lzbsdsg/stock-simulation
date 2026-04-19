@@ -14,13 +14,26 @@ export const usePortfolioStore = defineStore('portfolio', () => {
   const equityCurve = ref<EquityCurve | null>(null)
   const fundFlows = ref<FundFlowItem[]>([])
   const loading = ref(false)
+  const positionsLoading = ref(false)
+  const positionsPage = ref(1)
+  const positionsSize = ref(20)
+  const positionsTotal = ref(0)
 
   async function loadOverview(): Promise<void> {
     overview.value = await portfolioApi.getOverview()
   }
 
-  async function loadPositions(): Promise<void> {
-    positions.value = await portfolioApi.getPositions()
+  async function loadPositions(page = positionsPage.value, size = positionsSize.value): Promise<void> {
+    positionsLoading.value = true
+    try {
+      const pageResult = await portfolioApi.getPositions(page, size)
+      positions.value = pageResult.records
+      positionsTotal.value = pageResult.total
+      positionsPage.value = pageResult.page
+      positionsSize.value = pageResult.size
+    } finally {
+      positionsLoading.value = false
+    }
   }
 
   async function loadEquityCurve(days = 30): Promise<void> {
@@ -35,7 +48,12 @@ export const usePortfolioStore = defineStore('portfolio', () => {
   async function refreshAll(days = 30): Promise<void> {
     loading.value = true
     try {
-      await Promise.all([loadOverview(), loadPositions(), loadEquityCurve(days), loadFundFlows()])
+      await Promise.all([
+        loadOverview(),
+        loadPositions(positionsPage.value, positionsSize.value),
+        loadEquityCurve(days),
+        loadFundFlows(),
+      ])
     } finally {
       loading.value = false
     }
@@ -47,6 +65,10 @@ export const usePortfolioStore = defineStore('portfolio', () => {
     equityCurve,
     fundFlows,
     loading,
+    positionsLoading,
+    positionsPage,
+    positionsSize,
+    positionsTotal,
     loadOverview,
     loadPositions,
     loadEquityCurve,

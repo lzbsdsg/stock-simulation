@@ -14,6 +14,10 @@ public interface PositionRepository {
 
   List<Position> findByUserId(Long userId);
 
+  List<Position> findByUserId(Long userId, int page, int size);
+
+  long countByUserId(Long userId);
+
   void save(Position position);
 
   boolean updateWithVersion(Position position);
