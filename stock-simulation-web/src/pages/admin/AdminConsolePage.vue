@@ -67,9 +67,27 @@ async function loadData(silent: boolean) {
   }
 
   try {
-    const [statsPayload, metricsPayload] = await Promise.all([getDashboardStats(), getRealtimeMetrics()])
-    stats.value = statsPayload
-    metrics.value = metricsPayload
+    const [statsResult, metricsResult] = await Promise.allSettled([getDashboardStats(), getRealtimeMetrics()])
+
+    if (statsResult.status === 'fulfilled') {
+      stats.value = statsResult.value
+    }
+
+    if (metricsResult.status === 'fulfilled') {
+      metrics.value = metricsResult.value
+    }
+
+    if (statsResult.status === 'rejected' && metricsResult.status === 'rejected' && !silent) {
+      ElMessage.error('管理员面板加载失败，请稍后重试')
+    }
+
+    if (statsResult.status === 'rejected') {
+      console.error('[admin] load dashboard stats failed', statsResult.reason)
+    }
+
+    if (metricsResult.status === 'rejected') {
+      console.error('[admin] load realtime metrics failed', metricsResult.reason)
+    }
   } catch (error) {
     if (!silent) {
       ElMessage.error('管理员面板加载失败，请稍后重试')

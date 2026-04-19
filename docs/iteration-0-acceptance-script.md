@@ -62,6 +62,12 @@ call .\mvnw.cmd -DskipTests compile
 call .\mvnw.cmd spring-boot:run -Dspring.profiles.active=dev
 ```
 
+PowerShell 推荐写法（避免 `-Dspring.profiles.active` 被误解析）：
+
+```powershell
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"
+```
+
 预期：日志出现 `Tomcat started on port 8080`。
 
 如果 8080 被占用：
