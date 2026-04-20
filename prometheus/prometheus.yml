@@ -16,6 +16,16 @@ scrape_configs:
           - "app-2:8081"
         labels:
           app: "stock-simulation"
+          source: "container"
+
+  # 宿主机后端兜底抓取（未启用 app-1/app-2 容器时使用）
+  - job_name: "stock-simulation-host"
+    metrics_path: "/actuator/prometheus"
+    static_configs:
+      - targets: ["host.docker.internal:8081"]
+        labels:
+          app: "stock-simulation"
+          source: "host"
 
   # RabbitMQ
   - job_name: "rabbitmq"

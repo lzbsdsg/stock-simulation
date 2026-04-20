@@ -1,4 +1,4 @@
-# docker-compose.dev.yml — 开发环境完整生产级编排
+﻿# docker-compose.dev.yml — 开发环境完整生产级编排
 # 用法: docker compose -f docker-compose.dev.yml up -d
 # 架构: PG 1主2从 + Redis 3主3从集群 + RabbitMQ + Nginx
 
@@ -281,6 +281,261 @@ services:
       start_period: 30s
 
   # ============================================================
+  # 非生产观测栈（按需启用，不影响默认开发启动链路）
+  # 启动方式: docker compose -f docker-compose.dev.yml --profile nonprod-observe up -d
+  # ============================================================
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.16.0
+    container_name: stock-postgres-exporter
+    profiles:
+      - nonprod-observe
+    environment:
+      - DATA_SOURCE_URI=pg-master:5432/stock_simulation?sslmode=disable
+      - DATA_SOURCE_USER=stock_app
+      - DATA_SOURCE_PASS=${POSTGRES_PASSWORD}
+    ports:
+      - "9187:9187"
+    depends_on:
+      pg-master:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9187/metrics"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - stock-network
+
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: stock-loki
+    profiles:
+      - nonprod-observe
+    user: "0:0"
+    command: ["-config.file=/etc/loki/loki-config.yml"]
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki-data:/tmp/loki
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3100/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - stock-network
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    container_name: stock-promtail
+    profiles:
+      - nonprod-observe
+    command: ["-config.file=/etc/promtail/promtail.yml"]
+    ports:
+      - "9080:9080"
+    volumes:
+      - ./promtail/promtail.yml:/etc/promtail/promtail.yml:ro
+      - ./logs:/var/log/stock:ro
+    depends_on:
+      loki:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/bin/promtail", "-version"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - stock-network
+
+  tempo:
+    image: grafana/tempo:2.5.0
+    container_name: stock-tempo
+    profiles:
+      - nonprod-observe
+    user: "0:0"
+    command: ["-config.file=/etc/tempo/tempo.yml"]
+    ports:
+      - "3200:3200"
+      - "4318:4318"
+    volumes:
+      - ./tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo-data:/tmp/tempo
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3200/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - stock-network
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: stock-prometheus
+    profiles:
+      - nonprod-observe
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      postgres-exporter:
+        condition: service_healthy
+      tempo:
+        condition: service_healthy
+      promtail:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - stock-network
+
+  grafana:
+    image: grafana/grafana:11.1.4
+    container_name: stock-grafana
+    profiles:
+      - nonprod-observe
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/observability-overview.json
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+      tempo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - stock-network
+
+  # ============================================================
+  # 非生产环境应用实例（按需启用，不影响默认开发容器）
+  # 启动方式: docker compose -f docker-compose.dev.yml --profile nonprod-app up -d app-1 app-2
+  # ============================================================
+
+  app-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: backend-runtime
+    image: stock-simulation:dev
+    container_name: stock-app-1
+    profiles:
+      - nonprod-app
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - DB_HOST=pg-master
+      - DB_PORT=5432
+      - DB_NAME=stock_simulation
+      - DB_USER=stock_app
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_CLUSTER_NODES=redis-node-1:7000,redis-node-2:7001,redis-node-3:7002,redis-node-4:7003,redis-node-5:7004,redis-node-6:7005
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=stock_app
+      - RABBITMQ_PASSWORD=${RABBITMQ_DEFAULT_PASS}
+      - JWT_SECRET=${JWT_SECRET}
+      - DEV_BASIC_AUTH_USER=${DEV_BASIC_AUTH_USER:-dev}
+      - DEV_BASIC_AUTH_PASSWORD=${DEV_BASIC_AUTH_PASSWORD}
+      - JAVA_OPTS=-XX:+UseG1GC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom
+    volumes:
+      - ./logs/app-1:/app/logs
+    ports:
+      - "18080:8080"
+      - "18081:8081"
+    depends_on:
+      pg-master:
+        condition: service_healthy
+      redis-node-1:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - stock-network
+
+  app-2:
+    image: stock-simulation:dev
+    container_name: stock-app-2
+    profiles:
+      - nonprod-app
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - DB_HOST=pg-master
+      - DB_PORT=5432
+      - DB_NAME=stock_simulation
+      - DB_USER=stock_app
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_CLUSTER_NODES=redis-node-1:7000,redis-node-2:7001,redis-node-3:7002,redis-node-4:7003,redis-node-5:7004,redis-node-6:7005
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=stock_app
+      - RABBITMQ_PASSWORD=${RABBITMQ_DEFAULT_PASS}
+      - JWT_SECRET=${JWT_SECRET}
+      - DEV_BASIC_AUTH_USER=${DEV_BASIC_AUTH_USER:-dev}
+      - DEV_BASIC_AUTH_PASSWORD=${DEV_BASIC_AUTH_PASSWORD}
+      - JAVA_OPTS=-XX:+UseG1GC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom
+    volumes:
+      - ./logs/app-2:/app/logs
+    ports:
+      - "28080:8080"
+      - "28081:8081"
+    depends_on:
+      pg-master:
+        condition: service_healthy
+      redis-node-1:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      app-1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - stock-network
+
+  # ============================================================
   # Nginx
   # ============================================================
   
@@ -313,6 +568,10 @@ volumes:
   redis-node-5-data:
   redis-node-6-data:
   rabbitmq-data:
+  loki-data:
+  tempo-data:
+  prometheus-data:
+  grafana-data:
 
 
 
