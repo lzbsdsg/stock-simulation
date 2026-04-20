@@ -54,7 +54,7 @@ Week 20  ████ Beta 发布 + 文档收尾
 
 **后端任务**：
 - [ ] Spring Boot 3.2 项目初始化（Maven）
-- [ ] 配置 application.yml / application-dev.yml / application-test.yml / application-prod.yml
+- [ ] 配置 application.yml / application-dev.yml / application-test.yml
 - [ ] 集成 Lombok + MapStruct + Spotless
 - [ ] 配置 MyBatis-Plus（分页插件 + 乐观锁插件）
 - [ ] 配置 Spring Security 6 骨架（暂时 permitAll）
@@ -636,8 +636,8 @@ Week 20  ████ Beta 发布 + 文档收尾
 **状态**：✅ 已完成（实现与验收口径见 `iteration-14-delivery.md`）
 
 **任务**：
-- [x] 编写生产 Dockerfile（后端多阶段 + 前端 Nginx）
-- [x] 编写 docker-compose.yml（高并发架构版）:
+- [x] 编写开发 Dockerfile（后端多阶段 + 前端 Nginx）
+- [x] 编写 docker-compose.dev.yml（高并发架构版）:
   ```yaml
   services:
     nginx:          # 反向代理+负载均衡+限流+ip_hash
@@ -652,22 +652,22 @@ Week 20  ████ Beta 发布 + 文档收尾
     grafana:        # 可视化
     loki:           # 日志聚合
   ```
-- [x] 编写 nginx/nginx.conf（生产版）:
+- [x] 编写 nginx/nginx.conf（开发版）:
   - limit_req_zone 全局限流
   - upstream app 负载均衡 + 健康检查
   - WebSocket ip_hash 粘性会话
   - 静态资源 gzip + cache-control
-  - SSL 终止（Let's Encrypt）
+  - HTTP 入口（无 SSL 终止）
 - [x] PG 主从配置:
   - streaming replication 配置脚本
   - recovery.conf / standby.signal
   - 复制延迟监控
 - [x] Redis Cluster 初始化脚本 (`redis-cli --cluster create`)
-- [x] 配置 application-prod.yml（主从数据源、Redis Cluster 节点列表）
+- [x] 配置 application.yml（主从数据源、Redis Cluster 节点列表）
 - [x] 健康检查: `/actuator/health` 含 DB/Redis/MQ 状态
 
 **验收标准**：
-- `docker-compose up -d` 一键启动全部服务（2 App + PG主从 + Redis Cluster + MQ + Nginx）
+- `docker compose -f docker-compose.dev.yml up -d` 一键启动全部服务（2 App + PG主从 + Redis Cluster + MQ + Nginx）
 - Nginx 负载均衡到 2 个 App 实例
 - WebSocket 粘性会话到同一实例
 - 写操作走主库，`@ReadOnly` 查询走从库
@@ -784,8 +784,8 @@ Week 20  ████ Beta 发布 + 文档收尾
 - [ ] 安全测试（越权/注入/暴力破解/Token安全）
 - [ ] Trivy 镜像扫描 → 修复 Critical 漏洞
 - [ ] OWASP ZAP 快速扫描（可选）
-- [ ] 生产环境关闭 Swagger UI（`springdoc.swagger-ui.enabled=false`）
-- [ ] 生产环境 Actuator 仅暴露 health + prometheus + info
+- [ ] 发布前按需收敛 Swagger UI（非开发环境）
+- [ ] 发布前按需收敛 Actuator 暴露端点
 - [ ] CORS 白名单收紧
 - [ ] 敏感配置 → 环境变量 / Docker Secrets
 - [ ] Nginx rate limiting 参数验证
@@ -794,7 +794,7 @@ Week 20  ████ Beta 发布 + 文档收尾
 - 5 个 k6 场景全部达标
 - Trivy 0 Critical
 - 安全测试全部通过
-- 生产环境 Swagger 不可访问
+- 非开发环境 Swagger 按策略限制访问
 - Nginx 限流生效验证
 
 ---

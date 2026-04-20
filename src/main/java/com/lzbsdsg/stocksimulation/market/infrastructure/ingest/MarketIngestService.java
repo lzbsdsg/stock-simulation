@@ -244,7 +244,7 @@ public class MarketIngestService {
 
   private List<QuoteSnapshot> loadQuotes(List<String> stockCodes) {
     List<CompletableFuture<List<QuoteSnapshot>>> futures = new ArrayList<>();
-    for (MarketDataProvider provider : providers) {
+    for (MarketDataProvider provider : activeProviders()) {
       futures.add(
           CompletableFuture
               .supplyAsync(() -> fetchProviderBatch(provider, stockCodes))
@@ -292,6 +292,15 @@ public class MarketIngestService {
           ex.getMessage());
       return List.of();
     }
+  }
+
+  private List<MarketDataProvider> activeProviders() {
+    return providers.stream().filter(this::isNotDeprecatedProvider).toList();
+  }
+
+  private boolean isNotDeprecatedProvider(MarketDataProvider provider) {
+    String providerName = provider.getClass().getSimpleName().toLowerCase(Locale.ROOT);
+    return !providerName.contains("akshare");
   }
 
   public long getLastIngestAtMs() {

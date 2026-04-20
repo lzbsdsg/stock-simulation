@@ -232,10 +232,6 @@ services:
       - -c
       - |
         sleep 10
-        if redis-cli -h redis-node-1 -p 7000 -a ${REDIS_PASSWORD} cluster info | grep -q "cluster_state:ok"; then
-          echo "Redis cluster already initialized, skip."
-          exit 0
-        fi
         echo 'yes' | redis-cli -a ${REDIS_PASSWORD} --cluster create \
           redis-node-1:7000 \
           redis-node-2:7001 \

@@ -28,9 +28,11 @@ import org.springframework.stereotype.Service;
 public class HistoricalKLineService {
 
   private static final ZoneId ZONE_SHANGHAI = ZoneId.of("Asia/Shanghai");
-  private static final String DATA_SOURCE = "EASTMONEY";
-  private static final String DATA_SOURCE_SINA = "SINA";
-  private static final String DATA_SOURCE_TENCENT = "TENCENT";
+  private static final String DATA_SOURCE_EAST_MONEY = "EASTMONEY";
+  private static final String DATA_SOURCE_SINA_HISTORY = "SINA_HISTORY";
+  private static final String DATA_SOURCE_TENCENT_HISTORY = "TENCENT_HISTORY";
+  private static final String LEGACY_SOURCE_SINA = "SINA";
+  private static final String LEGACY_SOURCE_TENCENT = "TENCENT";
   private static final int RETAIN_YEARS = 3;
 
   private final MarketKLineDailyRepository marketKLineDailyRepository;
@@ -54,6 +56,7 @@ public class HistoricalKLineService {
     }
 
     syncDailyKLine(normalizedCode, boundedFrom, boundedTo);
+    repairLegacySyntheticHistoryIfNeeded(normalizedCode, boundedFrom, boundedTo);
     marketKLineDailyRepository.deleteOlderThan(normalizedCode, lowerBound);
     List<KLinePoint> dailyPoints =
         marketKLineDailyRepository.findByStockCodeAndDateRange(normalizedCode, boundedFrom, boundedTo);
@@ -103,34 +106,67 @@ public class HistoricalKLineService {
   }
 
   private void fetchAndUpsert(String stockCode, LocalDate from, LocalDate to) {
+    List<KLinePoint> tencentPoints = fetchKLineFromTencent(stockCode, from, to);
+    if (!tencentPoints.isEmpty()) {
+      marketKLineDailyRepository.upsertBatch(stockCode, tencentPoints, DATA_SOURCE_TENCENT_HISTORY);
+      return;
+    }
+
+    List<KLinePoint> sinaPoints = fetchKLineFromSina(stockCode, from, to);
+    if (!sinaPoints.isEmpty()) {
+      marketKLineDailyRepository.upsertBatch(stockCode, sinaPoints, DATA_SOURCE_SINA_HISTORY);
+      return;
+    }
+
+    List<KLinePoint> eastMoneyPoints = fetchKLineFromEastMoney(stockCode, from, to);
+    if (!eastMoneyPoints.isEmpty()) {
+      marketKLineDailyRepository.upsertBatch(stockCode, eastMoneyPoints, DATA_SOURCE_EAST_MONEY);
+      return;
+    }
+
+    log.warn("No kline source available stockCode={} from={} to={}", stockCode, from, to);
+  }
+
+  private void repairLegacySyntheticHistoryIfNeeded(String stockCode, LocalDate from, LocalDate to) {
+    List<String> sources = marketKLineDailyRepository.findDistinctSourcesInDateRange(stockCode, from, to);
+    if (sources == null || sources.isEmpty()) {
+      return;
+    }
+
+    boolean hasLegacySyntheticSource =
+        sources.stream().anyMatch(this::isLegacySyntheticSource);
+    if (!hasLegacySyntheticSource) {
+      return;
+    }
+
+    log.info(
+        "Detected legacy synthetic kline source, start repairing stockCode={} from={} to={} sources={}",
+        stockCode,
+        from,
+        to,
+        sources);
+    fetchAndUpsert(stockCode, from, to);
+  }
+
+  private boolean isLegacySyntheticSource(String source) {
+    if (source == null || source.isBlank()) {
+      return false;
+    }
+    String normalized = source.trim().toUpperCase(Locale.ROOT);
+    return LEGACY_SOURCE_SINA.equals(normalized) || LEGACY_SOURCE_TENCENT.equals(normalized);
+  }
+
+  private List<KLinePoint> fetchKLineFromEastMoney(String stockCode, LocalDate from, LocalDate to) {
     try {
-      List<KLinePoint> fetched = eastMoneyKLineGateway.fetchDailyKLine(stockCode, from, to);
-      if (!fetched.isEmpty()) {
-        marketKLineDailyRepository.upsertBatch(stockCode, fetched, DATA_SOURCE);
-        return;
-      }
-      fetchAndUpsertFromFallbackProviders(stockCode, from, to);
+      return eastMoneyKLineGateway.fetchDailyKLine(stockCode, from, to);
     } catch (Exception ex) {
       log.warn(
-          "Fetch real daily kline failed stockCode={} from={} to={} reason={}",
+          "EastMoney kline fallback failed stockCode={} from={} to={} reason={}",
           stockCode,
           from,
           to,
           ex.getMessage());
-      fetchAndUpsertFromFallbackProviders(stockCode, from, to);
-    }
-  }
-
-  private void fetchAndUpsertFromFallbackProviders(String stockCode, LocalDate from, LocalDate to) {
-    List<KLinePoint> sinaPoints = fetchKLineFromSina(stockCode, from, to);
-    if (!sinaPoints.isEmpty()) {
-      marketKLineDailyRepository.upsertBatch(stockCode, sinaPoints, DATA_SOURCE_SINA);
-      return;
-    }
-
-    List<KLinePoint> tencentPoints = fetchKLineFromTencent(stockCode, from, to);
-    if (!tencentPoints.isEmpty()) {
-      marketKLineDailyRepository.upsertBatch(stockCode, tencentPoints, DATA_SOURCE_TENCENT);
+      return List.of();
     }
   }
 

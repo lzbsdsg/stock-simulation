@@ -348,7 +348,7 @@
 | 负载均衡 | Nginx | upstream 健康检查、limit_req 限流、ip_hash WS粘性会话 |
 | 构建 | Maven 3.9+ / pnpm 8+ | Maven稳定可靠；pnpm高效磁盘占用低 |
 | CI/CD | GitHub Actions | 零运维、与GitHub深度集成 |
-| 容器 | Docker + docker-compose | 一键启动开发/生产环境，水平扩展容易 |
+| 容器 | Docker + docker-compose | 一键启动本地开发环境，学习与联调方便 |
 | 日志 | SLF4J + Logback → JSON → Loki | 结构化日志，含traceId、userId |
 | 监控 | Micrometer + Prometheus + Grafana | 业界标准，指标→采集→可视化→告警 |
 | 链路追踪 | Micrometer Tracing → Tempo | 全链路 traceId 贯穿请求生命周期 |
@@ -369,7 +369,7 @@
 │                              用户浏览器 / 移动端                              │
 │         Vue 3 + TypeScript + Vite + ECharts + WebSocket Client              │
 └──────────────────┬─────────────────────────┬─────────────────────────────────┘
-                   │ HTTPS/REST               │ WSS/STOMP
+                   │ HTTP/REST                │ WS/STOMP
                    ▼                          ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                  Nginx (反向代理 + 负载均衡 + 限流 + 静态资源)                 │
@@ -477,13 +477,12 @@ admin ──→ user, trade（管理查询, @ReadOnly从库）
 stock-simulation/
 ├── pom.xml
 ├── Dockerfile
-├── docker-compose.yml
 ├── docker-compose.dev.yml
 ├── .github/
 │   ├── copilot-instructions.md
 │   └── workflows/
 │       ├── ci.yml
-│       └── deploy.yml
+│       └── ci.yml
 ├── docs/
 │   ├── architecture.md
 │   ├── api/openapi-draft.yaml
@@ -747,7 +746,6 @@ stock-simulation/
 │   ├── application.yml
 │   ├── application-dev.yml
 │   ├── application-test.yml
-│   ├── application-prod.yml
 │   ├── logback-spring.xml
 │   └── db/migration/
 │       ├── V20260213_001__create_user_tables.sql
@@ -1099,7 +1097,7 @@ CLOSED (正常) ──连续失败3次──→ OPEN (断路30s) ──30s后─
 - 格式：JSON 结构化（logback-spring.xml + LogstashEncoder → Loki）
 - 字段：timestamp, level, logger, message, traceId, userId, method, path
 - 级别：ERROR(异常) / WARN(业务告警) / INFO(关键操作) / DEBUG(开发)
-- 生产环境：INFO 级别，SQL日志关闭
+- 开发环境：INFO 级别，按需开启 SQL 日志
 
 ### 13.2 关键业务指标（Prometheus）
 

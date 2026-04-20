@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -92,6 +93,15 @@ public class GlobalExceptionHandler {
     log.warn("Missing required header: {}", ex.getHeaderName());
     Result<Void> result = Result.fail(ErrorCode.BAD_REQUEST.getCode(), ex.getMessage());
     return ResponseEntity.badRequest().body(result);
+  }
+
+  /** 请求方法不支持异常 */
+  @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+  public ResponseEntity<Result<Void>> handleMethodNotSupportedException(
+      HttpRequestMethodNotSupportedException ex) {
+    log.warn("Method not supported: {}", ex.getMethod());
+    Result<Void> result = Result.fail(ErrorCode.BAD_REQUEST.getCode(), "请求方法不支持");
+    return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(result);
   }
 
   /** 未知异常 */

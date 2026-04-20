@@ -53,7 +53,7 @@
 │                              用户浏览器 / 移动端                              │
 │         Vue 3 + TypeScript + Vite + ECharts + WebSocket Client              │
 └──────────────────┬─────────────────────────┬─────────────────────────────────┘
-                   │ HTTPS/REST               │ WSS/STOMP
+                   │ HTTP/REST                │ WS/STOMP
                    ▼                          ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                  Nginx (反向代理 + 负载均衡 + 静态资源 + 限流)                 │
@@ -404,7 +404,6 @@ admin ──→ user, trade（管理查询）
 stock-simulation/
 ├── pom.xml
 ├── Dockerfile
-├── docker-compose.yml
 ├── docker-compose.dev.yml
 ├── src/main/java/com/lzbsdsg/stocksimulation/
 │   ├── StockSimulationApplication.java
@@ -640,7 +639,6 @@ stock-simulation/
 │   ├── application.yml
 │   ├── application-dev.yml
 │   ├── application-test.yml
-│   ├── application-prod.yml
 │   ├── logback-spring.xml
 │   └── db/migration/
 │       ├── V20260213_001__create_user_tables.sql
@@ -985,7 +983,7 @@ User 1──N AssetSnapshot
 - 限流分三级：全局 100/min、交易 10/min、行情 60/min
 - Nginx 层全局限流：单IP 100 req/s（防DDoS粗粒度过滤）
 - CORS 白名单：仅允许前端域名
-- HTTPS 强制（生产环境）
+- 本地开发环境使用 HTTP（如需 HTTPS 可后续按需启用）
 - 敏感操作日志审计
 
 ---

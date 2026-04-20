@@ -1,5 +1,7 @@
 package com.lzbsdsg.stocksimulation.market.infrastructure.adapter;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lzbsdsg.stocksimulation.market.domain.entity.KLinePeriod;
 import com.lzbsdsg.stocksimulation.market.domain.entity.KLinePoint;
 import com.lzbsdsg.stocksimulation.market.domain.entity.QuoteSnapshot;
@@ -14,16 +16,20 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.time.temporal.TemporalAdjusters;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -39,22 +45,31 @@ import org.springframework.stereotype.Component;
 public class SinaMarketDataAdapter implements MarketDataProvider {
 
   private static final String SINA_QUOTE_URL = "https://hq.sinajs.cn/list=";
+  private static final String SINA_KLINE_URL =
+      "https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData";
   private static final Charset GBK = Charset.forName("GBK");
   private static final DateTimeFormatter SINA_DATE_TIME_FORMATTER =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
   private final HttpClient httpClient;
+  private final ObjectMapper objectMapper;
 
   public SinaMarketDataAdapter() {
     this(
         HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(2))
             .followRedirects(HttpClient.Redirect.NORMAL)
-            .build());
+            .build(),
+        new ObjectMapper());
   }
 
   SinaMarketDataAdapter(HttpClient httpClient) {
+    this(httpClient, new ObjectMapper());
+  }
+
+  SinaMarketDataAdapter(HttpClient httpClient, ObjectMapper objectMapper) {
     this.httpClient = httpClient;
+    this.objectMapper = objectMapper;
   }
 
   @Override
@@ -77,8 +92,182 @@ public class SinaMarketDataAdapter implements MarketDataProvider {
     }
 
     String normalizedCode = normalizeStockCode(stockCode);
-    QuoteSnapshot latest = getQuote(normalizedCode);
-    return buildSyntheticKLine(normalizedCode, period, from, to, latest);
+    List<KLinePoint> dailyPoints = fetchDailyKLine(normalizedCode, from, to);
+    if (period == KLinePeriod.DAILY) {
+      return dailyPoints;
+    }
+    return aggregate(dailyPoints, period);
+  }
+
+  private List<KLinePoint> fetchDailyKLine(String stockCode, LocalDate from, LocalDate to) {
+    String payload = fetchKLinePayload(stockCode);
+    try {
+      JsonNode root = objectMapper.readTree(payload);
+      if (!root.isArray()) {
+        return List.of();
+      }
+
+      List<KLinePoint> points = new ArrayList<>();
+      for (JsonNode node : root) {
+        LocalDate date = parseLocalDate(node.path("day").asText(""));
+        if (date == null || date.isBefore(from) || date.isAfter(to)) {
+          continue;
+        }
+        BigDecimal open = parseDecimalValue(node.path("open").asText(""));
+        BigDecimal close = parseDecimalValue(node.path("close").asText(""));
+        BigDecimal high = parseDecimalValue(node.path("high").asText(""));
+        BigDecimal low = parseDecimalValue(node.path("low").asText(""));
+        Long volume = parseLongValue(node.path("volume").asText(""));
+        if (open == null || close == null || high == null || low == null) {
+          continue;
+        }
+
+        long normalizedVolume = volume == null ? 0L : Math.max(volume, 0L);
+        KLinePoint point = new KLinePoint();
+        point.setDate(date);
+        point.setOpen(open);
+        point.setClose(close);
+        point.setHigh(high);
+        point.setLow(low);
+        point.setVolume(normalizedVolume);
+        BigDecimal avgPrice = open.add(close).divide(BigDecimal.valueOf(2), 4, RoundingMode.HALF_UP);
+        point.setAmount(avgPrice.multiply(BigDecimal.valueOf(normalizedVolume)).setScale(2, RoundingMode.HALF_UP));
+        points.add(point);
+      }
+      return points;
+    } catch (Exception ex) {
+      throw new IllegalStateException("Failed to parse Sina historical kline", ex);
+    }
+  }
+
+  private String fetchKLinePayload(String stockCode) {
+    try {
+      String url =
+          SINA_KLINE_URL
+              + "?symbol="
+              + URLEncoder.encode(stockCode, StandardCharsets.UTF_8)
+              + "&scale=240&ma=no&datalen=1600";
+      HttpRequest request =
+          HttpRequest.newBuilder()
+              .uri(URI.create(url))
+              .timeout(Duration.ofSeconds(3))
+              .header("Accept", "application/json,text/plain,*/*")
+              .header(
+                  "User-Agent",
+                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+              .header("Referer", "https://finance.sina.com.cn")
+              .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+              .GET()
+              .build();
+      HttpResponse<String> response =
+          httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+      if (response.statusCode() >= 400) {
+        throw new IllegalStateException("Sina kline response status is " + response.statusCode());
+      }
+      return response.body() == null ? "[]" : response.body();
+    } catch (IOException | InterruptedException ex) {
+      if (ex instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
+      throw new IllegalStateException("Failed to request Sina historical kline", ex);
+    }
+  }
+
+  private List<KLinePoint> aggregate(List<KLinePoint> dailyPoints, KLinePeriod period) {
+    if (period == KLinePeriod.DAILY || dailyPoints.isEmpty()) {
+      return dailyPoints;
+    }
+
+    Map<LocalDate, KLineAccumulator> grouped = new LinkedHashMap<>();
+    for (KLinePoint point : dailyPoints) {
+      if (point == null || point.getDate() == null) {
+        continue;
+      }
+      LocalDate bucket =
+          switch (period) {
+            case WEEKLY -> point.getDate().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+            case MONTHLY -> point.getDate().withDayOfMonth(1);
+            default -> point.getDate();
+          };
+      grouped.computeIfAbsent(bucket, ignored -> new KLineAccumulator()).accept(point);
+    }
+    return grouped.values().stream().map(KLineAccumulator::toPoint).toList();
+  }
+
+  private LocalDate parseLocalDate(String text) {
+    if (text == null || text.isBlank()) {
+      return null;
+    }
+    try {
+      return LocalDate.parse(text.trim());
+    } catch (Exception ex) {
+      return null;
+    }
+  }
+
+  private BigDecimal parseDecimalValue(String text) {
+    if (text == null || text.isBlank() || "-".equals(text.trim())) {
+      return null;
+    }
+    try {
+      return new BigDecimal(text.trim());
+    } catch (Exception ex) {
+      return null;
+    }
+  }
+
+  private Long parseLongValue(String text) {
+    if (text == null || text.isBlank() || "-".equals(text.trim())) {
+      return null;
+    }
+    try {
+      return new BigDecimal(text.trim()).longValue();
+    } catch (Exception ex) {
+      return null;
+    }
+  }
+
+  private static final class KLineAccumulator {
+
+    private LocalDate firstDate;
+    private BigDecimal open;
+    private BigDecimal close;
+    private BigDecimal high;
+    private BigDecimal low;
+    private long volume;
+    private BigDecimal amount = BigDecimal.ZERO;
+
+    void accept(KLinePoint point) {
+      if (firstDate == null) {
+        firstDate = point.getDate();
+        open = point.getOpen();
+        high = point.getHigh();
+        low = point.getLow();
+      }
+      close = point.getClose();
+      if (point.getHigh() != null && (high == null || point.getHigh().compareTo(high) > 0)) {
+        high = point.getHigh();
+      }
+      if (point.getLow() != null && (low == null || point.getLow().compareTo(low) < 0)) {
+        low = point.getLow();
+      }
+      volume += point.getVolume() == null ? 0L : point.getVolume();
+      if (point.getAmount() != null) {
+        amount = amount.add(point.getAmount());
+      }
+    }
+
+    KLinePoint toPoint() {
+      KLinePoint point = new KLinePoint();
+      point.setDate(firstDate);
+      point.setOpen(open);
+      point.setClose(close);
+      point.setHigh(high);
+      point.setLow(low);
+      point.setVolume(volume);
+      point.setAmount(amount);
+      return point;
+    }
   }
 
   @Override

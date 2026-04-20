@@ -18,7 +18,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
-import org.springframework.dao.OptimisticLockingFailureException;
 
 /** 交易并发安全测试。 */
 public class TradeConcurrencyTest {
@@ -120,9 +119,7 @@ public class TradeConcurrencyTest {
     repository.setForcedConflictTimes(3L, 10);
     AccountApplicationService service = new AccountApplicationService(repository);
 
-    assertThrows(
-        OptimisticLockingFailureException.class,
-        () -> service.freezeBalance(3L, new BigDecimal("100")));
+    assertThrows(BizException.class, () -> service.freezeBalance(3L, new BigDecimal("100")));
   }
 
   private Account account(

@@ -15,7 +15,7 @@
 ### 2.1 慢 SQL 观测与热点查询优化
 
 1) PostgreSQL 慢 SQL 日志
-- 文件：`docker-compose.yml`
+- 文件：`docker-compose.dev.yml`
 - 变更：`pg-master` 增加
   - `-c log_min_duration_statement=50`
   - `-c log_line_prefix=%m [%p] %u@%d`
@@ -38,8 +38,8 @@
   - 支持读取通用 `spring.datasource.hikari.*` 回退
   - 支持 `connection-timeout` / `idle-timeout` / `max-lifetime` / `keepalive-time` / `leak-detection-threshold`
 
-2) 生产参数收敛
-- 结合现有生产配置生效：
+2) 默认参数收敛
+- 结合现有开发配置生效：
   - 主库池：`min=10, max=30`
   - 从库池：`min=20, max=50`
   - 启用 `keepalive-time=120000`
@@ -62,12 +62,12 @@
   - `app.rabbit.match.concurrent-consumers`
   - `app.rabbit.match.max-concurrent-consumers`
 
-3) 默认与生产参数
+3) 默认参数
 - 文件：`src/main/resources/application.yml`
 
 ### 2.4 JVM 调优
 
-- 文件：`docker-compose.yml`
+- 文件：`docker-compose.dev.yml`
 - `app-1` / `app-2` 增加 `JAVA_TOOL_OPTIONS`：
   - `-XX:+UseG1GC`
   - `-XX:MaxGCPauseMillis=100`
@@ -118,7 +118,7 @@ pnpm test -- src/composables/__tests__/useWebSocket.spec.ts
 
 结果：通过（`2 passed, 0 failed`）。
 
-4) 前端生产构建
+4) 前端构建
 
 ```cmd
 cd /d d:\StockSimulation\stock-simulation\stock-simulation-web
@@ -131,7 +131,7 @@ pnpm build
 
 ```cmd
 cd /d d:\StockSimulation\stock-simulation
-docker compose -f docker-compose.yml config
+docker compose -f docker-compose.dev.yml config
 ```
 
 结果：通过（新增 JVM / PG 慢 SQL 参数渲染成功）。
@@ -159,7 +159,7 @@ k6 run --quiet --vus 300 --duration 10s -e WS_URL=ws://localhost:18080/ws/market
 
 ```cmd
 cd /d d:\StockSimulation\stock-simulation
-docker compose up -d
+docker compose -f docker-compose.dev.yml up -d
 ```
 
 ```cmd

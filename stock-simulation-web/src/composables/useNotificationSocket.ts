@@ -11,6 +11,28 @@ interface UseNotificationSocketOptions {
   onError?: (message: string) => void
 }
 
+function resolveSockJsEndpoint(endpoint: string): string {
+  if (typeof window === 'undefined') {
+    return endpoint
+  }
+  const hostname = window.location.hostname
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
+  if (!isLocalhost || window.location.protocol !== 'https:') {
+    return endpoint
+  }
+
+  if (endpoint.startsWith('https://localhost')) {
+    return endpoint.replace('https://localhost', 'http://localhost')
+  }
+  if (endpoint.startsWith('https://127.0.0.1')) {
+    return endpoint.replace('https://127.0.0.1', 'http://127.0.0.1')
+  }
+  if (endpoint.startsWith('/')) {
+    return `http://localhost${endpoint}`
+  }
+  return endpoint
+}
+
 export function useNotificationSocket(options: UseNotificationSocketOptions) {
   const status = ref<WsConnectionStatus>('DISCONNECTED')
   const reconnectAttempt = ref(0)
@@ -74,7 +96,8 @@ export function useNotificationSocket(options: UseNotificationSocketOptions) {
     status.value = reconnectAttempt.value > 0 ? 'RECONNECTING' : 'CONNECTING'
 
     const encodedToken = encodeURIComponent(token)
-    const sockJsUrl = `${options.endpoint}?access_token=${encodedToken}`
+    const sockJsEndpoint = resolveSockJsEndpoint(options.endpoint)
+    const sockJsUrl = `${sockJsEndpoint}?access_token=${encodedToken}`
 
     stompClient = new Client({
       webSocketFactory: () => new SockJS(sockJsUrl),

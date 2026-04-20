@@ -14,7 +14,7 @@
 
 ### 2.1 观测栈编排（Docker Compose）
 
-更新 [docker-compose.yml](docker-compose.yml)：
+更新 [docker-compose.dev.yml](docker-compose.dev.yml)：
 
 - 应用实例 `app-1`、`app-2` 增加：
   - `OTEL_EXPORTER_OTLP_ENDPOINT`（指向 Tempo）
@@ -72,7 +72,7 @@ Grafana 自动导入配置：
 日志格式增强：
 
 - 更新 [src/main/resources/logback-spring.xml](src/main/resources/logback-spring.xml)
-- 生产环境改为 JSON 编码（LogstashEncoder），提升 Loki 字段检索能力（traceId/userId）
+- 开发环境维持控制台输出，保证本地调试可读性（traceId/userId 可检索）
 
 ### 2.5 Tempo 链路追踪
 
@@ -83,7 +83,7 @@ Grafana 自动导入配置：
 - 更新 [pom.xml](pom.xml)，新增：
   - `micrometer-tracing-bridge-otel`
   - `opentelemetry-exporter-otlp`
-- 更新 [src/main/resources/application-prod.yml](src/main/resources/application-prod.yml)：
+- 更新 [src/main/resources/application.yml](src/main/resources/application.yml)：
   - `management.otlp.tracing.endpoint`
   - `management.tracing.sampling.probability`
   - 关键指标直方图分位统计
@@ -166,7 +166,7 @@ mvnw.cmd "-Dtest=TradeApplicationServiceTest,MarketDataFacadeTest" test
 
 ```cmd
 cd /d d:\StockSimulation\stock-simulation
-docker compose -f docker-compose.yml config
+docker compose -f docker-compose.dev.yml config
 ```
 
 结果：通过（配置可完整渲染，包含 tempo/promtail/postgres-exporter）。
@@ -186,7 +186,7 @@ powershell -Command "Get-ChildItem .\grafana\dashboards\*.json | %% { Get-Conten
 
 ```cmd
 cd /d d:\StockSimulation\stock-simulation
-docker compose up -d
+docker compose -f docker-compose.dev.yml up -d
 ```
 
 ```cmd

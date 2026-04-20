@@ -7,12 +7,15 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import com.lzbsdsg.stocksimulation.market.domain.entity.KLinePeriod;
+import com.lzbsdsg.stocksimulation.market.domain.entity.KLinePoint;
 import com.lzbsdsg.stocksimulation.market.domain.entity.QuoteSnapshot;
 import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -72,5 +75,35 @@ class SinaMarketDataAdapterTest {
     SinaMarketDataAdapter adapter = new SinaMarketDataAdapter(httpClient);
 
     assertFalse(adapter.isAvailable());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void should_get_daily_kline_from_sina_history_endpoint() throws Exception {
+    HttpClient httpClient = Mockito.mock(HttpClient.class);
+    HttpResponse<String> response = Mockito.mock(HttpResponse.class);
+    when(response.statusCode()).thenReturn(200);
+    when(response.body())
+        .thenReturn(
+            """
+            [
+              {"day":"2026-04-18","open":"1660.00","high":"1680.00","low":"1650.00","close":"1672.00","volume":"1234567"},
+              {"day":"2026-04-19","open":"1672.00","high":"1695.00","low":"1668.00","close":"1688.00","volume":"2234567"}
+            ]
+            """);
+    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(response);
+
+    SinaMarketDataAdapter adapter = new SinaMarketDataAdapter(httpClient);
+    List<KLinePoint> points =
+        adapter.getKLine(
+            "sh600519",
+            KLinePeriod.DAILY,
+            LocalDate.parse("2026-04-18"),
+            LocalDate.parse("2026-04-19"));
+
+    assertEquals(2, points.size());
+    assertEquals(LocalDate.parse("2026-04-18"), points.get(0).getDate());
+    assertEquals("1660.00", points.get(0).getOpen().toPlainString());
+    assertEquals("1688.00", points.get(1).getClose().toPlainString());
   }
 }

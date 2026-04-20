@@ -1,27 +1,27 @@
-# Iteration 14 交付说明（部署：Docker集群 + Nginx LB + PG主从 + Redis Cluster）
+# Iteration 14 交付说明（开发部署：Docker集群 + Nginx LB + PG主从 + Redis Cluster）
 
 ## 1. 迭代目标
 
 基于 [docs/doc-D-dev-roadmap.md](docs/doc-D-dev-roadmap.md) 的 Iteration 14（Week 15）：
 
-- 完成生产级容器化部署编排（2+App 实例）
-- 提供 Nginx 入口（负载均衡、限流、WS 粘性、SSL 终止）
+- 完成开发环境容器化部署编排（2+App 实例）
+- 提供 Nginx 入口（负载均衡、限流、WS 粘性，HTTP）
 - 完成 PostgreSQL 主从复制与 Redis Cluster 初始化能力
-- 完成生产配置（主从数据源 + Redis Cluster 节点）
+- 完成开发配置（主从数据源 + Redis Cluster 节点）
 - 提供健康检查与部署验收命令
 
 ## 2. 本次完成项
 
-### 2.1 生产 Docker 构建链路
+### 2.1 开发 Docker 构建链路
 
 - 升级 [Dockerfile](Dockerfile) 为多目标构建：
   - `backend-builder` / `backend-runtime`：后端多阶段构建
   - `frontend-builder` / `frontend-nginx`：前端构建并打包到 Nginx
 - 新增 [.dockerignore](.dockerignore) 减少构建上下文体积，提升构建效率与稳定性。
 
-### 2.2 生产 docker-compose 拓扑（高可用版）
+### 2.2 开发 docker-compose 拓扑（高可用版）
 
-- 重构 [docker-compose.yml](docker-compose.yml)，完成以下服务编排：
+- 重构 [docker-compose.dev.yml](docker-compose.dev.yml)，完成以下服务编排：
   - `nginx`
   - `app-1`, `app-2`
   - `pg-master`, `pg-slave-1`, `pg-slave-2`
@@ -30,16 +30,15 @@
   - `prometheus`, `grafana`, `loki`
 - 增加关键 `depends_on` 与 `healthcheck`，保障启动顺序和基础可用性。
 
-### 2.3 Nginx 生产配置
+### 2.3 Nginx 开发配置
 
 - 更新 [nginx/nginx.conf](nginx/nginx.conf)：
   - `limit_req_zone` 全局限流
   - `upstream app_backend` 负载均衡（2实例）
   - `upstream ws_backend` + `ip_hash`（WS 粘性会话）
   - 静态资源 `gzip` 与 `cache-control`
-  - HTTPS 终止（Let's Encrypt 证书挂载路径）
-- 镜像构建阶段默认生成自签名证书，确保 `docker compose up -d` 可直接启动；生产可替换为 Let's Encrypt 证书。
-- 新增 [nginx/certs/README.md](nginx/certs/README.md) 说明证书落盘要求。
+  - HTTP 入口（不启用 TLS 终止）
+- 更新 [nginx/certs/README.md](nginx/certs/README.md) 说明证书目录已停用。
 
 ### 2.4 PostgreSQL 主从复制与脚本
 
@@ -57,14 +56,14 @@
   - 启动等待 6 节点可用
   - 执行 `redis-cli --cluster create`
   - 支持已初始化场景幂等退出
-- `docker-compose.yml` 中由 `redis-cluster-init` 一次性任务触发初始化。
+- `docker-compose.dev.yml` 中由 `redis-cluster-init` 一次性任务触发初始化。
 
-### 2.6 生产应用配置
+### 2.6 开发应用配置
 
-- 更新 [src/main/resources/application-prod.yml](src/main/resources/application-prod.yml)：
+- 更新 [src/main/resources/application.yml](src/main/resources/application.yml)：
   - 增加 `spring.datasource.master/slave`（主从数据源）
   - 增加 `spring.data.redis.cluster.nodes`（Redis Cluster 节点）
-  - 保留 RabbitMQ 生产配置
+  - 保留 RabbitMQ 开发配置
   - 增强 `management.endpoint.health`：展示组件详情，覆盖 DB/Redis/Rabbit
 
 ### 2.7 监控抓取目标对齐
@@ -81,12 +80,12 @@
 
 ## 3. 与路线图任务对齐
 
-- 生产 Dockerfile（后端多阶段 + 前端 Nginx）：已完成
-- 高并发架构 docker-compose.yml：已完成
-- 生产版 nginx.conf（限流/LB/ip_hash/gzip/cache/SSL）：已完成
+- 开发 Dockerfile（后端多阶段 + 前端 Nginx）：已完成
+- 高并发架构 docker-compose.dev.yml：已完成
+- 开发版 nginx.conf（限流/LB/ip_hash/gzip/cache/HTTP）：已完成
 - PG 主从脚本（含 standby.signal）与复制延迟检测：已完成
 - Redis Cluster 初始化脚本：已完成
-- application-prod.yml 主从与集群配置：已完成
+- application.yml 主从与集群配置：已完成
 - `/actuator/health` 组件健康检查：已完成
 
 ## 4. 已执行校验
@@ -95,7 +94,7 @@
 
 ```powershell
 Set-Location "d:\StockSimulation\stock-simulation"
-docker compose -f docker-compose.yml config
+docker compose -f docker-compose.dev.yml config
 ```
 
 结果：通过（配置可解析，返回 `compose-config-ok`）。
@@ -113,7 +112,7 @@ docker compose -f docker-compose.yml config
 
 ```powershell
 Set-Location "d:\StockSimulation\stock-simulation"
-docker compose up -d
+docker compose -f docker-compose.dev.yml up -d
 ```
 
 2. 检查服务状态
@@ -133,7 +132,7 @@ docker compose exec redis-node-1 redis-cli -p 7000 -a $env:REDIS_PASSWORD cluste
 4. 验证应用健康检查（DB/Redis/MQ）
 
 ```powershell
-curl -k https://localhost/actuator/health
+curl http://localhost/actuator/health
 ```
 
 通过标准：返回 JSON 包含 `components`，且可见 `db`、`redis`、`rabbit`。
@@ -141,8 +140,8 @@ curl -k https://localhost/actuator/health
 5. 验证 Nginx 对 2 个应用实例的负载
 
 ```powershell
-curl -k https://localhost/actuator/health
-curl -k https://localhost/actuator/health
+curl http://localhost/actuator/health
+curl http://localhost/actuator/health
 ```
 
 可结合容器日志确认请求分发到 `app-1` 与 `app-2`。
@@ -151,7 +150,7 @@ curl -k https://localhost/actuator/health
 
 ```powershell
 docker compose stop app-1
-curl -k https://localhost/actuator/health
+curl http://localhost/actuator/health
 ```
 
 通过标准：请求仍成功，由 `app-2` 承载。

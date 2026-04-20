@@ -2,7 +2,7 @@
 
 ## 触发句式
 
-> 请帮我生成部署配置与可观测性方案，包含 Dockerfile、docker-compose、Nginx、Prometheus、Grafana、日志配置、GitHub Actions CI/CD。
+> 请帮我生成本地开发环境的部署与可观测性方案，包含 Dockerfile、docker-compose.dev、Nginx、Prometheus、Grafana、日志配置、GitHub Actions CI。
 
 ---
 
@@ -16,21 +16,20 @@
 | 日志 | Logback JSON → Loki (可选) |
 | 指标 | Micrometer → Prometheus → Grafana |
 | 告警 | Grafana Alert Rules (最小可行) |
-| 镜像仓库 | GitHub Container Registry (ghcr.io) |
+| 镜像仓库 | 可选（本地开发可不启用） |
 
 ---
 
 ## 输出要求（必须依次输出）
 
-1. **Assumptions** — 部署环境（VPS/云服务器规格）、域名、HTTPS
+1. **Assumptions** — 本地开发环境（Windows/macOS/Linux）、端口占用、HTTP 访问
 2. **目录树** — 项目根目录下的部署相关文件
 3. **核心文件**
    - `Dockerfile` — 多阶段构建（Maven build → JRE runtime）
-   - `docker-compose.yml` — 完整编排（app + pg + redis + rabbitmq + nginx + prometheus + grafana）
-   - `docker-compose.dev.yml` — 开发环境（只有依赖服务）
+   - `docker-compose.dev.yml` — 本地开发完整编排（app + pg + redis + rabbitmq + nginx + prometheus + grafana）
    - `nginx/nginx.conf` — 反向代理 + 前端静态文件
    - `.github/workflows/ci.yml` — 构建 + 测试 + 镜像推送
-   - `.github/workflows/deploy.yml` — 部署到服务器
+   - `.github/workflows/ci.yml` — 本地开发构建与测试
    - `prometheus/prometheus.yml` — 指标采集配置
    - `grafana/dashboards/` — 预置Dashboard JSON
    - `src/main/resources/logback-spring.xml` — JSON格式日志
@@ -50,7 +49,7 @@
 
 ## 质量验收标准
 
-- [ ] docker-compose up 一键启动全部服务
+- [ ] docker compose -f docker-compose.dev.yml up 一键启动全部服务
 - [ ] CI 流水线≤10min完成
 - [ ] Prometheus 可采集到应用指标
 - [ ] Grafana Dashboard 可展示核心指标

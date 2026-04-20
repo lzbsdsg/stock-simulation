@@ -769,7 +769,7 @@ curl "http://localhost:8080/api/v1/market/rank-board?limit=10" ^
 | A01 | 权限控制 | 越权访问测试（A用户操作B的订单） |
 | A02 | 加密失败 | 密码BCrypt检查、Token不含敏感信息 |
 | A03 | 注入 | SQL 注入测试（MyBatis参数化已防护） |
-| A05 | 安全配置 | 检查生产环境关闭 Swagger/Actuator |
+| A05 | 安全配置 | 检查非开发环境下 Swagger/Actuator 访问策略 |
 | A07 | 身份认证 | 暴力破解(5次锁定)、Token过期校验 |
 
 ### 4.2 安全测试用例

@@ -20,7 +20,7 @@
 
 ## 输出要求（必须依次输出）
 
-1. **Assumptions** — Spring Boot配置profile（dev/test/prod）
+1. **Assumptions** — Spring Boot配置profile（dev/test）
 2. **目录树** — `com.lzbsdsg.stocksimulation.common` + `com.lzbsdsg.stocksimulation.config`
 3. **核心类职责**
    - `Result<T>` — 统一响应包装
@@ -47,7 +47,7 @@
 - [ ] 未捕获异常不泄漏堆栈到前端
 - [ ] 限流注解可应用于任意Controller方法
 - [ ] 错误码可被前端国际化映射
-- [ ] Profile切换（dev/test/prod）不影响功能
+- [ ] Profile切换（dev/test）不影响功能
 
 ---
 

@@ -27,25 +27,4 @@
         <logger name="com.lzbsdsg.stocksimulation" level="INFO"/>
     </springProfile>
 
-    <!-- 生产环境：文件 + WARN -->
-    <springProfile name="prod">
-        <appender name="FILE_JSON" class="ch.qos.logback.core.rolling.RollingFileAppender">
-            <file>logs/${APP_NAME}.log</file>
-            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-                <fileNamePattern>logs/${APP_NAME}.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-                <maxFileSize>100MB</maxFileSize>
-                <maxHistory>30</maxHistory>
-                <totalSizeCap>3GB</totalSizeCap>
-            </rollingPolicy>
-            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-                <customFields>{"app":"${APP_NAME}"}</customFields>
-            </encoder>
-        </appender>
-
-        <root level="WARN">
-            <appender-ref ref="FILE_JSON"/>
-        </root>
-        <logger name="com.lzbsdsg.stocksimulation" level="INFO"/>
-    </springProfile>
-
 </configuration>

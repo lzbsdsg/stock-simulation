@@ -8,6 +8,7 @@ import type { KLinePeriod, KLinePoint, MarketListedItem, Quote } from '@/types/m
 
 const DEFAULT_CODES = ['sh600519', 'sz000001', 'sh601318', 'sh600036']
 const LISTED_UNIVERSE_CACHE_TTL_MS = 10 * 60 * 1000
+const VISIBLE_CODES_HEARTBEAT_MS = 5000
 
 interface LoadKLineOptions {
   preferCache?: boolean
@@ -213,7 +214,7 @@ export const useMarketStore = defineStore('market', () => {
     void reportVisibleCodes()
     visibleHeartbeatTimer = window.setInterval(() => {
       void reportVisibleCodes()
-    }, 1500)
+    }, VISIBLE_CODES_HEARTBEAT_MS)
   }
 
   function stopVisibleHeartbeat(): void {

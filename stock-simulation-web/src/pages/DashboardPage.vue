@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { useMarketStore } from '@/stores/market'
 import { useAppStore } from '@/stores/app'
 import { usePortfolioStore } from '@/stores/portfolio'
@@ -65,20 +66,25 @@ const lagStatusClass = computed(() => {
 })
 
 onMounted(async () => {
-  await watchlistStore.load()
-  const focusCodes = watchlistStore.items.map((item) => item.stockCode)
-  marketStore.setWatchlistCodes(focusCodes)
+  try {
+    await watchlistStore.load()
+    const focusCodes = watchlistStore.items.map((item) => item.stockCode)
+    marketStore.setWatchlistCodes(focusCodes)
 
-  if (marketStore.realtimeCodes.length === 0) {
-    await marketStore.initializeMarket()
-  } else {
-    marketStore.connectRealtime()
-  }
+    if (marketStore.realtimeCodes.length === 0) {
+      await marketStore.initializeMarket()
+    } else {
+      marketStore.connectRealtime()
+    }
 
-  await marketStore.loadWatchlistQuotes()
+    await marketStore.loadWatchlistQuotes()
 
-  if (!portfolioStore.overview) {
-    await portfolioStore.loadOverview()
+    if (!portfolioStore.overview) {
+      await portfolioStore.loadOverview()
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '仪表盘初始化失败，请稍后重试'
+    ElMessage.warning(message)
   }
 })
 

@@ -14,6 +14,8 @@ public interface MarketKLineDailyRepository {
 
   Optional<LocalDate> findEarliestTradeDate(String stockCode);
 
+  List<String> findDistinctSourcesInDateRange(String stockCode, LocalDate from, LocalDate to);
+
   void upsertBatch(String stockCode, List<KLinePoint> points, String source);
 
   void deleteOlderThan(String stockCode, LocalDate cutoffDateInclusive);

@@ -5,6 +5,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 
 import com.lzbsdsg.stocksimulation.market.domain.entity.KLinePeriod;
 import com.lzbsdsg.stocksimulation.market.domain.entity.KLinePoint;
@@ -55,7 +56,8 @@ class HistoricalKLineServiceTest {
 
     when(marketKLineDailyRepository.findEarliestTradeDate("sh600519")).thenReturn(Optional.of(from));
     when(marketKLineDailyRepository.findLatestTradeDate("sh600519")).thenReturn(Optional.of(yesterday));
-    when(eastMoneyKLineGateway.fetchDailyKLine("sh600519", today, today)).thenReturn(List.of());
+    when(tencentMarketDataAdapter.getKLine("sh600519", KLinePeriod.DAILY, today, today))
+      .thenReturn(List.of(point(today, "1690.00", "1698.00", "1702.00", "1685.00", 120000L, "2000000.00")));
     when(marketKLineDailyRepository.findByStockCodeAndDateRange("sh600519", from, today))
         .thenReturn(
             List.of(
@@ -66,7 +68,8 @@ class HistoricalKLineServiceTest {
     historicalKLineService.getKLine("sh600519", KLinePeriod.DAILY, from, today);
     historicalKLineService.getKLine("sh600519", KLinePeriod.DAILY, from, today);
 
-    verify(eastMoneyKLineGateway, times(1)).fetchDailyKLine("sh600519", today, today);
+    verify(tencentMarketDataAdapter, times(1))
+      .getKLine("sh600519", KLinePeriod.DAILY, today, today);
     verify(marketKLineSyncStateRepository, times(1))
         .upsert(org.mockito.ArgumentMatchers.any(MarketKLineSyncState.class));
   }
@@ -109,24 +112,25 @@ class HistoricalKLineServiceTest {
     when(marketKLineDailyRepository.findEarliestTradeDate("sh600519"))
         .thenReturn(Optional.of(lowerBound));
     when(marketKLineDailyRepository.findLatestTradeDate("sh600519")).thenReturn(Optional.empty());
-    when(eastMoneyKLineGateway.fetchDailyKLine("sh600519", lowerBound, to)).thenReturn(List.of());
+    when(tencentMarketDataAdapter.getKLine("sh600519", KLinePeriod.DAILY, lowerBound, to))
+      .thenReturn(List.of(point(lowerBound, "120.00", "121.00", "122.00", "119.50", 10000L, "1200000.00")));
     when(marketKLineDailyRepository.findByStockCodeAndDateRange("sh600519", lowerBound, to))
         .thenReturn(List.of());
 
     historicalKLineService.getKLine("sh600519", KLinePeriod.DAILY, from, to);
 
-    verify(eastMoneyKLineGateway).fetchDailyKLine("sh600519", lowerBound, to);
+    verify(tencentMarketDataAdapter).getKLine("sh600519", KLinePeriod.DAILY, lowerBound, to);
     verify(marketKLineDailyRepository).deleteOlderThan(eq("sh600519"), eq(lowerBound));
   }
 
   @Test
-  void should_fallback_to_sina_when_eastmoney_failed() {
+    void should_fallback_to_sina_when_tencent_failed() {
     LocalDate from = LocalDate.parse("2026-03-01");
     LocalDate to = LocalDate.parse("2026-03-05");
 
     when(marketKLineDailyRepository.findEarliestTradeDate("sh600519")).thenReturn(Optional.empty());
     when(marketKLineDailyRepository.findLatestTradeDate("sh600519")).thenReturn(Optional.of(to));
-    when(eastMoneyKLineGateway.fetchDailyKLine("sh600519", from, to))
+    when(tencentMarketDataAdapter.getKLine("sh600519", KLinePeriod.DAILY, from, to))
         .thenThrow(new IllegalStateException("network error"));
     when(sinaMarketDataAdapter.getKLine("sh600519", KLinePeriod.DAILY, from, to))
         .thenReturn(List.of(point(from, "10.00", "10.20", "10.30", "9.90", 1000L, "10000.00")));
@@ -137,7 +141,29 @@ class HistoricalKLineServiceTest {
     verify(sinaMarketDataAdapter, org.mockito.Mockito.atLeastOnce())
       .getKLine("sh600519", KLinePeriod.DAILY, from, to);
     verify(marketKLineDailyRepository)
-        .upsertBatch(eq("sh600519"), org.mockito.ArgumentMatchers.anyList(), eq("SINA"));
+      .upsertBatch(eq("sh600519"), org.mockito.ArgumentMatchers.anyList(), eq("SINA_HISTORY"));
+    verify(eastMoneyKLineGateway, never()).fetchDailyKLine("sh600519", from, to);
+    }
+
+    @Test
+    void should_repair_legacy_synthetic_sources_with_preferred_provider() {
+    LocalDate from = LocalDate.parse("2026-01-01");
+    LocalDate to = LocalDate.parse("2026-01-31");
+
+    when(marketKLineDailyRepository.findEarliestTradeDate("sh600519")).thenReturn(Optional.of(from));
+    when(marketKLineDailyRepository.findLatestTradeDate("sh600519")).thenReturn(Optional.of(to));
+    when(marketKLineDailyRepository.findDistinctSourcesInDateRange("sh600519", from, to))
+      .thenReturn(List.of("TENCENT"));
+    when(tencentMarketDataAdapter.getKLine("sh600519", KLinePeriod.DAILY, from, to))
+      .thenReturn(List.of(point(from, "1500.00", "1510.00", "1515.00", "1498.00", 22000L, "33000000.00")));
+    when(marketKLineDailyRepository.findByStockCodeAndDateRange("sh600519", from, to))
+      .thenReturn(List.of(point(from, "1500.00", "1510.00", "1515.00", "1498.00", 22000L, "33000000.00")));
+
+    historicalKLineService.getKLine("sh600519", KLinePeriod.DAILY, from, to);
+
+    verify(tencentMarketDataAdapter).getKLine("sh600519", KLinePeriod.DAILY, from, to);
+    verify(marketKLineDailyRepository)
+      .upsertBatch(eq("sh600519"), org.mockito.ArgumentMatchers.anyList(), eq("TENCENT_HISTORY"));
   }
 
   private KLinePoint point(

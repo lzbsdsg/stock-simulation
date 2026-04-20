@@ -80,6 +80,7 @@ public class MarketApplicationService {
   }
 
   public QuoteVO getQuote(String stockCode) {
+    reportVisibleCodes(List.of(stockCode));
     QuoteSnapshot snapshot = marketDataFacade.getQuote(stockCode);
     return toQuoteVO(snapshot);
   }
@@ -93,6 +94,7 @@ public class MarketApplicationService {
   }
 
   public List<KLineVO> getKLine(String stockCode, String period, LocalDate from, LocalDate to) {
+    reportVisibleCodes(List.of(stockCode));
     KLinePeriod kLinePeriod = KLinePeriod.valueOf(period.toUpperCase(Locale.ROOT));
     List<KLinePoint> points = marketDataFacade.getKLine(stockCode, kLinePeriod, from, to);
     return points.stream().map(this::toKLineVO).collect(Collectors.toList());

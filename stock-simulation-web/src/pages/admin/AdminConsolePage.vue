@@ -8,6 +8,20 @@ import type { MarketLatencyMetric, MarketRealtimeMetrics } from '@/types/market'
 import { formatPrice } from '@/utils/format'
 
 const REFRESH_INTERVAL_MS = 3000
+const REALTIME_PULL_INTERVAL_MS = 1000
+const ACTIVE_WINDOW_MS = 8000
+const ACTIVE_BATCH_SIZE = 800
+const ROUND_ROBIN_BATCH_SIZE = 100
+const QUOTE_CACHE_TTL_MS = 5000
+const QUOTE_STALE_TTL_SECONDS = 300
+const DB_MASTER_MAX_POOL = 20
+const DB_REDIS_MAX_ACTIVE = 16
+const WS_MAX_CONNECTIONS = 10000
+const ASYNC_CORE_POOL_SIZE = 8
+const ASYNC_MAX_POOL_SIZE = 32
+const ASYNC_QUEUE_CAPACITY = 500
+const RABBIT_MATCH_CONCURRENT = 8
+const RABBIT_MATCH_PREFETCH = 10
 
 const loading = ref(false)
 const refreshing = ref(false)
@@ -49,6 +63,29 @@ const quoteCacheHitRatio = computed(() => {
   }
   return (l1 / total) * 100
 })
+
+const realtimeStrategyRows = computed(() => [
+  { label: '行情拉取周期', value: formatMs(REALTIME_PULL_INTERVAL_MS) },
+  { label: '活跃股票窗口', value: formatMs(ACTIVE_WINDOW_MS) },
+  { label: '活跃股票批量', value: formatNumber(ACTIVE_BATCH_SIZE) },
+  { label: '轮巡股票批量', value: formatNumber(ROUND_ROBIN_BATCH_SIZE) },
+  { label: '行情缓存 TTL', value: formatMs(QUOTE_CACHE_TTL_MS) },
+  { label: '陈旧缓存保留', value: formatSeconds(QUOTE_STALE_TTL_SECONDS) },
+])
+
+const capacityRows = computed(() => [
+  { label: 'WebSocket 最大连接', value: formatNumber(WS_MAX_CONNECTIONS), hint: '连接并发上限' },
+  { label: '异步线程池 core/max', value: `${ASYNC_CORE_POOL_SIZE}/${ASYNC_MAX_POOL_SIZE}`, hint: 'CallerRunsPolicy' },
+  { label: '异步队列容量', value: formatNumber(ASYNC_QUEUE_CAPACITY), hint: '任务排队上限' },
+  { label: 'Rabbit 消费并发', value: `${RABBIT_MATCH_CONCURRENT}/${RABBIT_MATCH_CONCURRENT}`, hint: '并发/最大并发' },
+  { label: 'Rabbit 预取数', value: formatNumber(RABBIT_MATCH_PREFETCH), hint: '单消费者预取' },
+  { label: 'DB 主库连接池', value: formatNumber(DB_MASTER_MAX_POOL), hint: 'Hikari maxPoolSize' },
+  { label: 'Redis 连接池活跃', value: formatNumber(DB_REDIS_MAX_ACTIVE), hint: 'Lettuce max-active' },
+  { label: '行情限流 visible-codes', value: '120/min', hint: '约 2.0 QPS' },
+  { label: '行情限流 realtime-metrics', value: '60/min', hint: '约 1.0 QPS' },
+  { label: '交易限流 place/cancel', value: '10/min', hint: '约 0.17 QPS' },
+  { label: '用户持仓/概览限流', value: '100/min', hint: '约 1.7 QPS' },
+])
 
 onMounted(async () => {
   await loadData(false)
@@ -127,6 +164,13 @@ function formatMs(value: number | null | undefined): string {
   return `${value.toFixed(2)} ms`
 }
 
+function formatSeconds(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return '--'
+  }
+  return value >= 60 ? `${(value / 60).toFixed(1)} min` : `${value.toFixed(0)} s`
+}
+
 function formatPercent(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) {
     return '--'
@@ -203,6 +247,15 @@ function formatLatencyValue(value: number | null | undefined): string {
 
     <section class="admin-section">
       <h2>实时性能面板</h2>
+      <div class="strategy-note">
+        <span>当前策略：1 秒定时调度，优先更新最近窗口内的活跃代码，缓存命中后直接读本地，只有变更才推送。</span>
+      </div>
+      <div class="admin-grid">
+        <article v-for="row in realtimeStrategyRows" :key="row.label" class="metric-card strategy-card">
+          <span class="metric-label">{{ row.label }}</span>
+          <strong>{{ row.value }}</strong>
+        </article>
+      </div>
       <div class="admin-grid">
         <article class="metric-card">
           <span class="metric-label">活跃代码数</span>
@@ -265,6 +318,20 @@ function formatLatencyValue(value: number | null | undefined): string {
             </template>
           </el-table-column>
         </el-table>
+      </div>
+    </section>
+
+    <section class="admin-section">
+      <h2>容量与并发上限</h2>
+      <div class="strategy-note">
+        <span>这里展示的是当前项目的并发配置和接口限流，属于“可承载能力参考值”，不是线上实测 QPS。</span>
+      </div>
+      <div class="admin-grid">
+        <article v-for="row in capacityRows" :key="row.label" class="metric-card strategy-card">
+          <span class="metric-label">{{ row.label }}</span>
+          <strong>{{ row.value }}</strong>
+          <small class="capacity-hint">{{ row.hint }}</small>
+        </article>
       </div>
     </section>
 
@@ -367,6 +434,21 @@ function formatLatencyValue(value: number | null | undefined): string {
 .admin-section h2 {
   margin: 0;
   font-size: 20px;
+}
+
+.strategy-note {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.strategy-card {
+  background: linear-gradient(180deg, rgba(42, 111, 255, 0.08), rgba(42, 111, 255, 0.02));
+}
+
+.capacity-hint {
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 
 .admin-grid {

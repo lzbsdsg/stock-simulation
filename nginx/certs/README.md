@@ -1,5 +1,3 @@
-默认镜像会在构建时生成自签名证书，确保 `docker compose up -d` 可直接启动。
+当前仓库仅保留开发环境，Nginx 仅监听 HTTP（80）。
 
-若要切换为 Let's Encrypt 证书，请将以下文件放在该目录并以挂载方式覆盖 `/etc/nginx/certs`：
-- fullchain.pem
-- privkey.pem
+本目录不再用于挂载 HTTPS 证书，可保留为空目录以兼容历史路径。

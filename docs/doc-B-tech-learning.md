@@ -57,7 +57,7 @@ public record PlaceOrderCommand(
 
 **核心知识点**：
 - 自动配置原理（`@EnableAutoConfiguration`, `spring.factories` → `AutoConfiguration.imports`）
-- Profile 多环境配置（dev / test / prod）
+- Profile 多环境配置（dev / test）
 - Actuator 端点（health, metrics, info, env）
 - 异常处理（`@RestControllerAdvice` + `@ExceptionHandler`）
 - 参数校验（`@Valid` + `jakarta.validation`）
@@ -73,7 +73,7 @@ public record PlaceOrderCommand(
 **Minimum Demo**：
 - 创建一个 REST Controller，实现 CRUD，返回统一 `Result<T>`
 - 配置 `@RestControllerAdvice` 全局异常处理
-- 使用 `application-dev.yml` 和 `application-prod.yml` 两套配置
+- 使用 `application.yml` 与 `application-dev.yml` 配置
 
 ---
 
@@ -386,7 +386,7 @@ onMounted(async () => {
 - `npm create vite@latest` 项目初始化
 - `vite.config.ts` 配置（alias, proxy, plugins）
 - 开发服务器代理（`/api` → `http://localhost:8080`）
-- 环境变量（`.env.development`, `.env.production`）
+- 环境变量（`.env`, `.env.development`）
 - 构建优化（代码分割、gzip）
 
 **推荐资源**：
@@ -519,7 +519,7 @@ export const useAuthStore = defineStore('auth', () => {
 
 **核心知识点**：
 - Dockerfile 编写（多阶段构建减小镜像）
-- docker-compose.yml 编排服务（app, pg, redis, rabbitmq, nginx）
+- docker-compose.dev.yml 编排服务（app, pg, redis, rabbitmq, nginx）
 - Volume 挂载（数据持久化）
 - Network 配置（服务间通信）
 - Health Check 配置

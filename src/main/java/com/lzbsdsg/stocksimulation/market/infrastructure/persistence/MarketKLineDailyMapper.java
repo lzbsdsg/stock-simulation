@@ -53,6 +53,16 @@ public interface MarketKLineDailyMapper {
       """)
   LocalDate selectEarliestTradeDate(@Param("stockCode") String stockCode);
 
+    @Select(
+            """
+            SELECT DISTINCT source
+            FROM t_market_kline_daily
+            WHERE stock_code = #{stockCode}
+                AND trade_date BETWEEN #{from} AND #{to}
+            """)
+    List<String> selectDistinctSourcesInDateRange(
+            @Param("stockCode") String stockCode, @Param("from") LocalDate from, @Param("to") LocalDate to);
+
   @Insert(
       """
       <script>

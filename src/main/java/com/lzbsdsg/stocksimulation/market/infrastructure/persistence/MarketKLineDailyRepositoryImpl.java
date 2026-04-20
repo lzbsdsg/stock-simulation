@@ -34,6 +34,11 @@ public class MarketKLineDailyRepositoryImpl implements MarketKLineDailyRepositor
   }
 
   @Override
+  public List<String> findDistinctSourcesInDateRange(String stockCode, LocalDate from, LocalDate to) {
+    return marketKLineDailyMapper.selectDistinctSourcesInDateRange(stockCode, from, to);
+  }
+
+  @Override
   public void upsertBatch(String stockCode, List<KLinePoint> points, String source) {
     if (points == null || points.isEmpty()) {
       return;

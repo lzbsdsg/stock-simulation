@@ -43,4 +43,5 @@ fi
 
 exec docker-entrypoint.sh postgres \
   -c hot_standby=on \
+  -c max_wal_senders=16 \
   -c max_standby_streaming_delay=30s

@@ -34,6 +34,11 @@ const request = axios.create({
   timeout: 10000,
 })
 
+const refreshRequest = axios.create({
+  baseURL: resolveApiBaseURL(),
+  timeout: 10000,
+})
+
 let pendingRefresh: Promise<string | null> | null = null
 
 function parseRateLimitHeaders(headers: Record<string, unknown>): RateLimitInfo {
@@ -119,7 +124,7 @@ async function performTokenRefresh(): Promise<string | null> {
   }
 
   try {
-    const response = await axios.post<ApiResponse<TokenPayload>>('/api/v1/auth/refresh', {
+    const response = await refreshRequest.post<ApiResponse<TokenPayload>>('/auth/refresh', {
       refreshToken,
     })
 

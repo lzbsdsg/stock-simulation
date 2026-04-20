@@ -8,8 +8,6 @@ import static org.mockito.Mockito.when;
 
 import com.lzbsdsg.stocksimulation.auth.infrastructure.gateway.JwtTokenProvider;
 import com.lzbsdsg.stocksimulation.market.infrastructure.websocket.MarketWebSocketSessionRegistry;
-import java.lang.reflect.Field;
-import java.security.Principal;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,16 +38,14 @@ class WebSocketJwtHandshakeInterceptorTest {
   }
 
   @Test
-  void should_allow_when_valid_bypass_header_and_capacity_available() throws Exception {
-    setPrivateField(interceptor, "bypassEnabled", true);
-    setPrivateField(interceptor, "bypassKey", "k6-bypass-key");
-    setPrivateField(interceptor, "bypassUserId", 2L);
-
+  void should_allow_when_valid_bearer_token_and_capacity_available() {
     HttpHeaders headers = new HttpHeaders();
-    headers.add("X-K6-Bypass-Key", "k6-bypass-key");
+    headers.add("Authorization", "Bearer valid-token");
 
     when(sessionRegistry.hasCapacity()).thenReturn(true);
     when(request.getHeaders()).thenReturn(headers);
+    when(jwtTokenProvider.validateToken("valid-token")).thenReturn(true);
+    when(jwtTokenProvider.getUserIdFromToken("valid-token")).thenReturn(2L);
 
     Map<String, Object> attributes = new HashMap<>();
     boolean allowed = interceptor.beforeHandshake(request, response, webSocketHandler, attributes);
@@ -75,16 +71,16 @@ class WebSocketJwtHandshakeInterceptorTest {
 
   @Test
   void should_allow_when_authenticated_principal_present() {
-    Principal principal = () -> "2";
+    HttpHeaders headers = new HttpHeaders();
 
     when(sessionRegistry.hasCapacity()).thenReturn(true);
-    when(request.getPrincipal()).thenReturn(principal);
+    when(request.getHeaders()).thenReturn(headers);
 
     Map<String, Object> attributes = new HashMap<>();
     boolean allowed = interceptor.beforeHandshake(request, response, webSocketHandler, attributes);
 
-    assertTrue(allowed);
-    assertEquals("2", attributes.get("wsUserId"));
+    assertFalse(allowed);
+    verify(response).setStatusCode(HttpStatus.UNAUTHORIZED);
   }
 
   @Test
@@ -97,10 +93,4 @@ class WebSocketJwtHandshakeInterceptorTest {
     verify(response).setStatusCode(HttpStatus.SERVICE_UNAVAILABLE);
   }
 
-  private static void setPrivateField(Object target, String fieldName, Object value)
-      throws ReflectiveOperationException {
-    Field field = target.getClass().getDeclaredField(fieldName);
-    field.setAccessible(true);
-    field.set(target, value);
-  }
 }

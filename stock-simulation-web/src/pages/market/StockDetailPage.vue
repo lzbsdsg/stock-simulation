@@ -13,6 +13,9 @@ import type { KLinePeriod } from '@/types/market'
 
 type RangePreset = '3M' | '6M' | '1Y' | '3Y'
 
+const DETAIL_QUOTE_POLL_MS = 5000
+const DETAIL_KLINE_REFRESH_MS = 60000
+
 const RANGE_DAYS_MAP: Record<RangePreset, number> = {
   '3M': 90,
   '6M': 180,
@@ -28,6 +31,8 @@ const KLineChart = defineAsyncComponent(() => import('@/components/market/KLineC
 const period = ref<KLinePeriod>('DAILY')
 const rangePreset = ref<RangePreset>('1Y')
 let refreshTimer: number | null = null
+let marketRefreshTimer: number | null = null
+let lastKlineRefreshAt = 0
 
 const stockCode = computed(() => String(route.params.stockCode || '').toLowerCase())
 const referenceClose = computed(() => marketStore.selectedQuote?.closePrice ?? null)
@@ -46,22 +51,17 @@ async function loadDetail(code: string): Promise<void> {
 
   try {
     marketStore.setSelectedCode(code)
-    const shouldAwaitQuote = !marketStore.selectedQuote
-    const quoteTask = marketStore.loadQuote(code, {
-      preferCache: true,
-      backgroundRefresh: true,
-    })
-    const klineTask = marketStore.loadKLine(code, period.value, RANGE_DAYS_MAP[rangePreset.value], {
-      preferCache: true,
-      backgroundRefresh: true,
-    })
-
-    if (shouldAwaitQuote) {
-      await Promise.all([quoteTask, klineTask])
-    } else {
-      void quoteTask.catch(() => undefined)
-      await klineTask
-    }
+    await Promise.all([
+      marketStore.loadQuote(code, {
+        preferCache: false,
+        backgroundRefresh: false,
+      }),
+      marketStore.loadKLine(code, period.value, RANGE_DAYS_MAP[rangePreset.value], {
+        preferCache: false,
+        backgroundRefresh: false,
+      }),
+    ])
+    lastKlineRefreshAt = Date.now()
   } catch (error) {
     const message = error instanceof Error ? error.message : '加载详情失败'
     ElMessage.error(message)
@@ -72,9 +72,10 @@ async function handlePeriodChange(value: KLinePeriod): Promise<void> {
   period.value = value
   try {
     await marketStore.loadKLine(stockCode.value, period.value, RANGE_DAYS_MAP[rangePreset.value], {
-      preferCache: true,
-      backgroundRefresh: true,
+      preferCache: false,
+      backgroundRefresh: false,
     })
+    lastKlineRefreshAt = Date.now()
   } catch (error) {
     const message = error instanceof Error ? error.message : '加载K线失败'
     ElMessage.error(message)
@@ -85,9 +86,10 @@ async function handleRangeChange(value: RangePreset): Promise<void> {
   rangePreset.value = value
   try {
     await marketStore.loadKLine(stockCode.value, period.value, RANGE_DAYS_MAP[rangePreset.value], {
-      preferCache: true,
-      backgroundRefresh: true,
+      preferCache: false,
+      backgroundRefresh: false,
     })
+    lastKlineRefreshAt = Date.now()
   } catch (error) {
     const message = error instanceof Error ? error.message : '加载K线失败'
     ElMessage.error(message)
@@ -112,10 +114,12 @@ onMounted(async () => {
     })
     .catch(() => undefined)
   startAutoRefresh()
+  startMarketRefresh()
 })
 
 onBeforeUnmount(() => {
   stopAutoRefresh()
+  stopMarketRefresh()
 })
 
 function startAutoRefresh(): void {
@@ -140,6 +144,47 @@ function stopAutoRefresh(): void {
 
 async function refreshTradePanels(): Promise<void> {
   await Promise.all([tradeStore.loadOrders(), tradeStore.loadTrades()])
+}
+
+function startMarketRefresh(): void {
+  if (marketRefreshTimer !== null) {
+    return
+  }
+
+  marketRefreshTimer = window.setInterval(() => {
+    void refreshMarketPanels().catch(() => undefined)
+  }, DETAIL_QUOTE_POLL_MS)
+}
+
+function stopMarketRefresh(): void {
+  if (marketRefreshTimer === null) {
+    return
+  }
+  window.clearInterval(marketRefreshTimer)
+  marketRefreshTimer = null
+}
+
+async function refreshMarketPanels(): Promise<void> {
+  const code = stockCode.value
+  if (!code) {
+    return
+  }
+
+  await marketStore.loadQuote(code, {
+    preferCache: false,
+    backgroundRefresh: false,
+  })
+
+  const now = Date.now()
+  if (now - lastKlineRefreshAt < DETAIL_KLINE_REFRESH_MS) {
+    return
+  }
+
+  await marketStore.loadKLine(code, period.value, RANGE_DAYS_MAP[rangePreset.value], {
+    preferCache: false,
+    backgroundRefresh: false,
+  })
+  lastKlineRefreshAt = now
 }
 
 async function addCurrentStockToWatchlist(): Promise<void> {

@@ -10,7 +10,12 @@ const recentItems = computed(() => notificationStore.notifications.slice(0, 8))
 
 onMounted(async () => {
   if (notificationStore.notifications.length === 0) {
-    await notificationStore.loadNotifications()
+    try {
+      await notificationStore.loadNotifications()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '通知加载失败，请稍后重试'
+      ElMessage.warning(message)
+    }
   }
 })
 

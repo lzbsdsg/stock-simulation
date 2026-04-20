@@ -66,8 +66,8 @@ class PortfolioControllerApiTest {
 
   @Test
   void should_return_positions_with_realtime_profit() throws Exception {
-    when(portfolioApplicationService.getPositions())
-        .thenReturn(
+    PageResult<PositionVO> pageResult =
+        new PageResult<>(
             List.of(
                 new PositionVO(
                     1L,
@@ -82,14 +82,20 @@ class PortfolioControllerApiTest {
                     new BigDecimal("200.00"),
                     new BigDecimal("0.1185"),
                     new BigDecimal("120.00"),
-                    null)));
+                    null)),
+            1,
+            1,
+            20);
+    when(portfolioApplicationService.getPositions(1, 20))
+        .thenReturn(
+            pageResult);
 
     mockMvc
-        .perform(get("/api/v1/portfolio/positions"))
+        .perform(get("/api/v1/portfolio/positions").param("page", "1").param("size", "20"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.code").value(200))
-        .andExpect(jsonPath("$.data[0].stockCode").value("sh600519"))
-        .andExpect(jsonPath("$.data[0].profit").value(200.0));
+        .andExpect(jsonPath("$.data.records[0].stockCode").value("sh600519"))
+        .andExpect(jsonPath("$.data.records[0].profit").value(200.0));
   }
 
   @Test
