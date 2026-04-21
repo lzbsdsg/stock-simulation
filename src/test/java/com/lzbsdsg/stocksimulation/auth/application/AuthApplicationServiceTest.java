@@ -140,6 +140,24 @@ public class AuthApplicationServiceTest {
   }
 
   @Test
+  void should_skip_failed_attempt_reset_for_clean_user_on_login_success() {
+    User user = buildUser();
+    user.setFailedAttempts(0);
+    user.setLockedUntil(null);
+    user.setStatus("ACTIVE");
+    when(userRepository.findByEmail("u@test.com")).thenReturn(Optional.of(user));
+    when(jwtTokenProvider.generateAccessToken(eq(1L), eq("u@test.com"), eq("USER")))
+        .thenReturn("access");
+    when(jwtTokenProvider.generateRefreshToken(1L)).thenReturn("refresh");
+    when(jwtTokenProvider.getAccessTokenExpiration()).thenReturn(1800000L);
+
+    TokenDTO token = authApplicationService.login(new LoginCommand("u@test.com", "Strong123"));
+
+    assertEquals("access", token.accessToken());
+    verify(userRepository, never()).updateFailedAttempts(1L, 0, null);
+  }
+
+  @Test
   void should_lock_account_after_5_failed_attempts() {
     User user = buildUser();
     user.setFailedAttempts(4);

@@ -71,10 +71,23 @@ public class PortfolioApplicationService {
             .findByUserId(userId)
             .orElseThrow(() -> new BizException(ErrorCode.USER_ACCOUNT_NOT_FOUND));
 
-    List<Position> positions = positionRepository.findByUserId(userId);
-    Map<String, QuoteSnapshot> quoteMap = loadQuoteMap(positions, OVERVIEW_QUOTE_LIMIT, true);
+    long positionCount = positionRepository.countByUserId(userId);
+    BigDecimal marketValue;
+    if (positionCount == 0) {
+      marketValue = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+    } else if (positionCount > OVERVIEW_QUOTE_LIMIT) {
+      marketValue =
+          defaultMoney(positionRepository.sumCostMarketValueByUserId(userId));
+      log.warn(
+          "portfolio.overview.aggregate_fallback position_count={} quote_limit={}",
+          positionCount,
+          OVERVIEW_QUOTE_LIMIT);
+    } else {
+      List<Position> positions = positionRepository.findByUserId(userId);
+      Map<String, QuoteSnapshot> quoteMap = loadQuoteMap(positions, OVERVIEW_QUOTE_LIMIT, true);
+      marketValue = calcMarketValue(positions, quoteMap, false);
+    }
 
-    BigDecimal marketValue = calcMarketValue(positions, quoteMap, false);
     BigDecimal available = defaultMoney(account.getAvailableBalance());
     BigDecimal frozen = defaultMoney(account.getFrozenBalance());
     BigDecimal initial = defaultMoney(account.getInitialBalance());

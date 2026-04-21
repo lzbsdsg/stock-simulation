@@ -1,5 +1,6 @@
 package com.lzbsdsg.stocksimulation.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -17,6 +18,9 @@ public class SecurityConfig {
 
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
   private final K6BypassAuthenticationFilter k6BypassAuthenticationFilter;
+
+  @Value("${app.security.password.bcrypt-strength:12}")
+  private int bcryptStrength;
 
   public SecurityConfig(
       JwtAuthenticationFilter jwtAuthenticationFilter,
@@ -53,6 +57,7 @@ public class SecurityConfig {
 
   @Bean
   public PasswordEncoder passwordEncoder() {
-    return new BCryptPasswordEncoder(12);
+    int safeStrength = Math.min(Math.max(bcryptStrength, 4), 15);
+    return new BCryptPasswordEncoder(safeStrength);
   }
 }

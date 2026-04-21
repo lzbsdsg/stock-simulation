@@ -105,7 +105,8 @@ services:
       - ./redis/redis-node-1.conf:/usr/local/etc/redis/redis.conf.template:ro
       - redis-node-1-data:/data
     networks:
-      - stock-network
+      stock-network:
+        ipv4_address: 172.29.0.11
     healthcheck:
       test: ["CMD", "redis-cli", "-p", "7000", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
@@ -127,7 +128,8 @@ services:
       - ./redis/redis-node-2.conf:/usr/local/etc/redis/redis.conf.template:ro
       - redis-node-2-data:/data
     networks:
-      - stock-network
+      stock-network:
+        ipv4_address: 172.29.0.12
     healthcheck:
       test: ["CMD", "redis-cli", "-p", "7001", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
@@ -149,7 +151,8 @@ services:
       - ./redis/redis-node-3.conf:/usr/local/etc/redis/redis.conf.template:ro
       - redis-node-3-data:/data
     networks:
-      - stock-network
+      stock-network:
+        ipv4_address: 172.29.0.13
     healthcheck:
       test: ["CMD", "redis-cli", "-p", "7002", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
@@ -171,7 +174,8 @@ services:
       - ./redis/redis-node-4.conf:/usr/local/etc/redis/redis.conf.template:ro
       - redis-node-4-data:/data
     networks:
-      - stock-network
+      stock-network:
+        ipv4_address: 172.29.0.14
     healthcheck:
       test: ["CMD", "redis-cli", "-p", "7003", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
@@ -193,7 +197,8 @@ services:
       - ./redis/redis-node-5.conf:/usr/local/etc/redis/redis.conf.template:ro
       - redis-node-5-data:/data
     networks:
-      - stock-network
+      stock-network:
+        ipv4_address: 172.29.0.15
     healthcheck:
       test: ["CMD", "redis-cli", "-p", "7004", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
@@ -215,7 +220,8 @@ services:
       - ./redis/redis-node-6.conf:/usr/local/etc/redis/redis.conf.template:ro
       - redis-node-6-data:/data
     networks:
-      - stock-network
+      stock-network:
+        ipv4_address: 172.29.0.16
     healthcheck:
       test: ["CMD", "redis-cli", "-p", "7005", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
@@ -268,8 +274,10 @@ services:
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
     ports:
       - "5672:5672"
+      - "61613:61613"
       - "15672:15672"
     volumes:
+      - ./rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
       - rabbitmq-data:/var/lib/rabbitmq
     networks:
       - stock-network
@@ -454,21 +462,47 @@ services:
       - SPRING_PROFILES_ACTIVE=dev
       - DB_HOST=pg-master
       - DB_PORT=5432
+      - DB_MASTER_HOST=pg-master
+      - DB_MASTER_PORT=5432
+      - DB_SLAVE_HOST=pg-slave1
+      - DB_SLAVE_PORT=5432
       - DB_NAME=stock_simulation
       - DB_USER=stock_app
       - DB_PASSWORD=${POSTGRES_PASSWORD}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_CLUSTER_NODES=redis-node-1:7000,redis-node-2:7001,redis-node-3:7002,redis-node-4:7003,redis-node-5:7004,redis-node-6:7005
+      - REDIS_CLUSTER_NODES=172.29.0.11:7000,172.29.0.12:7001,172.29.0.13:7002,172.29.0.14:7003,172.29.0.15:7004,172.29.0.16:7005
+      - APP_REDIS_CLUSTER_MAP_TO_LOOPBACK=false
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
       - RABBITMQ_USER=stock_app
       - RABBITMQ_PASSWORD=${RABBITMQ_DEFAULT_PASS}
+      - MARKET_INGEST_ENABLED=true
+      - MARKET_BROADCAST_MODE=broker
+      - MARKET_REDIS_PUBSUB_ENABLED=false
+      - MARKET_WS_BROKER_RELAY_ENABLED=true
+      - MARKET_WS_BROKER_RELAY_HOST=rabbitmq
+      - MARKET_WS_BROKER_RELAY_PORT=61613
+      - MARKET_WS_BROKER_CLIENT_LOGIN=stock_app
+      - MARKET_WS_BROKER_CLIENT_PASSCODE=${RABBITMQ_DEFAULT_PASS}
+      - MARKET_WS_BROKER_SYSTEM_LOGIN=stock_app
+      - MARKET_WS_BROKER_SYSTEM_PASSCODE=${RABBITMQ_DEFAULT_PASS}
+      - MARKET_WS_BROKER_VIRTUAL_HOST=/
+      - MARKET_WS_QUOTE_DESTINATION_PREFIX=/topic/market.quote.
+      - MARKET_WEBSOCKET_DISPATCH_ENABLED=true
       - JWT_SECRET=${JWT_SECRET}
       - DEV_BASIC_AUTH_USER=${DEV_BASIC_AUTH_USER:-dev}
       - DEV_BASIC_AUTH_PASSWORD=${DEV_BASIC_AUTH_PASSWORD}
+      - APP_SECURITY_K6_BYPASS_ENABLED=true
+      - APP_SECURITY_K6_BYPASS_KEY=${APP_SECURITY_K6_BYPASS_KEY:-k6-bypass-20260420}
+      - APP_SECURITY_K6_BYPASS_USER_ID=${APP_SECURITY_K6_BYPASS_USER_ID:-3}
+      - MANAGEMENT_HEALTH_MAIL_ENABLED=false
       - JAVA_OPTS=-XX:+UseG1GC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom
     volumes:
       - ./logs/app-1:/app/logs
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
     ports:
       - "18080:8080"
       - "18081:8081"
@@ -498,21 +532,47 @@ services:
       - SPRING_PROFILES_ACTIVE=dev
       - DB_HOST=pg-master
       - DB_PORT=5432
+      - DB_MASTER_HOST=pg-master
+      - DB_MASTER_PORT=5432
+      - DB_SLAVE_HOST=pg-slave2
+      - DB_SLAVE_PORT=5432
       - DB_NAME=stock_simulation
       - DB_USER=stock_app
       - DB_PASSWORD=${POSTGRES_PASSWORD}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_CLUSTER_NODES=redis-node-1:7000,redis-node-2:7001,redis-node-3:7002,redis-node-4:7003,redis-node-5:7004,redis-node-6:7005
+      - REDIS_CLUSTER_NODES=172.29.0.11:7000,172.29.0.12:7001,172.29.0.13:7002,172.29.0.14:7003,172.29.0.15:7004,172.29.0.16:7005
+      - APP_REDIS_CLUSTER_MAP_TO_LOOPBACK=false
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
       - RABBITMQ_USER=stock_app
       - RABBITMQ_PASSWORD=${RABBITMQ_DEFAULT_PASS}
+      - MARKET_INGEST_ENABLED=false
+      - MARKET_BROADCAST_MODE=broker
+      - MARKET_REDIS_PUBSUB_ENABLED=false
+      - MARKET_WS_BROKER_RELAY_ENABLED=true
+      - MARKET_WS_BROKER_RELAY_HOST=rabbitmq
+      - MARKET_WS_BROKER_RELAY_PORT=61613
+      - MARKET_WS_BROKER_CLIENT_LOGIN=stock_app
+      - MARKET_WS_BROKER_CLIENT_PASSCODE=${RABBITMQ_DEFAULT_PASS}
+      - MARKET_WS_BROKER_SYSTEM_LOGIN=stock_app
+      - MARKET_WS_BROKER_SYSTEM_PASSCODE=${RABBITMQ_DEFAULT_PASS}
+      - MARKET_WS_BROKER_VIRTUAL_HOST=/
+      - MARKET_WS_QUOTE_DESTINATION_PREFIX=/topic/market.quote.
+      - MARKET_WEBSOCKET_DISPATCH_ENABLED=false
       - JWT_SECRET=${JWT_SECRET}
       - DEV_BASIC_AUTH_USER=${DEV_BASIC_AUTH_USER:-dev}
       - DEV_BASIC_AUTH_PASSWORD=${DEV_BASIC_AUTH_PASSWORD}
+      - APP_SECURITY_K6_BYPASS_ENABLED=true
+      - APP_SECURITY_K6_BYPASS_KEY=${APP_SECURITY_K6_BYPASS_KEY:-k6-bypass-20260420}
+      - APP_SECURITY_K6_BYPASS_USER_ID=${APP_SECURITY_K6_BYPASS_USER_ID:-3}
+      - MANAGEMENT_HEALTH_MAIL_ENABLED=false
       - JAVA_OPTS=-XX:+UseG1GC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom
     volumes:
       - ./logs/app-2:/app/logs
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
     ports:
       - "28080:8080"
       - "28081:8081"
@@ -556,6 +616,9 @@ services:
 networks:
   stock-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.29.0.0/24
 
 volumes:
   pg-master-data:
@@ -572,6 +635,3 @@ volumes:
   tempo-data:
   prometheus-data:
   grafana-data:
-
-
-

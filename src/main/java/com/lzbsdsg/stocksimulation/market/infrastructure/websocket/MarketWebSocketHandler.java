@@ -5,9 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import java.util.ArrayDeque;
-import java.util.Deque;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,19 +25,22 @@ import org.springframework.stereotype.Component;
 @Component
 public class MarketWebSocketHandler {
 
-  private static final String QUOTE_TOPIC_PREFIX = "/topic/market/quote/";
   private static final String WS_QUEUE_DELAY_TIMER_METRIC = "market.ws.queue.delay";
 
   private final SimpMessagingTemplate messagingTemplate;
   private final ObjectMapper objectMapper;
   private final MarketWebSocketSessionRegistry sessionRegistry;
+  private final String quoteDestinationPrefix;
   private final int queueDepthLimit;
   private final int payloadBytesLimit;
   private final int normalPushIntervalMs;
   private final int degradedPushIntervalMs;
   private final int degradeLagThresholdMs;
+  private final int normalDrainBatchSize;
+  private final int degradedDrainBatchSize;
 
-  private final Deque<PushTask> pushQueue = new ArrayDeque<>();
+  // Maintain insertion order and coalesce by stock code to keep only the latest pending quote per symbol.
+  private final LinkedHashMap<String, PushTask> pushQueue = new LinkedHashMap<>();
   private final Object queueLock = new Object();
 
   private final Counter wsPushDroppedCounter;
@@ -51,19 +55,29 @@ public class MarketWebSocketHandler {
       ObjectMapper objectMapper,
       MarketWebSocketSessionRegistry sessionRegistry,
       MeterRegistry meterRegistry,
+      @Value("${market.websocket.quote-destination-prefix:/topic/market/quote/}")
+          String quoteDestinationPrefix,
       @Value("${market.websocket.backpressure-queue-depth:100}") int queueDepthLimit,
       @Value("${market.websocket.payload-bytes-limit:65536}") int payloadBytesLimit,
       @Value("${market.websocket.push-interval-ms:3000}") int normalPushIntervalMs,
       @Value("${market.websocket.degraded-push-interval-ms:10000}") int degradedPushIntervalMs,
-      @Value("${market.websocket.degrade-lag-threshold-ms:5000}") int degradeLagThresholdMs) {
+      @Value("${market.websocket.degrade-lag-threshold-ms:5000}") int degradeLagThresholdMs,
+      @Value("${market.websocket.drain-batch-size:32}") int normalDrainBatchSize,
+      @Value("${market.websocket.degraded-drain-batch-size:128}") int degradedDrainBatchSize) {
     this.messagingTemplate = messagingTemplate;
     this.objectMapper = objectMapper;
     this.sessionRegistry = sessionRegistry;
+    this.quoteDestinationPrefix =
+        quoteDestinationPrefix == null || quoteDestinationPrefix.isBlank()
+            ? "/topic/market/quote/"
+            : quoteDestinationPrefix;
     this.queueDepthLimit = queueDepthLimit;
     this.payloadBytesLimit = payloadBytesLimit;
     this.normalPushIntervalMs = normalPushIntervalMs;
     this.degradedPushIntervalMs = degradedPushIntervalMs;
     this.degradeLagThresholdMs = degradeLagThresholdMs;
+    this.normalDrainBatchSize = Math.max(1, normalDrainBatchSize);
+    this.degradedDrainBatchSize = Math.max(this.normalDrainBatchSize, degradedDrainBatchSize);
     this.wsPushDroppedCounter = meterRegistry.counter("ws_push_dropped_total");
     this.wsQueueDelayTimer = Timer.builder(WS_QUEUE_DELAY_TIMER_METRIC)
         .description("Queue waiting delay before websocket send")
@@ -98,11 +112,22 @@ public class MarketWebSocketHandler {
     }
 
     PushTask droppedTask = null;
+    String normalizedCode = stockCode.trim().toLowerCase();
+    PushTask newTask = new PushTask(normalizedCode, payload, System.currentTimeMillis());
     synchronized (queueLock) {
-      if (pushQueue.size() >= queueDepthLimit) {
-        droppedTask = pushQueue.pollFirst();
+      if (pushQueue.containsKey(normalizedCode)) {
+        pushQueue.put(normalizedCode, newTask);
+        return;
       }
-      pushQueue.offerLast(new PushTask(stockCode.trim().toLowerCase(), payload, System.currentTimeMillis()));
+
+      if (pushQueue.size() >= queueDepthLimit) {
+        Iterator<Map.Entry<String, PushTask>> iterator = pushQueue.entrySet().iterator();
+        if (iterator.hasNext()) {
+          droppedTask = iterator.next().getValue();
+          iterator.remove();
+        }
+      }
+      pushQueue.put(normalizedCode, newTask);
     }
 
     if (droppedTask != null) {
@@ -112,34 +137,47 @@ public class MarketWebSocketHandler {
   }
 
   /** 处理待推送队列（由调度器按固定频率触发）。 */
-  public void drainQueue() {
-    PushTask nextTask;
+  public int drainQueue() {
+    List<PushTask> tasksToSend;
     long now = System.currentTimeMillis();
     synchronized (queueLock) {
-      nextTask = pushQueue.peekFirst();
-      if (nextTask == null) {
-        return;
+      if (pushQueue.isEmpty()) {
+        return 0;
       }
 
-      if (now - nextTask.enqueuedAtMs() > degradeLagThresholdMs) {
+      Iterator<Map.Entry<String, PushTask>> iterator = pushQueue.entrySet().iterator();
+      PushTask headTask = iterator.next().getValue();
+
+      if (now - headTask.enqueuedAtMs() > degradeLagThresholdMs) {
         degradedUntilMs = now + degradedPushIntervalMs * 3L;
       }
 
       int interval = currentPushIntervalMs(now);
       if (now - lastPushAtMs < interval) {
-        return;
+        return 0;
       }
-      nextTask = pushQueue.pollFirst();
+
+      int batchSize = currentDrainBatchSize(now);
+      tasksToSend = new ArrayList<>(Math.min(batchSize, pushQueue.size()));
+      tasksToSend.add(headTask);
+      iterator.remove();
+      while (iterator.hasNext() && tasksToSend.size() < batchSize) {
+        Map.Entry<String, PushTask> entry = iterator.next();
+        tasksToSend.add(entry.getValue());
+        iterator.remove();
+      }
       lastPushAtMs = now;
     }
 
-    PushTask taskToSend = nextTask;
-    String destination = QUOTE_TOPIC_PREFIX + taskToSend.stockCode();
-    Object payloadToSend = enrichPayloadWithLatency(taskToSend.payload());
-    long queueDelayMs = Math.max(now - taskToSend.enqueuedAtMs(), 0L);
-    wsQueueDelayTimer.record(queueDelayMs, java.util.concurrent.TimeUnit.MILLISECONDS);
-    wsPushDurationTimer.record(() -> messagingTemplate.convertAndSend(destination, payloadToSend));
-    log.debug("Pushed quote for {} to {}", taskToSend.stockCode(), destination);
+    for (PushTask taskToSend : tasksToSend) {
+      String destination = quoteDestinationPrefix + taskToSend.stockCode();
+      Object payloadToSend = enrichPayloadWithLatency(taskToSend.payload());
+      long queueDelayMs = Math.max(now - taskToSend.enqueuedAtMs(), 0L);
+      wsQueueDelayTimer.record(queueDelayMs, java.util.concurrent.TimeUnit.MILLISECONDS);
+      wsPushDurationTimer.record(() -> messagingTemplate.convertAndSend(destination, payloadToSend));
+      log.debug("Pushed quote for {} to {}", taskToSend.stockCode(), destination);
+    }
+    return tasksToSend.size();
   }
 
   /** 推送消息给指定用户 */
@@ -167,6 +205,10 @@ public class MarketWebSocketHandler {
 
   private int currentPushIntervalMs(long nowMs) {
     return nowMs < degradedUntilMs ? degradedPushIntervalMs : normalPushIntervalMs;
+  }
+
+  private int currentDrainBatchSize(long nowMs) {
+    return nowMs < degradedUntilMs ? degradedDrainBatchSize : normalDrainBatchSize;
   }
 
   private boolean payloadExceedsLimit(Object payload) {

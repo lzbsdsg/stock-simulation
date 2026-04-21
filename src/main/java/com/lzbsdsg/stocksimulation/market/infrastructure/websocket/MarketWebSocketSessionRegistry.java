@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -17,14 +18,19 @@ import org.springframework.stereotype.Component;
 public class MarketWebSocketSessionRegistry {
 
   private final int maxConnections;
+  private final int highConnectionWarningThreshold;
+  private final int highConnectionWarningStep;
   private final AtomicInteger activeConnections = new AtomicInteger(0);
   private final ConcurrentMap<String, Set<String>> userSessions = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, String> sessionUsers = new ConcurrentHashMap<>();
+  private final AtomicLong lastWarnedMilestone = new AtomicLong(-1L);
 
   public MarketWebSocketSessionRegistry(
       MeterRegistry meterRegistry,
       @Value("${market.websocket.max-connections:10000}") int maxConnections) {
     this.maxConnections = maxConnections;
+    this.highConnectionWarningThreshold = Math.max(1000, (int) (maxConnections * 0.8d));
+    this.highConnectionWarningStep = Math.max(1000, maxConnections / 10);
     Gauge.builder("ws_active_connections", activeConnections, AtomicInteger::get).register(meterRegistry);
   }
 
@@ -46,9 +52,7 @@ public class MarketWebSocketSessionRegistry {
     sessionUsers.put(sessionId, userId);
     userSessions.computeIfAbsent(userId, key -> ConcurrentHashMap.newKeySet()).add(sessionId);
 
-    if (newCount > 8000) {
-      log.warn("ws.connection.high activeConnections={}", newCount);
-    }
+    maybeLogHighConnection(newCount);
     return true;
   }
 
@@ -79,5 +83,24 @@ public class MarketWebSocketSessionRegistry {
 
   public Map<String, Set<String>> snapshotUserSessions() {
     return Map.copyOf(userSessions);
+  }
+
+  private void maybeLogHighConnection(int activeConnectionCount) {
+    if (activeConnectionCount < highConnectionWarningThreshold) {
+      return;
+    }
+
+    long milestone = activeConnectionCount / highConnectionWarningStep;
+    long lastMilestone = lastWarnedMilestone.get();
+    if (milestone <= lastMilestone) {
+      return;
+    }
+    if (lastWarnedMilestone.compareAndSet(lastMilestone, milestone)) {
+      log.warn(
+          "ws.connection.high activeConnections={} threshold={} maxConnections={}",
+          activeConnectionCount,
+          highConnectionWarningThreshold,
+          maxConnections);
+    }
   }
 }

@@ -1,0 +1,182 @@
+{
+    "metrics": {
+        "http_req_duration{expected_response:true}": {
+            "avg": 16.899869644712254,
+            "min": 1.0565,
+            "med": 7.1954,
+            "max": 1362.4858,
+            "p(90)": 28.465500000000002,
+            "p(95)": 55.39269999999997
+        },
+        "http_req_receiving": {
+            "med": 0.5732,
+            "max": 17.7668,
+            "p(90)": 2.7445000000000004,
+            "p(95)": 3.87205,
+            "avg": 1.2499970810166785,
+            "min": 0
+        },
+        "vus_max": {
+            "min": 50,
+            "max": 50,
+            "value": 50
+        },
+        "http_req_sending": {
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0.02312208101667991,
+            "min": 0,
+            "med": 0,
+            "max": 3.4695
+        },
+        "data_received": {
+            "count": 6270242,
+            "rate": 305371.2699164088
+        },
+        "http_req_tls_handshaking": {
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0
+        },
+        "data_sent": {
+            "count": 1131434,
+            "rate": 55102.72767886823
+        },
+        "http_req_failed": {
+            "passes": 223,
+            "fails": 4813,
+            "thresholds": {
+                "rate<0.005": true
+            },
+            "value": 0.04428117553613979
+        },
+        "http_reqs": {
+            "count": 5036,
+            "rate": 245.26162073154987
+        },
+        "http_req_connecting": {
+            "p(90)": 0,
+            "p(95)": 0.519825,
+            "avg": 0.04325168784749802,
+            "min": 0,
+            "med": 0,
+            "max": 2.6435
+        },
+        "http_req_waiting": {
+            "p(95)": 55.545525,
+            "avg": 16.601483300238392,
+            "min": 0.5878,
+            "med": 6.77335,
+            "max": 1360.9589,
+            "p(90)": 30.860599999999998
+        },
+        "checks": {
+            "passes": 4813,
+            "fails": 223,
+            "value": 0.9557188244638603
+        },
+        "vus": {
+            "value": 50,
+            "min": 50,
+            "max": 50
+        },
+        "iteration_duration": {
+            "avg": 550.2165416172505,
+            "min": 506.0338,
+            "med": 526.6669,
+            "max": 1903.0739,
+            "p(90)": 590.6787,
+            "p(95)": 628.1117299999999
+        },
+        "http_req_blocked": {
+            "avg": 0.30807011517077015,
+            "min": 0,
+            "med": 0,
+            "max": 28.1872,
+            "p(90)": 0,
+            "p(95)": 0.53105
+        },
+        "http_req_duration": {
+            "avg": 17.874602462271664,
+            "min": 1.0565,
+            "med": 7.7469,
+            "max": 1362.4858,
+            "p(90)": 33.053200000000004,
+            "p(95)": 61.4276,
+            "thresholds": {
+                "p(99)<300": false
+            }
+        },
+        "iterations": {
+            "count": 1855,
+            "rate": 90.34160175874206
+        }
+    },
+    "root_group": {
+        "checks": {
+            "mixed quote status expected": {
+                "id": "99bfd8e7fb71dbac95c30f23fa5c3524",
+                "passes": 1308,
+                "fails": 0,
+                "name": "mixed quote status expected",
+                "path": "::mixed quote status expected"
+            },
+            "mixed quotes status expected": {
+                "passes": 1308,
+                "fails": 0,
+                "name": "mixed quotes status expected",
+                "path": "::mixed quotes status expected",
+                "id": "1fd3ebd1b75e6ffa5a0c39aef6a3e367"
+            },
+            "mixed search status expected": {
+                "id": "32cbe17344b4bf1c1cd066310bae1b6e",
+                "passes": 1308,
+                "fails": 0,
+                "name": "mixed search status expected",
+                "path": "::mixed search status expected"
+            },
+            "mixed overview status expected": {
+                "name": "mixed overview status expected",
+                "path": "::mixed overview status expected",
+                "id": "2414842b891c7437201093205118c9d3",
+                "passes": 187,
+                "fails": 0
+            },
+            "mixed place order status expected": {
+                "name": "mixed place order status expected",
+                "path": "::mixed place order status expected",
+                "id": "1e95102c126e17ac2ab76e604cccc5b8",
+                "passes": 137,
+                "fails": 223
+            },
+            "mixed positions status expected": {
+                "name": "mixed positions status expected",
+                "path": "::mixed positions status expected",
+                "id": "77b13cba580c1b3627228a6f97fca405",
+                "passes": 187,
+                "fails": 0
+            },
+            "mixed list orders status expected": {
+                "passes": 360,
+                "fails": 0,
+                "name": "mixed list orders status expected",
+                "path": "::mixed list orders status expected",
+                "id": "c80ec5ee7b2dcc087b076b5e078ce2e9"
+            },
+            "mixed cancel order status expected": {
+                "name": "mixed cancel order status expected",
+                "path": "::mixed cancel order status expected",
+                "id": "8af6e00a30f3d2f52559d631cf39ee35",
+                "passes": 18,
+                "fails": 0
+            }
+        },
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {}
+    }
+}

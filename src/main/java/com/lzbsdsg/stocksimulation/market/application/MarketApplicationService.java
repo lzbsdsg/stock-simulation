@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -74,9 +75,61 @@ public class MarketApplicationService {
   @Value("${market.ingest.active-window-ms:8000}")
   private long activeWindowMs;
 
+  @Value("${market.kline.prewarm.enabled:true}")
+  private boolean klinePrewarmEnabled;
+
+  @Value("${market.kline.prewarm.codes:sh600519,sz000001,sh601318}")
+  private String klinePrewarmCodes;
+
   @PostConstruct
   void warmupOfficialBoardCache() {
     refreshOfficialBoardCache();
+    warmupListedStockCache();
+    warmupHotKLineCache();
+  }
+
+  private void warmupListedStockCache() {
+    try {
+      int listedCount = getOrLoadListedStocks().size();
+      log.info("market.stock.prewarm listedCount={}", listedCount);
+    } catch (Exception ex) {
+      log.warn("market.stock.prewarm failed reason={}", ex.getMessage());
+    }
+  }
+
+  private void warmupHotKLineCache() {
+    if (!klinePrewarmEnabled) {
+      return;
+    }
+
+    LocalDate today = LocalDate.now();
+    LocalDate prewarmFrom = LocalDate.of(today.getYear() - 1, 1, 1);
+    LocalDate prewarmTo = LocalDate.of(today.getYear() - 1, 12, 31);
+
+    String[] hotCodes = klinePrewarmCodes.split(",");
+    for (String rawCode : hotCodes) {
+      String code = rawCode == null ? "" : rawCode.trim();
+      if (code.isEmpty()) {
+        continue;
+      }
+      try {
+        List<KLinePoint> prewarmed =
+            marketDataFacade.getKLine(code, KLinePeriod.DAILY, prewarmFrom, prewarmTo);
+        log.info(
+            "market.kline.prewarm code={} from={} to={} size={}",
+            code,
+            prewarmFrom,
+            prewarmTo,
+            prewarmed.size());
+      } catch (Exception ex) {
+        log.warn(
+            "market.kline.prewarm failed code={} from={} to={} reason={}",
+            code,
+            prewarmFrom,
+            prewarmTo,
+            ex.getMessage());
+      }
+    }
   }
 
   public QuoteVO getQuote(String stockCode) {
@@ -115,13 +168,29 @@ public class MarketApplicationService {
         .limit(SEARCH_LIMIT)
         .toList();
 
-    List<QuoteVO> results = new ArrayList<>();
-    for (StockInfo stockInfo : matchedStocks) {
-      try {
-        results.add(toQuoteVO(marketDataFacade.getQuote(stockInfo.getStockCode())));
-      } catch (Exception ex) {
-        results.add(fallbackQuote(stockInfo));
+    if (matchedStocks.isEmpty()) {
+      return List.of();
+    }
+
+    List<String> matchedCodes =
+        matchedStocks.stream().map(StockInfo::getStockCode).filter(Objects::nonNull).toList();
+
+    Map<String, QuoteVO> quoteMap = new java.util.HashMap<>();
+    try {
+      List<QuoteSnapshot> snapshots = marketDataFacade.batchGetQuotes(matchedCodes);
+      for (QuoteSnapshot snapshot : snapshots) {
+        if (snapshot != null && snapshot.getStockCode() != null) {
+          quoteMap.put(snapshot.getStockCode().trim().toLowerCase(Locale.ROOT), toQuoteVO(snapshot));
+        }
       }
+    } catch (Exception ex) {
+      log.debug("searchStock batch quote fallback keyword={} reason={}", normalizedKeyword, ex.getMessage());
+    }
+
+    List<QuoteVO> results = new ArrayList<>(matchedStocks.size());
+    for (StockInfo stockInfo : matchedStocks) {
+      String code = stockInfo.getStockCode() == null ? "" : stockInfo.getStockCode().trim().toLowerCase(Locale.ROOT);
+      results.add(quoteMap.getOrDefault(code, fallbackQuote(stockInfo)));
     }
     return results;
   }

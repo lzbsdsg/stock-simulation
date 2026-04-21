@@ -47,8 +47,14 @@ public class AccountApplicationService {
   /** 冻结资金（买入下单时调用） */
   @Transactional
   public void freezeBalance(Long userId, BigDecimal amount) {
+    freezeBalanceAndGetAccount(userId, amount);
+  }
+
+  /** 冻结资金并返回最新账户快照（性能链路复用，避免重复回库查询）。 */
+  @Transactional
+  public Account freezeBalanceAndGetAccount(Long userId, BigDecimal amount) {
     validatePositiveAmount(amount);
-    executeWithOptimisticRetry(
+    return executeWithOptimisticRetry(
         userId,
         account -> {
           try {
@@ -62,8 +68,14 @@ public class AccountApplicationService {
   /** 解冻资金（撤单/成交结算时调用） */
   @Transactional
   public void unfreezeBalance(Long userId, BigDecimal amount) {
+    unfreezeBalanceAndGetAccount(userId, amount);
+  }
+
+  /** 解冻资金并返回最新账户快照。 */
+  @Transactional
+  public Account unfreezeBalanceAndGetAccount(Long userId, BigDecimal amount) {
     validatePositiveAmount(amount);
-    executeWithOptimisticRetry(
+    return executeWithOptimisticRetry(
         userId,
         account -> {
           try {
@@ -77,9 +89,15 @@ public class AccountApplicationService {
   /** 成交扣款（撮合时调用） */
   @Transactional
   public void deductFrozen(Long userId, BigDecimal frozenAmount, BigDecimal actualCost) {
+    deductFrozenAndGetAccount(userId, frozenAmount, actualCost);
+  }
+
+  /** 成交扣款并返回最新账户快照。 */
+  @Transactional
+  public Account deductFrozenAndGetAccount(Long userId, BigDecimal frozenAmount, BigDecimal actualCost) {
     validatePositiveAmount(frozenAmount);
     validatePositiveAmount(actualCost);
-    executeWithOptimisticRetry(
+    return executeWithOptimisticRetry(
         userId,
         account -> {
           if (account.getFrozenBalance().compareTo(frozenAmount) < 0) {
@@ -105,12 +123,18 @@ public class AccountApplicationService {
   /** 卖出入账（撮合时调用） */
   @Transactional
   public void creditBalance(Long userId, BigDecimal amount) {
+    creditBalanceAndGetAccount(userId, amount);
+  }
+
+  /** 卖出入账并返回最新账户快照。 */
+  @Transactional
+  public Account creditBalanceAndGetAccount(Long userId, BigDecimal amount) {
     validatePositiveAmount(amount);
-    executeWithOptimisticRetry(
+    return executeWithOptimisticRetry(
         userId, account -> account.setAvailableBalance(account.getAvailableBalance().add(amount)));
   }
 
-  private void executeWithOptimisticRetry(
+  private Account executeWithOptimisticRetry(
       Long userId, java.util.function.Consumer<Account> mutate) {
     for (int attempt = 1; attempt <= MAX_OPTIMISTIC_RETRY; attempt++) {
       Account account =
@@ -124,7 +148,7 @@ public class AccountApplicationService {
       }
 
       if (accountRepository.updateWithVersion(account)) {
-        return;
+        return account;
       }
     }
     throw new BizException(ErrorCode.TRADE_OPTIMISTIC_LOCK_CONFLICT);

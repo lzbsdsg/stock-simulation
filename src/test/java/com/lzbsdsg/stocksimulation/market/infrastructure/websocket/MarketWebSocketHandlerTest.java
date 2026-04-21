@@ -3,20 +3,21 @@ package com.lzbsdsg.stocksimulation.market.infrastructure.websocket;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.Map;
-import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 class MarketWebSocketHandlerTest {
+
+  private static final String QUOTE_PREFIX = "/topic/market/quote/";
 
   private SimpMessagingTemplate messagingTemplate;
   private SimpleMeterRegistry meterRegistry;
@@ -30,18 +31,21 @@ class MarketWebSocketHandlerTest {
   @Test
   void should_register_and_unregister_session() {
     MarketWebSocketSessionRegistry sessionRegistry =
-      new MarketWebSocketSessionRegistry(meterRegistry, 2);
+        new MarketWebSocketSessionRegistry(meterRegistry, 2);
     MarketWebSocketHandler handler =
         new MarketWebSocketHandler(
-        messagingTemplate,
-        new ObjectMapper(),
-        sessionRegistry,
-        meterRegistry,
-        100,
-        65536,
-        1,
-        10,
-        5);
+            messagingTemplate,
+            new ObjectMapper(),
+            sessionRegistry,
+            meterRegistry,
+            QUOTE_PREFIX,
+            100,
+            65536,
+            1,
+            10,
+            5,
+            2,
+            4);
 
     assertTrue(handler.tryRegisterSession("1001", "s1"));
     assertEquals(1, handler.getActiveConnectionCount());
@@ -54,18 +58,21 @@ class MarketWebSocketHandlerTest {
   @Test
   void should_reject_when_connection_limit_exceeded() {
     MarketWebSocketSessionRegistry sessionRegistry =
-      new MarketWebSocketSessionRegistry(meterRegistry, 1);
+        new MarketWebSocketSessionRegistry(meterRegistry, 1);
     MarketWebSocketHandler handler =
         new MarketWebSocketHandler(
-        messagingTemplate,
-        new ObjectMapper(),
-        sessionRegistry,
-        meterRegistry,
-        100,
-        65536,
-        1,
-        10,
-        5);
+            messagingTemplate,
+            new ObjectMapper(),
+            sessionRegistry,
+            meterRegistry,
+            QUOTE_PREFIX,
+            100,
+            65536,
+            1,
+            10,
+            5,
+            2,
+            4);
 
     assertTrue(handler.tryRegisterSession("1001", "s1"));
     assertFalse(handler.tryRegisterSession("1002", "s2"));
@@ -73,20 +80,23 @@ class MarketWebSocketHandlerTest {
   }
 
   @Test
-  void should_drop_oldest_when_queue_is_full() {
+  void should_drop_oldest_when_queueIsFull() {
     MarketWebSocketSessionRegistry sessionRegistry =
-      new MarketWebSocketSessionRegistry(meterRegistry, 10);
+        new MarketWebSocketSessionRegistry(meterRegistry, 10);
     MarketWebSocketHandler handler =
         new MarketWebSocketHandler(
-        messagingTemplate,
-        new ObjectMapper(),
-        sessionRegistry,
-        meterRegistry,
-        1,
-        65536,
-        1,
-        10,
-        5000);
+            messagingTemplate,
+            new ObjectMapper(),
+            sessionRegistry,
+            meterRegistry,
+            QUOTE_PREFIX,
+            1,
+            65536,
+            1,
+            10,
+            5000,
+            2,
+            4);
 
     handler.pushQuote("sh600519", Map.of("price", 1));
     handler.pushQuote("sz000001", Map.of("price", 2));
@@ -94,10 +104,11 @@ class MarketWebSocketHandlerTest {
     assertEquals(1, handler.getQueuedTaskCount());
     assertEquals(1.0d, meterRegistry.get("ws_push_dropped_total").counter().count());
 
-    handler.drainQueue();
+    int drained = handler.drainQueue();
+    assertEquals(1, drained);
     ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
     verify(messagingTemplate, times(1))
-      .convertAndSend(org.mockito.ArgumentMatchers.eq("/topic/market/quote/sz000001"), payloadCaptor.capture());
+        .convertAndSend(Mockito.eq("/topic/market/quote/sz000001"), payloadCaptor.capture());
 
     Object captured = payloadCaptor.getValue();
     assertTrue(captured instanceof Map<?, ?>);
@@ -109,23 +120,57 @@ class MarketWebSocketHandlerTest {
   @Test
   void should_enter_degraded_mode_when_lag_is_high() throws Exception {
     MarketWebSocketSessionRegistry sessionRegistry =
-      new MarketWebSocketSessionRegistry(meterRegistry, 10);
+        new MarketWebSocketSessionRegistry(meterRegistry, 10);
     MarketWebSocketHandler handler =
         new MarketWebSocketHandler(
-        messagingTemplate,
-        new ObjectMapper(),
-        sessionRegistry,
-        meterRegistry,
-        10,
-        65536,
-        1,
-        1000,
-        5);
+            messagingTemplate,
+            new ObjectMapper(),
+            sessionRegistry,
+            meterRegistry,
+            QUOTE_PREFIX,
+            10,
+            65536,
+            1,
+            1000,
+            5,
+            2,
+            4);
 
     handler.pushQuote("sh600519", Map.of("price", 1));
     Thread.sleep(20);
-    handler.drainQueue();
+    int drained = handler.drainQueue();
 
     assertTrue(handler.isDegradedMode());
+    assertEquals(1, drained);
+  }
+
+  @Test
+  void should_drain_multiple_quotes_in_single_batch() {
+    MarketWebSocketSessionRegistry sessionRegistry =
+        new MarketWebSocketSessionRegistry(meterRegistry, 10);
+    MarketWebSocketHandler handler =
+        new MarketWebSocketHandler(
+            messagingTemplate,
+            new ObjectMapper(),
+            sessionRegistry,
+            meterRegistry,
+            QUOTE_PREFIX,
+            10,
+            65536,
+            1,
+            10,
+            5000,
+            2,
+            4);
+
+    handler.pushQuote("sh600519", Map.of("price", 1));
+    handler.pushQuote("sz000001", Map.of("price", 2));
+    handler.pushQuote("sh601318", Map.of("price", 3));
+
+    int drained = handler.drainQueue();
+
+    assertEquals(2, drained);
+    assertEquals(1, handler.getQueuedTaskCount());
+    verify(messagingTemplate, times(2)).convertAndSend(Mockito.anyString(), Mockito.any(Object.class));
   }
 }

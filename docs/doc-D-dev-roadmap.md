@@ -765,6 +765,14 @@ Week 20  ████ Beta 发布 + 文档收尾
 
 **目标**：完整压测达标 + 安全全面加固
 
+**执行状态（2026-04-20）**：⚠️ 已执行压测与安全收敛改造，但验收未达标（详见 `docs/iteration-17-delivery.md`）
+
+- [x] 5 个场景压测执行并产出报告（`tools/perf/iteration17-*.json`）
+- [ ] 5 个场景全部达标
+- [x] Swagger/Actuator/CORS 收敛配置落地
+- [x] Nginx 限流参数运行态验证
+- [ ] Trivy 0 Critical（受漏洞库下载网络阻塞）
+
 **Week 18 前半 — k6 完整压测**：
 - [ ] 编写 k6 压测脚本 (5 个场景):
   - k6/market-load-test.js — 行情查询 500VU / 5min

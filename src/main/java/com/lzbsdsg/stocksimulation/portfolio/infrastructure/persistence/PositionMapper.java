@@ -1,6 +1,7 @@
 package com.lzbsdsg.stocksimulation.portfolio.infrastructure.persistence;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -15,6 +16,10 @@ public interface PositionMapper extends BaseMapper<PositionDO> {
       "SELECT * FROM t_portfolio_position WHERE user_id = #{userId} AND stock_code = #{stockCode} FOR UPDATE")
   PositionDO selectByUserIdAndStockCodeForUpdate(
       @Param("userId") Long userId, @Param("stockCode") String stockCode);
+
+    @Select(
+      "SELECT COALESCE(SUM(COALESCE(cost_price, 0) * COALESCE(total_quantity, 0)), 0) FROM t_portfolio_position WHERE user_id = #{userId}")
+    BigDecimal sumCostMarketValueByUserId(@Param("userId") Long userId);
 
   @Update(
       """

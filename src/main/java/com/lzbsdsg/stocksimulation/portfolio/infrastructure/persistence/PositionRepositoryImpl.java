@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.lzbsdsg.stocksimulation.portfolio.domain.entity.Position;
 import com.lzbsdsg.stocksimulation.portfolio.domain.repository.PositionRepository;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
@@ -60,6 +61,12 @@ public class PositionRepositoryImpl implements PositionRepository {
   public long countByUserId(Long userId) {
     return positionMapper.selectCount(
         new LambdaQueryWrapper<PositionDO>().eq(PositionDO::getUserId, userId));
+  }
+
+  @Override
+  public BigDecimal sumCostMarketValueByUserId(Long userId) {
+    BigDecimal aggregated = positionMapper.sumCostMarketValueByUserId(userId);
+    return aggregated == null ? BigDecimal.ZERO : aggregated;
   }
 
   @Override

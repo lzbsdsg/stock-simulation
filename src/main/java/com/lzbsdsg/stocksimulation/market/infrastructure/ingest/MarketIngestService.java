@@ -6,6 +6,7 @@ import com.lzbsdsg.stocksimulation.market.domain.gateway.MarketDataProvider;
 import com.lzbsdsg.stocksimulation.market.domain.repository.StockInfoRepository;
 import com.lzbsdsg.stocksimulation.market.domain.service.QuoteMergePolicy;
 import com.lzbsdsg.stocksimulation.market.infrastructure.gateway.MarketCacheGateway;
+import com.lzbsdsg.stocksimulation.market.infrastructure.websocket.MarketWebSocketHandler;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PostConstruct;
@@ -64,10 +65,17 @@ public class MarketIngestService {
   private final MarketCacheGateway marketCacheGateway;
   private final RedisTemplate<String, Object> redisTemplate;
   private final MarketActiveQuoteRegistry marketActiveQuoteRegistry;
+  private final MarketWebSocketHandler marketWebSocketHandler;
   private final MeterRegistry meterRegistry;
 
   @Value("${market.ingest.latency-sample-enabled:false}")
   private boolean latencySampleEnabled;
+
+  @Value("${market.ingest.enabled:true}")
+  private boolean ingestEnabled;
+
+  @Value("${market.broadcast.mode:redis}")
+  private String broadcastMode;
 
   @Value("${market.ingest.active-window-ms:8000}")
   private long activeWindowMs;
@@ -101,6 +109,9 @@ public class MarketIngestService {
   @Scheduled(fixedRateString = "${market.ingest.pull-interval-ms:1000}")
   public void pullAndBroadcast() {
     long cycleStartNs = System.nanoTime();
+    if (!ingestEnabled) {
+      return;
+    }
     if (!ensureLeadership()) {
       return;
     }
@@ -131,7 +142,7 @@ public class MarketIngestService {
               .opsForValue()
               .set(PUB_TS_KEY_PREFIX + normalizedCode, publishTs, 30, TimeUnit.SECONDS);
         }
-        redisTemplate.convertAndSend(BROADCAST_CHANNEL, quote);
+        publishQuote(normalizedCode, quote);
         publishedQuoteCount++;
       }
     } finally {
@@ -150,6 +161,10 @@ public class MarketIngestService {
   @Scheduled(fixedRateString = "${market.ingest.renew-interval-ms:3000}")
   public void renewLeadership() {
     String token = leaderToken;
+    if (!ingestEnabled) {
+      leaderToken = null;
+      return;
+    }
     if (token == null) {
       return;
     }
@@ -162,6 +177,9 @@ public class MarketIngestService {
   }
 
   boolean ensureLeadership() {
+    if (!ingestEnabled) {
+      return false;
+    }
     String token = leaderToken;
     if (token != null) {
       Object owner = redisTemplate.opsForValue().get(INGEST_LEADER_KEY);
@@ -317,5 +335,13 @@ public class MarketIngestService {
 
   public int getLastPublishedQuoteCount() {
     return lastPublishedQuoteCount;
+  }
+
+  private void publishQuote(String normalizedCode, QuoteSnapshot quote) {
+    if ("broker".equalsIgnoreCase(broadcastMode)) {
+      marketWebSocketHandler.pushQuote(normalizedCode, quote);
+      return;
+    }
+    redisTemplate.convertAndSend(BROADCAST_CHANNEL, quote);
   }
 }

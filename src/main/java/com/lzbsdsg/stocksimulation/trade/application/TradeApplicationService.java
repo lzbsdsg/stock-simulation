@@ -33,7 +33,6 @@ import com.lzbsdsg.stocksimulation.trade.infrastructure.mq.OrderMessageProducer;
 import com.lzbsdsg.stocksimulation.trade.infrastructure.mq.TradeFilledEvent;
 import com.lzbsdsg.stocksimulation.user.application.AccountApplicationService;
 import com.lzbsdsg.stocksimulation.user.domain.entity.Account;
-import com.lzbsdsg.stocksimulation.user.domain.repository.AccountRepository;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -83,7 +82,6 @@ public class TradeApplicationService {
   private final MarketDataFacade marketDataFacade;
   private final StockInfoRepository stockInfoRepository;
   private final AccountApplicationService accountApplicationService;
-  private final AccountRepository accountRepository;
   private final FundFlowRepository fundFlowRepository;
   private final PositionRepository positionRepository;
   private final CacheManager cacheManager;
@@ -160,7 +158,8 @@ public class TradeApplicationService {
         BigDecimal freezeAmount =
             orderDomainService.calculateFreezeAmount(
                 price, command.quantity(), feeCalculator.estimateBuyCommissionRate());
-        accountApplicationService.freezeBalance(userId, freezeAmount);
+        Account accountAfterFreeze =
+            accountApplicationService.freezeBalanceAndGetAccount(userId, freezeAmount);
         order.setFrozenAmount(freezeAmount);
         orderRepository.save(order);
         tradeOrderCreatedCounter.increment();
@@ -168,6 +167,7 @@ public class TradeApplicationService {
             userId,
             FundFlow.FundFlowType.FREEZE,
             freezeAmount.negate(),
+            accountAfterFreeze.getAvailableBalance(),
             order.getId(),
             "BUY order freeze");
       } else {
@@ -218,11 +218,13 @@ public class TradeApplicationService {
       }
 
       if (order.getSide() == OrderSide.BUY && hasPositiveAmount(order.getFrozenAmount())) {
-        accountApplicationService.unfreezeBalance(userId, order.getFrozenAmount());
+        Account accountAfterUnfreeze =
+            accountApplicationService.unfreezeBalanceAndGetAccount(userId, order.getFrozenAmount());
         recordFundFlow(
             userId,
             FundFlow.FundFlowType.UNFREEZE,
             order.getFrozenAmount(),
+            accountAfterUnfreeze.getAvailableBalance(),
             order.getId(),
             "Cancel BUY order");
       }
@@ -399,11 +401,14 @@ public class TradeApplicationService {
 
       int remainingQuantity = Math.max(order.remainingQuantity(), 0);
       if (order.getSide() == OrderSide.BUY && hasPositiveAmount(order.getFrozenAmount())) {
-        accountApplicationService.unfreezeBalance(order.getUserId(), order.getFrozenAmount());
+        Account accountAfterUnfreeze =
+            accountApplicationService.unfreezeBalanceAndGetAccount(
+                order.getUserId(), order.getFrozenAmount());
         recordFundFlow(
             order.getUserId(),
             FundFlow.FundFlowType.UNFREEZE,
             order.getFrozenAmount(),
+            accountAfterUnfreeze.getAvailableBalance(),
             order.getId(),
             "Close expire BUY order");
       } else if (order.getSide() == OrderSide.SELL && remainingQuantity > 0) {
@@ -530,7 +535,9 @@ public class TradeApplicationService {
     BigDecimal actualCost = trade.getTradeAmount().add(trade.getCommission());
     BigDecimal frozenAmount =
         order.getFrozenAmount() == null ? actualCost : order.getFrozenAmount();
-    accountApplicationService.deductFrozen(order.getUserId(), frozenAmount, actualCost);
+    Account accountAfterSettle =
+        accountApplicationService.deductFrozenAndGetAccount(
+            order.getUserId(), frozenAmount, actualCost);
 
     Position position =
         positionRepository.findByUserIdAndStockCodeForUpdate(order.getUserId(), order.getStockCode()).orElse(null);
@@ -561,6 +568,7 @@ public class TradeApplicationService {
         order.getUserId(),
         FundFlow.FundFlowType.TRADE_BUY,
         actualCost.negate(),
+        accountAfterSettle.getAvailableBalance(),
         order.getId(),
         "BUY trade settled");
   }
@@ -583,13 +591,17 @@ public class TradeApplicationService {
     }
 
     BigDecimal netAmount = trade.getTradeAmount().subtract(trade.getCommission());
+    BigDecimal balanceAfter = null;
     if (netAmount.compareTo(BigDecimal.ZERO) > 0) {
-      accountApplicationService.creditBalance(order.getUserId(), netAmount);
+      Account accountAfterCredit =
+          accountApplicationService.creditBalanceAndGetAccount(order.getUserId(), netAmount);
+      balanceAfter = accountAfterCredit.getAvailableBalance();
     }
     recordFundFlow(
         order.getUserId(),
         FundFlow.FundFlowType.TRADE_SELL,
         netAmount,
+        balanceAfter,
         order.getId(),
         "SELL trade settled");
   }
@@ -613,16 +625,17 @@ public class TradeApplicationService {
   }
 
   private void recordFundFlow(
-      Long userId, FundFlow.FundFlowType type, BigDecimal amount, Long orderId, String remark) {
-    Account account =
-        accountRepository
-            .findByUserId(userId)
-            .orElseThrow(() -> new BizException(ErrorCode.USER_ACCOUNT_NOT_FOUND));
+      Long userId,
+      FundFlow.FundFlowType type,
+      BigDecimal amount,
+      BigDecimal balanceAfter,
+      Long orderId,
+      String remark) {
     FundFlow flow = new FundFlow();
     flow.setUserId(userId);
     flow.setFlowType(type);
     flow.setAmount(amount);
-    flow.setBalanceAfter(account.getAvailableBalance());
+    flow.setBalanceAfter(balanceAfter);
     flow.setOrderId(orderId);
     flow.setRemark(remark);
     flow.setCreatedAt(LocalDateTime.now(ZONE_SHANGHAI));

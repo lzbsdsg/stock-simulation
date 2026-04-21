@@ -12,6 +12,13 @@ const TOKEN = __ENV.TOKEN || '';
 const K6_BYPASS_KEY = __ENV.K6_BYPASS_KEY || '';
 const VUS = Number(__ENV.VUS || '100');
 const DURATION = __ENV.DURATION || '5m';
+const TARGET_CODE = __ENV.TARGET_CODE || 'sh600519';
+const KLINE_PREWARM_ENABLED = (__ENV.KLINE_PREWARM_ENABLED || 'true').toLowerCase() === 'true';
+const KLINE_PREWARM_REPEAT = Math.max(Number(__ENV.KLINE_PREWARM_REPEAT || '2'), 1);
+const KLINE_PREWARM_CODES = (__ENV.KLINE_PREWARM_CODES || TARGET_CODE)
+    .split(',')
+    .map((code) => code.trim())
+    .filter(Boolean);
 
 const DEFAULT_HEADERS = {};
 if (TOKEN) {
@@ -60,12 +67,45 @@ function hit(endpointTag, path) {
     });
 }
 
+function assertBusinessSuccess(response, label) {
+    check(response, {
+        [`${label} status is 200`]: (r) => r.status === 200,
+        [`${label} has result code 200`]: (r) => {
+            try {
+                const payload = JSON.parse(r.body);
+                return payload && payload.code === 200;
+            } catch (_) {
+                return false;
+            }
+        },
+    });
+}
+
+export function setup() {
+    if (!KLINE_PREWARM_ENABLED || KLINE_PREWARM_CODES.length === 0) {
+        return;
+    }
+
+    for (const code of KLINE_PREWARM_CODES) {
+        for (let i = 0; i < KLINE_PREWARM_REPEAT; i += 1) {
+            const response = http.get(
+                `${BASE_URL}/api/v1/market/kline/${code}?period=DAILY&from=${encodeURIComponent(KLINE_FROM)}&to=${encodeURIComponent(KLINE_TO)}`,
+                {
+                    headers: DEFAULT_HEADERS,
+                    tags: { endpoint: i === 0 ? 'kline-prewarm-seed' : 'kline-prewarm-verify', stage: 'warmup' },
+                },
+            );
+            assertBusinessSuccess(response, `kline prewarm ${code} #${i + 1}`);
+        }
+    }
+}
+
 export default function () {
-    hit('quote', '/api/v1/market/quote/sh600519');
-    hit('quotes', '/api/v1/market/quotes?codes=sh600519&codes=sz000001&codes=sh601318');
+    hit('quote', `/api/v1/market/quote/${TARGET_CODE}`);
+    hit('quotes', `/api/v1/market/quotes?codes=${encodeURIComponent(TARGET_CODE)}&codes=sz000001&codes=sh601318`);
     hit(
         'kline',
-        `/api/v1/market/kline/sh600519?period=DAILY&from=${encodeURIComponent(KLINE_FROM)}&to=${encodeURIComponent(KLINE_TO)}`,
+        `/api/v1/market/kline/${TARGET_CODE}?period=DAILY&from=${encodeURIComponent(KLINE_FROM)}&to=${encodeURIComponent(KLINE_TO)}`,
     );
     hit('search', '/api/v1/market/search?keyword=%E8%8C%85%E5%8F%B0');
     sleep(0.4);

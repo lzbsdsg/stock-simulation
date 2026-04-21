@@ -3,6 +3,7 @@ package com.lzbsdsg.stocksimulation.config;
 import com.lzbsdsg.stocksimulation.auth.infrastructure.gateway.JwtTokenProvider;
 import com.lzbsdsg.stocksimulation.market.infrastructure.websocket.MarketWebSocketSessionRegistry;
 import java.net.URI;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
@@ -14,8 +15,19 @@ import org.springframework.web.socket.server.HandshakeInterceptor;
 @Component
 public class WebSocketJwtHandshakeInterceptor implements HandshakeInterceptor {
 
+  private static final String K6_BYPASS_HEADER = "X-K6-Bypass-Key";
+
   private final JwtTokenProvider jwtTokenProvider;
   private final MarketWebSocketSessionRegistry sessionRegistry;
+
+  @Value("${app.security.k6-bypass.enabled:false}")
+  private boolean k6BypassEnabled;
+
+  @Value("${app.security.k6-bypass.key:}")
+  private String k6BypassKey;
+
+  @Value("${app.security.k6-bypass.user-id:1}")
+  private long k6BypassUserId;
 
   public WebSocketJwtHandshakeInterceptor(
       JwtTokenProvider jwtTokenProvider, MarketWebSocketSessionRegistry sessionRegistry) {
@@ -32,6 +44,15 @@ public class WebSocketJwtHandshakeInterceptor implements HandshakeInterceptor {
     if (!sessionRegistry.hasCapacity()) {
       response.setStatusCode(HttpStatus.SERVICE_UNAVAILABLE);
       return false;
+    }
+
+    String bypassKey = request.getHeaders().getFirst(K6_BYPASS_HEADER);
+    if (k6BypassEnabled
+        && k6BypassKey != null
+        && !k6BypassKey.isBlank()
+        && k6BypassKey.equals(bypassKey)) {
+      attributes.put("wsUserId", String.valueOf(k6BypassUserId));
+      return true;
     }
 
     String token = extractBearerToken(request);

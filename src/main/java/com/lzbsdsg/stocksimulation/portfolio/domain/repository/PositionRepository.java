@@ -1,6 +1,7 @@
 package com.lzbsdsg.stocksimulation.portfolio.domain.repository;
 
 import com.lzbsdsg.stocksimulation.portfolio.domain.entity.Position;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -17,6 +18,8 @@ public interface PositionRepository {
   List<Position> findByUserId(Long userId, int page, int size);
 
   long countByUserId(Long userId);
+
+  BigDecimal sumCostMarketValueByUserId(Long userId);
 
   void save(Position position);
 

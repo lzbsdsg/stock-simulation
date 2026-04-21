@@ -13,6 +13,7 @@ import io.lettuce.core.resource.DefaultClientResources;
 import io.lettuce.core.resource.DnsResolvers;
 import io.lettuce.core.resource.MappingSocketAddressResolver;
 import org.springframework.boot.autoconfigure.data.redis.LettuceClientConfigurationBuilderCustomizer;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -27,6 +28,12 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @Configuration
 public class RedisConfig {
 
+  @Value("${app.redis.cluster.map-to-loopback:true}")
+  private boolean mapClusterNodesToLoopback;
+
+  @Value("${market.redis.pubsub.enabled:true}")
+  private boolean marketRedisPubSubEnabled;
+
   @Bean(destroyMethod = "shutdown")
   @Profile("dev")
   public ClientResources redisClientResources() {
@@ -36,7 +43,7 @@ public class RedisConfig {
                 DnsResolvers.UNRESOLVED,
                 hostAndPort -> {
                   String host = hostAndPort.getHostText();
-                  if (host != null && host.startsWith("redis-node-")) {
+                  if (mapClusterNodesToLoopback && host != null && host.startsWith("redis-node-")) {
                     return HostAndPort.of("127.0.0.1", hostAndPort.getPort());
                   }
                   return hostAndPort;
@@ -85,7 +92,9 @@ public class RedisConfig {
     RedisMessageListenerContainer container = new RedisMessageListenerContainer();
     container.setConnectionFactory(connectionFactory);
     container.addMessageListener(cacheInvalidateListener, new PatternTopic("cache:invalidate:*"));
-    container.addMessageListener(marketPubSubListener, new PatternTopic("market:quote:broadcast"));
+    if (marketRedisPubSubEnabled) {
+      container.addMessageListener(marketPubSubListener, new PatternTopic("market:quote:broadcast"));
+    }
     return container;
   }
 }

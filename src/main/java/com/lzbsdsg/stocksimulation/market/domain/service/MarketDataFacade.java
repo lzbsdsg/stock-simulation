@@ -43,6 +43,10 @@ public class MarketDataFacade {
   private final Counter quoteCacheHitL2Counter;
   private final Map<String, ProviderCircuitBreaker> circuitBreakers = new ConcurrentHashMap<>();
   private static final long PROVIDER_READ_TIMEOUT_MS = 1200L;
+  private static final int QUOTE_CACHE_WAIT_RETRIES = 3;
+  private static final long QUOTE_CACHE_WAIT_MILLIS = 50L;
+  private static final int KLINE_CACHE_WAIT_RETRIES = 12;
+  private static final long KLINE_CACHE_WAIT_MILLIS = 80L;
 
   @Autowired
   public MarketDataFacade(
@@ -88,8 +92,8 @@ public class MarketDataFacade {
 
     boolean acquiredLock = marketCacheGateway.tryAcquireLoadLock(normalizedCode);
     if (!acquiredLock) {
-      sleepSilently(80);
-      MarketCacheGateway.CacheResult<QuoteSnapshot> lockWaitResult = marketCacheGateway.getQuote(normalizedCode);
+      MarketCacheGateway.CacheResult<QuoteSnapshot> lockWaitResult =
+          waitForQuoteCacheFill(normalizedCode, QUOTE_CACHE_WAIT_RETRIES, QUOTE_CACHE_WAIT_MILLIS);
       if (lockWaitResult.hit()) {
         recordQuoteCacheHit(lockWaitResult.status());
         marketCacheGateway.setCacheStatusHeader(lockWaitResult.status());
@@ -97,6 +101,12 @@ public class MarketDataFacade {
           throw new BizException(ErrorCode.MARKET_STOCK_NOT_FOUND);
         }
         return lockWaitResult.value();
+      }
+
+      QuoteSnapshot staleWhenWaiting = marketCacheGateway.getStaleQuote(normalizedCode);
+      if (staleWhenWaiting != null) {
+        marketCacheGateway.setCacheStatusHeader(MarketCacheGateway.STALE);
+        return staleWhenWaiting;
       }
     }
 
@@ -199,9 +209,45 @@ public class MarketDataFacade {
   /** 获取K线 */
   public List<KLinePoint> getKLine(
       String stockCode, KLinePeriod period, LocalDate from, LocalDate to) {
-    List<KLinePoint> points = historicalKLineService.getKLine(stockCode, period, from, to);
-    marketCacheGateway.setCacheStatusHeader(MarketCacheGateway.MISS);
-    return points;
+    String normalizedCode = normalizeStockCode(stockCode);
+    String klineCacheKey = buildKLineCacheKey(normalizedCode, period, from, to);
+    List<KLinePoint> cached = marketCacheGateway.getCachedKLine(klineCacheKey);
+    if (cached != null) {
+      marketCacheGateway.setCacheStatusHeader(MarketCacheGateway.HIT_L2);
+      return cached;
+    }
+
+    String klineLockKey = "kline:" + klineCacheKey;
+    boolean acquiredLock = marketCacheGateway.tryAcquireKLineLoadLock(klineLockKey);
+    if (!acquiredLock) {
+      List<KLinePoint> lockWaitCached =
+          waitForKLineCacheFill(klineCacheKey, KLINE_CACHE_WAIT_RETRIES, KLINE_CACHE_WAIT_MILLIS);
+      if (lockWaitCached != null) {
+        marketCacheGateway.setCacheStatusHeader(MarketCacheGateway.HIT_L2);
+        return lockWaitCached;
+      }
+    }
+
+    try {
+      List<KLinePoint> points = historicalKLineService.getKLine(stockCode, period, from, to);
+      if (!points.isEmpty()) {
+        marketCacheGateway.cacheKLine(klineCacheKey, points);
+      }
+      marketCacheGateway.setCacheStatusHeader(MarketCacheGateway.MISS);
+      return points;
+    } finally {
+      if (acquiredLock) {
+        marketCacheGateway.releaseLoadLock(klineLockKey);
+      }
+    }
+  }
+
+  private String buildKLineCacheKey(
+      String stockCode, KLinePeriod period, LocalDate from, LocalDate to) {
+    String safePeriod = period == null ? "DAILY" : period.name();
+    String safeFrom = from == null ? "null" : from.toString();
+    String safeTo = to == null ? "null" : to.toString();
+    return stockCode + ":" + safePeriod + ":" + safeFrom + ":" + safeTo;
   }
 
   private String normalizeStockCode(String stockCode) {
@@ -231,6 +277,29 @@ public class MarketDataFacade {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
+  }
+
+  private MarketCacheGateway.CacheResult<QuoteSnapshot> waitForQuoteCacheFill(
+      String stockCode, int retries, long waitMillis) {
+    for (int i = 0; i < retries; i++) {
+      sleepSilently(waitMillis);
+      MarketCacheGateway.CacheResult<QuoteSnapshot> result = marketCacheGateway.getQuote(stockCode);
+      if (result.hit()) {
+        return result;
+      }
+    }
+    return MarketCacheGateway.CacheResult.miss();
+  }
+
+  private List<KLinePoint> waitForKLineCacheFill(String cacheKey, int retries, long waitMillis) {
+    for (int i = 0; i < retries; i++) {
+      sleepSilently(waitMillis);
+      List<KLinePoint> cached = marketCacheGateway.getCachedKLine(cacheKey);
+      if (cached != null) {
+        return cached;
+      }
+    }
+    return null;
   }
 
   private QuoteSnapshot loadQuoteFromProviders(String stockCode) {

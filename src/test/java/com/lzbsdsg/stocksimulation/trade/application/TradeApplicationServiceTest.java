@@ -33,7 +33,6 @@ import com.lzbsdsg.stocksimulation.trade.infrastructure.mq.OrderMessageProducer;
 import com.lzbsdsg.stocksimulation.trade.infrastructure.mq.TradeFilledEvent;
 import com.lzbsdsg.stocksimulation.user.application.AccountApplicationService;
 import com.lzbsdsg.stocksimulation.user.domain.entity.Account;
-import com.lzbsdsg.stocksimulation.user.domain.repository.AccountRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -65,7 +64,6 @@ class TradeApplicationServiceTest {
   @Mock private MarketDataFacade marketDataFacade;
   @Mock private StockInfoRepository stockInfoRepository;
   @Mock private AccountApplicationService accountApplicationService;
-  @Mock private AccountRepository accountRepository;
   @Mock private FundFlowRepository fundFlowRepository;
   @Mock private PositionRepository positionRepository;
 
@@ -89,7 +87,6 @@ class TradeApplicationServiceTest {
             marketDataFacade,
             stockInfoRepository,
             accountApplicationService,
-            accountRepository,
             fundFlowRepository,
             positionRepository,
             new ConcurrentMapCacheManager(),
@@ -106,7 +103,8 @@ class TradeApplicationServiceTest {
   void should_place_buy_order_and_send_match_message() {
     when(idempotencyGateway.tryAcquire("cid-buy-1")).thenReturn(true);
     when(marketDataFacade.getQuote("sh600519")).thenReturn(mockQuote("sh600519", "贵州茅台"));
-    when(accountRepository.findByUserId(1001L)).thenReturn(Optional.of(account("8999.68")));
+    when(accountApplicationService.freezeBalanceAndGetAccount(1001L, new BigDecimal("1000.32")))
+        .thenReturn(account("8999.68"));
     doAnswer(
             invocation -> {
               Order order = invocation.getArgument(0);
@@ -123,7 +121,8 @@ class TradeApplicationServiceTest {
     assertNotNull(result);
     assertEquals(9001L, result.orderId());
     assertEquals("PENDING", result.status());
-    verify(accountApplicationService).freezeBalance(eq(1001L), eq(new BigDecimal("1000.32")));
+    verify(accountApplicationService)
+        .freezeBalanceAndGetAccount(eq(1001L), eq(new BigDecimal("1000.32")));
     verify(fundFlowRepository).save(any());
     verify(orderMessageProducer).sendMatchMessage(9001L);
     verify(idempotencyGateway, never()).release("cid-buy-1");
@@ -151,7 +150,7 @@ class TradeApplicationServiceTest {
 
     assertEquals(9002L, result.orderId());
     assertEquals("SELL", result.side());
-    verify(accountApplicationService, never()).freezeBalance(any(), any());
+    verify(accountApplicationService, never()).freezeBalanceAndGetAccount(any(), any());
     verify(positionRepository).updateWithVersion(any(Position.class));
     verify(orderMessageProducer).sendMatchMessage(9002L);
     verify(idempotencyGateway, never()).release("cid-sell-1");
@@ -202,7 +201,7 @@ class TradeApplicationServiceTest {
               throw new BizException(ErrorCode.TRADE_ORDER_INSUFFICIENT_FUND);
             })
         .when(accountApplicationService)
-        .freezeBalance(any(), any());
+        .freezeBalanceAndGetAccount(any(), any());
 
     PlaceOrderCommand command =
         new PlaceOrderCommand("cid-fund", "sh600519", "BUY", "LIMIT", new BigDecimal("10.00"), 100);
@@ -229,11 +228,13 @@ class TradeApplicationServiceTest {
     order.setFrozenAmount(new BigDecimal("1000.32"));
     when(orderRepository.findById(9100L)).thenReturn(Optional.of(order));
     when(orderRepository.updateWithVersion(any(Order.class))).thenReturn(true);
-    when(accountRepository.findByUserId(1001L)).thenReturn(Optional.of(account("10000.00")));
+    when(accountApplicationService.unfreezeBalanceAndGetAccount(1001L, new BigDecimal("1000.32")))
+        .thenReturn(account("10000.00"));
 
     tradeApplicationService.cancelOrder(new CancelOrderCommand(9100L));
 
-    verify(accountApplicationService).unfreezeBalance(1001L, new BigDecimal("1000.32"));
+    verify(accountApplicationService)
+        .unfreezeBalanceAndGetAccount(1001L, new BigDecimal("1000.32"));
     verify(fundFlowRepository).save(any());
   }
 
@@ -290,7 +291,7 @@ class TradeApplicationServiceTest {
               throw new RuntimeException("unexpected");
             })
         .when(accountApplicationService)
-        .unfreezeBalance(1001L, new BigDecimal("1000.32"));
+        .unfreezeBalanceAndGetAccount(1001L, new BigDecimal("1000.32"));
 
     BizException ex =
         assertThrows(
@@ -307,7 +308,9 @@ class TradeApplicationServiceTest {
     when(marketDataFacade.getQuote("sh600519")).thenReturn(mockQuote("sh600519", "贵州茅台"));
     when(positionRepository.findByUserIdAndStockCodeForUpdate(1001L, "sh600519"))
         .thenReturn(Optional.empty());
-    when(accountRepository.findByUserId(1001L)).thenReturn(Optional.of(account("8995.00")));
+    when(accountApplicationService.deductFrozenAndGetAccount(
+            1001L, new BigDecimal("1005.00"), new BigDecimal("1005.02")))
+        .thenReturn(account("8995.00"));
     doAnswer(
             invocation -> {
               com.lzbsdsg.stocksimulation.trade.domain.entity.Trade trade = invocation.getArgument(0);
@@ -320,7 +323,8 @@ class TradeApplicationServiceTest {
     TradeApplicationService.MatchResult result = tradeApplicationService.matchOrder(9201L);
 
     assertEquals(TradeApplicationService.MatchResult.MATCHED, result);
-    verify(accountApplicationService).deductFrozen(1001L, new BigDecimal("1005.00"), new BigDecimal("1005.02"));
+    verify(accountApplicationService)
+        .deductFrozenAndGetAccount(1001L, new BigDecimal("1005.00"), new BigDecimal("1005.02"));
     verify(positionRepository).save(any(Position.class));
     verify(fundFlowRepository).save(any());
     verify(orderMessageProducer).sendTradeFilledEvent(any(TradeFilledEvent.class));
@@ -340,7 +344,8 @@ class TradeApplicationServiceTest {
     when(positionRepository.findByUserIdAndStockCodeForUpdate(1001L, "sh600519"))
         .thenReturn(Optional.of(position));
     when(positionRepository.updateWithVersion(any(Position.class))).thenReturn(true);
-    when(accountRepository.findByUserId(1001L)).thenReturn(Optional.of(account("10000.00")));
+    when(accountApplicationService.creditBalanceAndGetAccount(1001L, new BigDecimal("993.98")))
+        .thenReturn(account("10000.00"));
     doAnswer(
             invocation -> {
               com.lzbsdsg.stocksimulation.trade.domain.entity.Trade trade = invocation.getArgument(0);
@@ -353,7 +358,7 @@ class TradeApplicationServiceTest {
     TradeApplicationService.MatchResult result = tradeApplicationService.matchOrder(9202L);
 
     assertEquals(TradeApplicationService.MatchResult.MATCHED, result);
-    verify(accountApplicationService).creditBalance(1001L, new BigDecimal("993.98"));
+    verify(accountApplicationService).creditBalanceAndGetAccount(1001L, new BigDecimal("993.98"));
     verify(positionRepository).updateWithVersion(any(Position.class));
     verify(fundFlowRepository).save(any());
   }

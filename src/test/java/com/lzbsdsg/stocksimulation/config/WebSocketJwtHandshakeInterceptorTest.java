@@ -10,6 +10,7 @@ import com.lzbsdsg.stocksimulation.auth.infrastructure.gateway.JwtTokenProvider;
 import com.lzbsdsg.stocksimulation.market.infrastructure.websocket.MarketWebSocketSessionRegistry;
 import java.util.HashMap;
 import java.util.Map;
+import java.lang.reflect.Field;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -91,6 +92,30 @@ class WebSocketJwtHandshakeInterceptorTest {
 
     assertFalse(allowed);
     verify(response).setStatusCode(HttpStatus.SERVICE_UNAVAILABLE);
+  }
+
+  @Test
+  void should_allow_when_k6_bypass_header_matches() throws Exception {
+    HttpHeaders headers = new HttpHeaders();
+    headers.add("X-K6-Bypass-Key", "k6-bypass");
+
+    when(sessionRegistry.hasCapacity()).thenReturn(true);
+    when(request.getHeaders()).thenReturn(headers);
+    setField(interceptor, "k6BypassEnabled", true);
+    setField(interceptor, "k6BypassKey", "k6-bypass");
+    setField(interceptor, "k6BypassUserId", 99L);
+
+    Map<String, Object> attributes = new HashMap<>();
+    boolean allowed = interceptor.beforeHandshake(request, response, webSocketHandler, attributes);
+
+    assertTrue(allowed);
+    assertEquals("99", attributes.get("wsUserId"));
+  }
+
+  private void setField(Object target, String fieldName, Object value) throws Exception {
+    Field field = target.getClass().getDeclaredField(fieldName);
+    field.setAccessible(true);
+    field.set(target, value);
   }
 
 }

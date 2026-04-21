@@ -1,0 +1,251 @@
+{
+    "root_group": {
+        "groups": {},
+        "checks": {
+                "quote status is 200": {
+                    "fails": 0,
+                    "name": "quote status is 200",
+                    "path": "::quote status is 200",
+                    "id": "7e31d2b428248578404915cee3088aa1",
+                    "passes": 366
+                },
+                "quote has result code 200": {
+                    "path": "::quote has result code 200",
+                    "id": "7ea5920a968d9210404da396252fe300",
+                    "passes": 366,
+                    "fails": 0,
+                    "name": "quote has result code 200"
+                },
+                "quote cache header exists": {
+                    "fails": 0,
+                    "name": "quote cache header exists",
+                    "path": "::quote cache header exists",
+                    "id": "5d4342f242228e9548d8e10d1dfefdaf",
+                    "passes": 366
+                },
+                "quotes status is 200": {
+                    "id": "637e9d689434cee718df679df5c3de83",
+                    "passes": 366,
+                    "fails": 0,
+                    "name": "quotes status is 200",
+                    "path": "::quotes status is 200"
+                },
+                "quotes has result code 200": {
+                    "passes": 366,
+                    "fails": 0,
+                    "name": "quotes has result code 200",
+                    "path": "::quotes has result code 200",
+                    "id": "d4df3247a15c4a1c82f7bbd2c9ae53e0"
+                },
+                "quotes cache header exists": {
+                    "name": "quotes cache header exists",
+                    "path": "::quotes cache header exists",
+                    "id": "a84f472f63dc3b5b42ce261cef37ad99",
+                    "passes": 366,
+                    "fails": 0
+                },
+                "kline status is 200": {
+                    "name": "kline status is 200",
+                    "path": "::kline status is 200",
+                    "id": "c30f2a0245a0852bb266391e934ba9d5",
+                    "passes": 366,
+                    "fails": 0
+                },
+                "kline has result code 200": {
+                    "name": "kline has result code 200",
+                    "path": "::kline has result code 200",
+                    "id": "d478cd47720d3a96a4a85a2524997def",
+                    "passes": 366,
+                    "fails": 0
+                },
+                "kline cache header exists": {
+                    "name": "kline cache header exists",
+                    "path": "::kline cache header exists",
+                    "id": "3dc0e7b1b3255cb8334311b1aaf5abd9",
+                    "passes": 366,
+                    "fails": 0
+                },
+                "search status is 200": {
+                    "name": "search status is 200",
+                    "path": "::search status is 200",
+                    "id": "8846297fcce9a908fddeccf71806615b",
+                    "passes": 366,
+                    "fails": 0
+                },
+                "search has result code 200": {
+                    "fails": 0,
+                    "name": "search has result code 200",
+                    "path": "::search has result code 200",
+                    "id": "089c434e28d3faceb3ce889f75b4b999",
+                    "passes": 366
+                },
+                "search cache header exists": {
+                    "name": "search cache header exists",
+                    "path": "::search cache header exists",
+                    "id": "bd917c6e3dd854cec0c401dbbf5f6918",
+                    "passes": 366,
+                    "fails": 0
+                }
+            },
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "metrics": {
+        "http_req_connecting": {
+            "min": 0,
+            "med": 0,
+            "max": 7.1433,
+            "p(90)": 0,
+            "p(95)": 1.4465149999999536,
+            "avg": 0.2274805327868854
+        },
+        "http_req_tls_handshaking": {
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0
+        },
+        "data_received": {
+            "count": 12854026,
+            "rate": 440865.1507322413
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 1464,
+            "thresholds": {
+                "rate<0.01": false
+            },
+            "value": 0
+        },
+        "http_req_duration{endpoint:quotes}": {
+            "p(90)": 98.03425,
+            "p(95)": 106.006475,
+            "avg": 32.712980601092895,
+            "min": 1.0828,
+            "med": 6.341200000000001,
+            "max": 325.1001,
+            "thresholds": {
+                "p(99)<220": false
+            }
+        },
+        "http_req_duration{endpoint:quote}": {
+            "med": 8.538,
+            "max": 132.1391,
+            "p(90)": 85.64975,
+            "p(95)": 98.07849999999999,
+            "avg": 28.592409836065613,
+            "min": 2.1622,
+            "thresholds": {
+                "p(99)<200": false
+            }
+        },
+        "vus": {
+            "value": 5,
+            "min": 5,
+            "max": 100
+        },
+        "http_req_waiting": {
+            "p(90)": 6700.106710000001,
+            "p(95)": 7183.342765,
+            "avg": 1516.4861811475398,
+            "min": 1.0602,
+            "med": 13.606349999999999,
+            "max": 13133.7399
+        },
+        "http_reqs": {
+            "rate": 50.21201767228425,
+            "count": 1464
+        },
+        "http_req_receiving": {
+            "max": 27.1563,
+            "p(90)": 12.130700000000001,
+            "p(95)": 14.357794999999994,
+            "avg": 3.0092415300546436,
+            "min": 0,
+            "med": 1.0500500000000001
+        },
+        "http_req_blocked": {
+            "med": 0,
+            "max": 66.4947,
+            "p(90)": 0,
+            "p(95)": 62.14980499999999,
+            "avg": 4.317552663934428,
+            "min": 0
+        },
+        "iteration_duration": {
+            "min": 1084.9308,
+            "med": 6382.0481500000005,
+            "max": 13796.1163,
+            "p(90)": 9868.7578,
+            "p(95)": 12925.0861,
+            "avg": 6500.581745081971
+        },
+        "http_req_duration{expected_response:true}": {
+            "med": 15.6594,
+            "max": 13138.814,
+            "p(90)": 6703.24128,
+            "p(95)": 7188.55295,
+            "avg": 1519.523885382513,
+            "min": 1.0828
+        },
+        "http_req_duration": {
+            "med": 15.6594,
+            "max": 13138.814,
+            "p(90)": 6703.24128,
+            "p(95)": 7188.55295,
+            "avg": 1519.523885382513,
+            "min": 1.0828
+        },
+        "vus_max": {
+            "value": 100,
+            "min": 100,
+            "max": 100
+        },
+        "data_sent": {
+            "rate": 8021.369823147409,
+            "count": 233874
+        },
+        "http_req_duration{endpoint:kline}": {
+            "max": 13138.814,
+            "p(90)": 9361.3635,
+            "p(95)": 12290.041,
+            "avg": 6007.22250928962,
+            "min": 419.9998,
+            "med": 5921.24785,
+            "thresholds": {
+                "p(99)<300": true
+            }
+        },
+        "http_req_sending": {
+            "avg": 0.02846270491803279,
+            "min": 0,
+            "med": 0,
+            "max": 1.0868,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "checks": {
+            "passes": 4392,
+            "fails": 0,
+            "value": 1
+        },
+        "iterations": {
+            "count": 366,
+            "rate": 12.553004418071062
+        },
+        "http_req_duration{endpoint:search}": {
+            "avg": 9.567641803278699,
+            "min": 2.0305,
+            "med": 4.6287,
+            "max": 46.707,
+            "p(90)": 25.430349999999997,
+            "p(95)": 32.19565,
+            "thresholds": {
+                "p(99)<220": false
+            }
+        }
+    }
+}

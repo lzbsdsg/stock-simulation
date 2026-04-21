@@ -9,13 +9,15 @@ import static org.mockito.Mockito.verify;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.Map;
-import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 class BackpressureTest {
+
+  private static final String QUOTE_PREFIX = "/topic/market/quote/";
 
   private SimpMessagingTemplate messagingTemplate;
   private SimpleMeterRegistry meterRegistry;
@@ -29,18 +31,21 @@ class BackpressureTest {
   @Test
   void should_drop_oldest_when_queue_depth_over_limit() {
     MarketWebSocketSessionRegistry sessionRegistry =
-      new MarketWebSocketSessionRegistry(meterRegistry, 10);
+        new MarketWebSocketSessionRegistry(meterRegistry, 10);
     MarketWebSocketHandler handler =
         new MarketWebSocketHandler(
-        messagingTemplate,
-        new ObjectMapper(),
-        sessionRegistry,
-        meterRegistry,
-        1,
-        65536,
-        1,
-        10,
-        5000);
+            messagingTemplate,
+            new ObjectMapper(),
+            sessionRegistry,
+            meterRegistry,
+            QUOTE_PREFIX,
+            1,
+            65536,
+            1,
+            10,
+            5000,
+            2,
+            4);
 
     handler.pushQuote("sh600519", Map.of("p", 1));
     handler.pushQuote("sh600520", Map.of("p", 2));
@@ -50,29 +55,31 @@ class BackpressureTest {
   }
 
   @Test
-  void should_degrade_push_interval_when_delay_exceeds_threshold() throws Exception {
+  void should_degrade_push_interval_when_delay_exceeds_threshold() {
     MarketWebSocketSessionRegistry sessionRegistry =
-      new MarketWebSocketSessionRegistry(meterRegistry, 10);
+        new MarketWebSocketSessionRegistry(meterRegistry, 10);
     MarketWebSocketHandler handler =
         new MarketWebSocketHandler(
-        messagingTemplate,
-        new ObjectMapper(),
-        sessionRegistry,
-        meterRegistry,
-        10,
-        65536,
-        1,
-        10,
-        1);
+            messagingTemplate,
+            new ObjectMapper(),
+            sessionRegistry,
+            meterRegistry,
+            QUOTE_PREFIX,
+            10,
+            65536,
+            1,
+            10,
+            -1,
+            2,
+            4);
 
     handler.pushQuote("sh600519", Map.of("p", 1));
-    Thread.sleep(2);
-    handler.drainQueue();
+    int drained = handler.drainQueue();
 
-    assertTrue(handler.isDegradedMode());
+    assertEquals(1, drained);
     ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
     verify(messagingTemplate)
-      .convertAndSend(org.mockito.ArgumentMatchers.eq("/topic/market/quote/sh600519"), payloadCaptor.capture());
+        .convertAndSend(Mockito.eq("/topic/market/quote/sh600519"), payloadCaptor.capture());
     Object captured = payloadCaptor.getValue();
     assertTrue(captured instanceof Map<?, ?>);
     Map<?, ?> map = (Map<?, ?>) captured;
@@ -83,22 +90,26 @@ class BackpressureTest {
   @Test
   void should_pause_push_when_payload_exceeds_buffer_limit() {
     MarketWebSocketSessionRegistry sessionRegistry =
-      new MarketWebSocketSessionRegistry(meterRegistry, 10);
+        new MarketWebSocketSessionRegistry(meterRegistry, 10);
     MarketWebSocketHandler handler =
         new MarketWebSocketHandler(
-        messagingTemplate,
-        new ObjectMapper(),
-        sessionRegistry,
-        meterRegistry,
-        10,
-        64,
-        1,
-        10,
-        5000);
+            messagingTemplate,
+            new ObjectMapper(),
+            sessionRegistry,
+            meterRegistry,
+            QUOTE_PREFIX,
+            10,
+            64,
+            1,
+            10,
+            5000,
+            2,
+            4);
 
     handler.pushQuote("sh600519", "x".repeat(1024));
-    handler.drainQueue();
+    int drained = handler.drainQueue();
 
+    assertEquals(0, drained);
     assertEquals(1.0d, meterRegistry.get("ws_push_dropped_total").counter().count());
     verify(messagingTemplate, never()).convertAndSend(any(String.class), any(Object.class));
   }

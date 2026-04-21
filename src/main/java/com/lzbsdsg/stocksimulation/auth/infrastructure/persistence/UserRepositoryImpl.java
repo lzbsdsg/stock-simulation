@@ -52,6 +52,8 @@ public class UserRepositoryImpl implements UserRepository {
     update.setLockedUntil(lockedUntil);
     if (lockedUntil != null) {
       update.setStatus("LOCKED");
+    } else if (failedAttempts == 0) {
+      update.setStatus("ACTIVE");
     }
     userMapper.updateById(update);
   }

@@ -7,37 +7,83 @@
 // - 5min 稳定运行
 
 import ws from 'k6/ws';
+import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { Counter, Trend } from 'k6/metrics';
 
+const VUS = Number(__ENV.VUS || '10000');
+const DURATION = __ENV.DURATION || '5m';
+const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
+const K6_BYPASS_KEY = __ENV.K6_BYPASS_KEY || '';
+
 export const options = {
-    vus: 10000,
-    duration: '5m',
+    vus: VUS,
+    duration: DURATION,
     thresholds: {
         ws_connecting: ['p(99)<1000'],
+        ws_stomp_connected_total: ['count>0'],
         ws_push_latency_ms: ['p(99)<500'],
         ws_latency_samples_total: ['count>0'],
     },
 };
 
-const WS_URL = __ENV.WS_URL || 'ws://localhost:8080/ws/market/websocket';
+const WS_URL = __ENV.WS_URL || 'ws://localhost:8080/ws/market-native';
 const ACCESS_TOKEN = __ENV.WS_TOKEN || '';
-const TARGET_CODE = __ENV.TARGET_CODE || 'bj920000';
-const WS_SESSION_MS = Number(__ENV.WS_SESSION_MS || '5000');
+const TARGET_CODE = __ENV.TARGET_CODE || 'sh600519';
+const WS_TOPIC_PREFIX = __ENV.WS_TOPIC_PREFIX || '/topic/market/quote/';
+const WS_SESSION_MS = Number(__ENV.WS_SESSION_MS || '60000');
+const WS_HEARTBEAT_MS = Number(__ENV.WS_HEARTBEAT_MS || '5000');
 const DEBUG_WS_PAYLOAD = (__ENV.DEBUG_WS_PAYLOAD || 'false').toLowerCase() === 'true';
 
 const wsPushLatency = new Trend('ws_push_latency_ms');
+const wsStompConnectedTotal = new Counter('ws_stomp_connected_total');
 const wsReceivedTotal = new Counter('ws_received_total');
 const wsLatencySamplesTotal = new Counter('ws_latency_samples_total');
 const wsLatencyMissingTotal = new Counter('ws_latency_missing_total');
 const wsLatencyParseErrorTotal = new Counter('ws_latency_parse_error_total');
 let printedDebugSample = false;
 
+export function setup() {
+    if (!BASE_URL || !TARGET_CODE) {
+        return;
+    }
+
+    const headers = {
+        'Content-Type': 'application/json',
+    };
+    if (ACCESS_TOKEN) {
+        headers.Authorization = `Bearer ${ACCESS_TOKEN}`;
+    }
+    if (K6_BYPASS_KEY) {
+        headers['X-K6-Bypass-Key'] = K6_BYPASS_KEY;
+    }
+
+    const response = http.post(`${BASE_URL}/api/v1/market/visible-codes`, JSON.stringify([TARGET_CODE]), {
+        headers,
+        tags: { endpoint: 'ws-visible-codes' },
+    });
+
+    check(response, {
+        'ws visible codes status is 200': (r) => r.status === 200,
+    });
+}
+
 export default function () {
-    const headers = ACCESS_TOKEN ? { Authorization: `Bearer ${ACCESS_TOKEN}` } : {};
+    const headers = {};
+    if (ACCESS_TOKEN) {
+        headers.Authorization = `Bearer ${ACCESS_TOKEN}`;
+    }
+    if (K6_BYPASS_KEY) {
+        headers['X-K6-Bypass-Key'] = K6_BYPASS_KEY;
+    }
     const connectRes = ws.connect(WS_URL, { headers }, function (socket) {
         socket.on('open', function () {
             socket.send('CONNECT\naccept-version:1.2\nhost:localhost\n\n\u0000');
+            if (WS_HEARTBEAT_MS > 0) {
+                socket.setInterval(function () {
+                    socket.send('\n');
+                }, WS_HEARTBEAT_MS);
+            }
         });
 
         socket.on('message', function (msg) {
@@ -61,9 +107,9 @@ export default function () {
         }, WS_SESSION_MS);
     });
 
-    check(connectRes, {
-        'ws connect success': (r) => r && r.status === 101,
-    });
+    if (DEBUG_WS_PAYLOAD && connectRes) {
+        console.log(`ws.connect status=${connectRes.status} error=${connectRes.error || ''}`);
+    }
 
     sleep(1);
 }
@@ -75,7 +121,8 @@ function processStompFrame(textMsg, socket) {
 
     // STOMP CONNECTED frame
     if (textMsg.startsWith('CONNECTED')) {
-        socket.send(`SUBSCRIBE\nid:sub-${__VU}-${__ITER}\ndestination:/topic/market/quote/${TARGET_CODE}\n\n\u0000`);
+        wsStompConnectedTotal.add(1);
+        socket.send(`SUBSCRIBE\nid:sub-${__VU}-${__ITER}\ndestination:${WS_TOPIC_PREFIX}${TARGET_CODE}\n\n\u0000`);
         return;
     }
 

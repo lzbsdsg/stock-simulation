@@ -110,6 +110,10 @@ class MarketDataFacadeTest {
 
   @Test
   void should_get_kline_from_historical_service() {
+    String klineCacheKey = "sh600519:DAILY:2026-03-01:2026-03-02";
+    when(marketCacheGateway.getCachedKLine(klineCacheKey)).thenReturn(null);
+    when(marketCacheGateway.tryAcquireKLineLoadLock("kline:" + klineCacheKey)).thenReturn(true);
+
     KLinePoint p = new KLinePoint();
     p.setDate(LocalDate.now());
     p.setClose(new BigDecimal("10.00"));
@@ -122,12 +126,26 @@ class MarketDataFacadeTest {
             "sh600519", KLinePeriod.DAILY, LocalDate.parse("2026-03-01"), LocalDate.parse("2026-03-02"));
 
     assertEquals(1, result.size());
+    verify(marketCacheGateway).releaseLoadLock("kline:" + klineCacheKey);
     verify(primaryProvider, never())
         .getKLine(
             "sh600519",
             KLinePeriod.DAILY,
             LocalDate.parse("2026-03-01"),
             LocalDate.parse("2026-03-02"));
+  }
+
+  @Test
+  void should_use_stale_when_waiting_for_quote_lock_timeout() {
+    QuoteSnapshot stale = quote("sh600519", "贵州茅台", "1686.66");
+    when(marketCacheGateway.getQuote("sh600519")).thenReturn(MarketCacheGateway.CacheResult.miss());
+    when(marketCacheGateway.tryAcquireLoadLock("sh600519")).thenReturn(false);
+    when(marketCacheGateway.getStaleQuote("sh600519")).thenReturn(stale);
+
+    QuoteSnapshot result = marketDataFacade.getQuote("sh600519");
+
+    assertEquals(new BigDecimal("1686.66"), result.getCurrentPrice());
+    verify(primaryProvider, never()).getQuote("sh600519");
   }
 
   @Test

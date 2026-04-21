@@ -16,10 +16,12 @@ import com.lzbsdsg.stocksimulation.market.domain.entity.StockInfo;
 import com.lzbsdsg.stocksimulation.market.domain.gateway.MarketDataProvider;
 import com.lzbsdsg.stocksimulation.market.domain.repository.StockInfoRepository;
 import com.lzbsdsg.stocksimulation.market.infrastructure.gateway.MarketCacheGateway;
+import com.lzbsdsg.stocksimulation.market.infrastructure.websocket.MarketWebSocketHandler;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -37,16 +39,18 @@ class MarketIngestServiceTest {
   private RedisTemplate<String, Object> redisTemplate;
   private ValueOperations<String, Object> valueOperations;
   private MarketActiveQuoteRegistry marketActiveQuoteRegistry;
+  private MarketWebSocketHandler marketWebSocketHandler;
   private MarketIngestService ingestService;
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws Exception {
     provider = org.mockito.Mockito.mock(MarketDataProvider.class);
     stockInfoRepository = org.mockito.Mockito.mock(StockInfoRepository.class);
     marketCacheGateway = org.mockito.Mockito.mock(MarketCacheGateway.class);
     redisTemplate = org.mockito.Mockito.mock(RedisTemplate.class);
     valueOperations = org.mockito.Mockito.mock(ValueOperations.class);
     marketActiveQuoteRegistry = org.mockito.Mockito.mock(MarketActiveQuoteRegistry.class);
+    marketWebSocketHandler = org.mockito.Mockito.mock(MarketWebSocketHandler.class);
     when(redisTemplate.opsForValue()).thenReturn(valueOperations);
     when(marketActiveQuoteRegistry.listActiveCodes(any(), anyInt())).thenReturn(List.of());
 
@@ -56,7 +60,14 @@ class MarketIngestServiceTest {
         marketCacheGateway,
         redisTemplate,
         marketActiveQuoteRegistry,
+        marketWebSocketHandler,
         new SimpleMeterRegistry());
+    setField(ingestService, "ingestEnabled", true);
+    setField(ingestService, "broadcastMode", "redis");
+    setField(ingestService, "activeWindowMs", 8000L);
+    setField(ingestService, "activeBatchSize", 800);
+    setField(ingestService, "roundRobinBatchSize", 100);
+    setField(ingestService, "stockUniverseRefreshMs", 300000L);
   }
 
   @Test
@@ -64,7 +75,6 @@ class MarketIngestServiceTest {
     when(valueOperations.setIfAbsent(
         eq(MarketIngestService.INGEST_LEADER_KEY), any(), anyLong(), eq(TimeUnit.SECONDS)))
         .thenReturn(Boolean.TRUE);
-    when(provider.isAvailable()).thenReturn(true);
     when(stockInfoRepository.findAllListed()).thenReturn(List.of(stock("sh600519")));
     QuoteSnapshot quote = quote("sh600519", "1688.88");
     when(provider.batchGetQuotes(List.of("sh600519"))).thenReturn(List.of(quote));
@@ -78,7 +88,7 @@ class MarketIngestServiceTest {
   }
 
   @Test
-  void should_merge_quotes_from_multiple_providers_during_ingest() {
+  void should_merge_quotes_from_multiple_providers_during_ingest() throws Exception {
     MarketDataProvider providerA = org.mockito.Mockito.mock(MarketDataProvider.class);
     MarketDataProvider providerB = org.mockito.Mockito.mock(MarketDataProvider.class);
 
@@ -88,7 +98,14 @@ class MarketIngestServiceTest {
         marketCacheGateway,
         redisTemplate,
         marketActiveQuoteRegistry,
+        marketWebSocketHandler,
         new SimpleMeterRegistry());
+    setField(multiProviderIngestService, "ingestEnabled", true);
+    setField(multiProviderIngestService, "broadcastMode", "redis");
+    setField(multiProviderIngestService, "activeWindowMs", 8000L);
+    setField(multiProviderIngestService, "activeBatchSize", 800);
+    setField(multiProviderIngestService, "roundRobinBatchSize", 100);
+    setField(multiProviderIngestService, "stockUniverseRefreshMs", 300000L);
 
     when(valueOperations.setIfAbsent(
         eq(MarketIngestService.INGEST_LEADER_KEY), any(), anyLong(), eq(TimeUnit.SECONDS)))
@@ -170,6 +187,41 @@ class MarketIngestServiceTest {
     boolean leadership = ingestService.ensureLeadership();
 
     assertFalse(leadership);
+  }
+
+  @Test
+  void should_publish_to_websocket_handler_when_broadcast_mode_is_broker() throws Exception {
+    setField(ingestService, "broadcastMode", "broker");
+    when(valueOperations.setIfAbsent(
+        eq(MarketIngestService.INGEST_LEADER_KEY), any(), anyLong(), eq(TimeUnit.SECONDS)))
+        .thenReturn(Boolean.TRUE);
+    when(stockInfoRepository.findAllListed()).thenReturn(List.of(stock("sh600519")));
+    QuoteSnapshot quote = quote("sh600519", "1688.88");
+    when(provider.batchGetQuotes(List.of("sh600519"))).thenReturn(List.of(quote));
+    when(marketCacheGateway.cacheQuoteIfFresh(anyString(), any())).thenReturn(true);
+
+    ingestService.pullAndBroadcast();
+
+    verify(marketWebSocketHandler).pushQuote("sh600519", quote);
+    verify(redisTemplate, org.mockito.Mockito.never())
+        .convertAndSend(eq(MarketIngestService.BROADCAST_CHANNEL), any());
+  }
+
+  @Test
+  void should_skip_ingest_when_disabled() throws Exception {
+    setField(ingestService, "ingestEnabled", false);
+
+    ingestService.pullAndBroadcast();
+
+    verify(marketCacheGateway, org.mockito.Mockito.never()).cacheQuoteIfFresh(anyString(), any());
+    verify(redisTemplate, org.mockito.Mockito.never()).convertAndSend(any(), any());
+    verify(marketWebSocketHandler, org.mockito.Mockito.never()).pushQuote(anyString(), any());
+  }
+
+  private static void setField(Object target, String fieldName, Object value) throws Exception {
+    Field field = target.getClass().getDeclaredField(fieldName);
+    field.setAccessible(true);
+    field.set(target, value);
   }
 
   private static StockInfo stock(String code) {

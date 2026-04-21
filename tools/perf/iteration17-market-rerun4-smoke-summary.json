@@ -1,0 +1,251 @@
+{
+    "metrics": {
+        "http_req_waiting": {
+            "max": 4587.9211,
+            "p(90)": 21.560200000000002,
+            "p(95)": 32.829924999999996,
+            "avg": 30.122927135812116,
+            "min": 0.5149,
+            "med": 6.29255
+        },
+        "http_req_connecting": {
+            "p(95)": 1.090475,
+            "avg": 0.2129716246834604,
+            "min": 0,
+            "med": 0,
+            "max": 8.0421,
+            "p(90)": 0.7644
+        },
+        "data_sent": {
+            "count": 2397374,
+            "rate": 47947.00551643341
+        },
+        "http_req_duration": {
+            "max": 4588.9948,
+            "p(90)": 25.0843,
+            "p(95)": 37.99215,
+            "avg": 31.778929908036734,
+            "min": 1.0567,
+            "med": 7.4143
+        },
+        "http_req_duration{endpoint:quotes}": {
+            "med": 4.2302,
+            "max": 166.3692,
+            "p(90)": 19.271770000000007,
+            "p(95)": 29.755249999999997,
+            "avg": 8.727163006396577,
+            "min": 1.0567,
+            "thresholds": {
+                "p(99)<220": false
+            }
+        },
+        "vus": {
+            "value": 1,
+            "min": 1,
+            "max": 100
+        },
+        "vus_max": {
+            "value": 100,
+            "min": 100,
+            "max": 100
+        },
+        "http_req_blocked": {
+            "p(90)": 1.0478,
+            "p(95)": 1.12195,
+            "avg": 0.39278182726909155,
+            "min": 0,
+            "med": 0,
+            "max": 29.5857
+        },
+        "iterations": {
+            "count": 3751,
+            "rate": 75.0192576094267
+        },
+        "http_req_failed": {
+            "passes": 3751,
+            "fails": 11255,
+            "thresholds": {
+                "rate<0.01": true
+            },
+            "value": 0.2499666799946688
+        },
+        "http_req_duration{expected_response:true}": {
+            "p(95)": 38.08544999999991,
+            "avg": 38.709965437583286,
+            "min": 1.0567,
+            "med": 7.8667,
+            "max": 4588.9948,
+            "p(90)": 25.03982000000001
+        },
+        "checks": {
+            "passes": 33765,
+            "fails": 11253,
+            "value": 0.7500333200053312
+        },
+        "http_req_sending": {
+            "max": 4.5716,
+            "p(90)": 0,
+            "p(95)": 0.51955,
+            "avg": 0.03728562574970017,
+            "min": 0,
+            "med": 0
+        },
+        "data_received": {
+            "count": 124295778,
+            "rate": 2485890.9596230634
+        },
+        "http_req_duration{endpoint:kline}": {
+            "p(95)": 45.02835,
+            "avg": 93.04359005598525,
+            "min": 4.2767,
+            "med": 10.9062,
+            "max": 4588.9948,
+            "p(90)": 30.7967,
+            "thresholds": {
+                "p(99)<300": true
+            }
+        },
+        "http_req_duration{endpoint:quote}": {
+            "max": 203.2332,
+            "p(90)": 23.71604,
+            "p(95)": 36.28283999999999,
+            "avg": 14.37362449360343,
+            "min": 2.1404,
+            "med": 6.3415,
+            "thresholds": {
+                "p(99)<200": false
+            }
+        },
+        "http_req_duration{endpoint:search}": {
+            "med": 5.9375,
+            "max": 109.1144,
+            "p(90)": 25.3173,
+            "p(95)": 37.4417,
+            "avg": 10.98212775259932,
+            "min": 1.6028,
+            "thresholds": {
+                "p(99)<220": false
+            }
+        },
+        "http_req_tls_handshaking": {
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0
+        },
+        "http_reqs": {
+            "rate": 300.1170300418707,
+            "count": 15006
+        },
+        "iteration_duration": {
+            "avg": 533.4847193281786,
+            "min": 415.0704,
+            "med": 435.2255,
+            "max": 5298.6654,
+            "p(90)": 511.166,
+            "p(95)": 558.5288499999999
+        },
+        "http_req_receiving": {
+            "min": 0,
+            "med": 1.0566,
+            "max": 73.7846,
+            "p(90)": 3.2888,
+            "p(95)": 5.200749999999999,
+            "avg": 1.6187171464747472
+        }
+    },
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+                "quote status is 200": {
+                    "fails": 0,
+                    "name": "quote status is 200",
+                    "path": "::quote status is 200",
+                    "id": "7e31d2b428248578404915cee3088aa1",
+                    "passes": 3752
+                },
+                "quote has result code 200": {
+                    "name": "quote has result code 200",
+                    "path": "::quote has result code 200",
+                    "id": "7ea5920a968d9210404da396252fe300",
+                    "passes": 3752,
+                    "fails": 0
+                },
+                "quote cache header exists": {
+                    "passes": 3752,
+                    "fails": 0,
+                    "name": "quote cache header exists",
+                    "path": "::quote cache header exists",
+                    "id": "5d4342f242228e9548d8e10d1dfefdaf"
+                },
+                "quotes status is 200": {
+                    "path": "::quotes status is 200",
+                    "id": "637e9d689434cee718df679df5c3de83",
+                    "passes": 3752,
+                    "fails": 0,
+                    "name": "quotes status is 200"
+                },
+                "quotes has result code 200": {
+                    "fails": 0,
+                    "name": "quotes has result code 200",
+                    "path": "::quotes has result code 200",
+                    "id": "d4df3247a15c4a1c82f7bbd2c9ae53e0",
+                    "passes": 3752
+                },
+                "quotes cache header exists": {
+                    "name": "quotes cache header exists",
+                    "path": "::quotes cache header exists",
+                    "id": "a84f472f63dc3b5b42ce261cef37ad99",
+                    "passes": 3752,
+                    "fails": 0
+                },
+                "kline status is 200": {
+                    "path": "::kline status is 200",
+                    "id": "c30f2a0245a0852bb266391e934ba9d5",
+                    "passes": 3751,
+                    "fails": 0,
+                    "name": "kline status is 200"
+                },
+                "kline has result code 200": {
+                    "passes": 3751,
+                    "fails": 0,
+                    "name": "kline has result code 200",
+                    "path": "::kline has result code 200",
+                    "id": "d478cd47720d3a96a4a85a2524997def"
+                },
+                "kline cache header exists": {
+                    "passes": 3751,
+                    "fails": 0,
+                    "name": "kline cache header exists",
+                    "path": "::kline cache header exists",
+                    "id": "3dc0e7b1b3255cb8334311b1aaf5abd9"
+                },
+                "search status is 200": {
+                    "name": "search status is 200",
+                    "path": "::search status is 200",
+                    "id": "8846297fcce9a908fddeccf71806615b",
+                    "passes": 0,
+                    "fails": 3751
+                },
+                "search has result code 200": {
+                    "name": "search has result code 200",
+                    "path": "::search has result code 200",
+                    "id": "089c434e28d3faceb3ce889f75b4b999",
+                    "passes": 0,
+                    "fails": 3751
+                },
+                "search cache header exists": {
+                    "passes": 0,
+                    "fails": 3751,
+                    "name": "search cache header exists",
+                    "path": "::search cache header exists",
+                    "id": "bd917c6e3dd854cec0c401dbbf5f6918"
+                }
+            }
+    }
+}

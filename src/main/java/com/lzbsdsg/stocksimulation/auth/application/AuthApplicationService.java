@@ -132,7 +132,9 @@ public class AuthApplicationService {
       throw new BizException(ErrorCode.AUTH_LOGIN_FAILED);
     }
 
-    userRepository.updateFailedAttempts(user.getId(), 0, null);
+    if (needsFailedAttemptReset(user)) {
+      userRepository.updateFailedAttempts(user.getId(), 0, null);
+    }
     clearLock(email);
     return issueToken(user);
   }
@@ -264,5 +266,11 @@ public class AuthApplicationService {
     if (loginLockCache != null) {
       loginLockCache.evict(email);
     }
+  }
+
+  private boolean needsFailedAttemptReset(User user) {
+    return user.getFailedAttempts() > 0
+        || user.getLockedUntil() != null
+        || "LOCKED".equalsIgnoreCase(user.getStatus());
   }
 }

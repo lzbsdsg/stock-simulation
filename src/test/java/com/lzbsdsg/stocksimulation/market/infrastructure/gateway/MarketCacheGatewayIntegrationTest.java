@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -73,6 +74,34 @@ class MarketCacheGatewayIntegrationTest {
   }
 
   @Test
+  void should_convert_legacy_quote_cache_map_to_domain_snapshot() {
+    when(valueOperations.get("market:quote:sh600519"))
+        .thenReturn(
+            Map.ofEntries(
+                Map.entry("stockCode", "sh600519"),
+                Map.entry("stockName", "贵州茅台"),
+                Map.entry("currentPrice", "1700.00"),
+                Map.entry("openPrice", "1680.00"),
+                Map.entry("closePrice", "1690.00"),
+                Map.entry("highPrice", "1710.00"),
+                Map.entry("lowPrice", "1675.00"),
+                Map.entry("volume", "123456"),
+                Map.entry("amount", "210000000.50"),
+                Map.entry("changePercent", "0.59"),
+                Map.entry("upperLimitPrice", "1859.00"),
+                Map.entry("lowerLimitPrice", "1521.00"),
+                Map.entry("timestamp", "2026-04-20T15:00:00"),
+                Map.entry("source", "TENCENT")));
+
+    MarketCacheGateway.CacheResult<QuoteSnapshot> result = marketCacheGateway.getQuote("sh600519");
+
+    assertTrue(result.hit());
+    assertEquals(MarketCacheGateway.HIT_L2, result.status());
+    assertEquals("贵州茅台", result.value().getStockName());
+    assertEquals(new BigDecimal("1859.00"), result.value().getUpperLimitPrice());
+  }
+
+  @Test
   void should_acquire_distributed_load_lock() {
     when(valueOperations.setIfAbsent(any(), any(), anyLong(), any())).thenReturn(Boolean.TRUE);
 
@@ -103,5 +132,47 @@ class MarketCacheGatewayIntegrationTest {
     assertEquals(LocalDate.parse("2026-03-25"), result.get(0).getDate());
     assertEquals(new BigDecimal("1710.00"), result.get(0).getClose());
     assertEquals(123456L, result.get(0).getVolume());
+  }
+
+  @Test
+  void should_hit_kline_l1_after_cache_write() {
+    List<KLinePoint> points =
+        List.of(
+            point(
+                LocalDate.parse("2026-03-25"),
+                "1700.00",
+                "1710.00",
+                "1720.00",
+                "1690.00",
+                123456L,
+                "210000000.50"));
+
+    marketCacheGateway.cacheKLine("sh600519:DAILY:2025-09-26:2026-03-25", points);
+    List<KLinePoint> result =
+        marketCacheGateway.getCachedKLine("sh600519:DAILY:2025-09-26:2026-03-25");
+
+    assertNotNull(result);
+    assertEquals(1, result.size());
+    assertEquals(new BigDecimal("1710.00"), result.get(0).getClose());
+    verify(valueOperations, never()).get("market:kline:sh600519:DAILY:2025-09-26:2026-03-25");
+  }
+
+  private KLinePoint point(
+      LocalDate date,
+      String open,
+      String close,
+      String high,
+      String low,
+      long volume,
+      String amount) {
+    KLinePoint point = new KLinePoint();
+    point.setDate(date);
+    point.setOpen(new BigDecimal(open));
+    point.setClose(new BigDecimal(close));
+    point.setHigh(new BigDecimal(high));
+    point.setLow(new BigDecimal(low));
+    point.setVolume(volume);
+    point.setAmount(new BigDecimal(amount));
+    return point;
   }
 }

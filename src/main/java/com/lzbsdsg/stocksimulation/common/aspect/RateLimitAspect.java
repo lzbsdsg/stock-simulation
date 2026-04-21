@@ -15,6 +15,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.aop.support.AopUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -44,6 +45,18 @@ public class RateLimitAspect {
   private final StringRedisTemplate stringRedisTemplate;
   private final RedisScript<List> rateLimitScript;
 
+  @Value("${app.ratelimit.enabled:true}")
+  private boolean rateLimitEnabled = true;
+
+  @Value("${app.ratelimit.limit-multiplier:1.0}")
+  private double limitMultiplier = 1.0;
+
+  @Value("${app.ratelimit.trust-identity-header:false}")
+  private boolean trustIdentityHeader = false;
+
+  @Value("${app.ratelimit.identity-header:X-RateLimit-Identity}")
+  private String identityHeader = "X-RateLimit-Identity";
+
   public RateLimitAspect(StringRedisTemplate stringRedisTemplate) {
     this.stringRedisTemplate = stringRedisTemplate;
     DefaultRedisScript<List> script = new DefaultRedisScript<>();
@@ -55,11 +68,12 @@ public class RateLimitAspect {
   @Around("@annotation(com.lzbsdsg.stocksimulation.common.annotation.RateLimit)")
   public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
     RateLimit rateLimit = resolveRateLimit(joinPoint);
-    if (rateLimit == null) {
+    if (rateLimit == null || !rateLimitEnabled) {
       return joinPoint.proceed();
     }
 
-    long capacity = rateLimit.limit() > 0 ? rateLimit.limit() : rateLimit.maxRequests();
+    long baseCapacity = rateLimit.limit() > 0 ? rateLimit.limit() : rateLimit.maxRequests();
+    long capacity = Math.max(1L, Math.round(baseCapacity * safeLimitMultiplier()));
     long windowSeconds =
         rateLimit.window() > 0
             ? rateLimit.window()
@@ -96,14 +110,22 @@ public class RateLimitAspect {
   }
 
   private String resolveIdentity() {
+    ServletRequestAttributes attributes =
+        (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+    if (trustIdentityHeader && attributes != null && identityHeader != null && !identityHeader.isBlank()) {
+      String identityByHeader = attributes.getRequest().getHeader(identityHeader);
+      if (identityByHeader != null && !identityByHeader.isBlank()) {
+        return identityByHeader.trim();
+      }
+    }
+
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     if (authentication != null
         && authentication.isAuthenticated()
         && !(authentication instanceof AnonymousAuthenticationToken)) {
       return authentication.getName();
     }
-    ServletRequestAttributes attributes =
-        (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+
     if (attributes == null) {
       return "anonymous";
     }
@@ -113,6 +135,13 @@ public class RateLimitAspect {
       return ip.split(",")[0].trim();
     }
     return request.getRemoteAddr();
+  }
+
+  private double safeLimitMultiplier() {
+    if (limitMultiplier <= 0) {
+      return 1.0;
+    }
+    return limitMultiplier;
   }
 
   private void setLimitHeaders(long limit, long remaining, long resetInSeconds) {

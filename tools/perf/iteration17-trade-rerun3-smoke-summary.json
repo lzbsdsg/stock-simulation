@@ -1,0 +1,160 @@
+{
+    "metrics": {
+        "hard_failure_rate": {
+            "passes": 717,
+            "fails": 2472,
+            "thresholds": {
+                "rate<0.01": true
+            },
+            "value": 0.22483537158984007
+        },
+        "vus_max": {
+            "value": 80,
+            "min": 80,
+            "max": 80
+        },
+        "http_req_sending": {
+            "avg": 0.12352583072100315,
+            "min": 0,
+            "med": 0,
+            "max": 21.7657,
+            "p(90)": 0,
+            "p(95)": 0.5458
+        },
+        "http_req_blocked": {
+            "p(95)": 1.2169149999999997,
+            "avg": 0.41925614420062685,
+            "min": 0,
+            "med": 0,
+            "max": 47.9941,
+            "p(90)": 1.08494
+        },
+        "iteration_duration": {
+            "avg": 1103.2699292535283,
+            "min": 1010.843,
+            "med": 1034.5026,
+            "max": 2494.8924,
+            "p(90)": 1187.6956200000002,
+            "p(95)": 1553.4125800000004
+        },
+        "vus": {
+            "max": 80,
+            "value": 66,
+            "min": 0
+        },
+        "http_reqs": {
+            "count": 3190,
+            "rate": 100.17064398918845
+        },
+        "http_req_waiting": {
+            "p(95)": 187.00480999999903,
+            "avg": 50.01197520376177,
+            "min": 3.0594,
+            "med": 10.2217,
+            "max": 10824.9105,
+            "p(90)": 57.88773999999996
+        },
+        "http_req_failed": {
+            "passes": 717,
+            "fails": 2473,
+            "value": 0.22476489028213167
+        },
+        "data_received": {
+            "count": 11885116,
+            "rate": 373209.94470414025
+        },
+        "http_req_duration{expected_response:true}": {
+            "avg": 61.70939450060675,
+            "min": 4.1869,
+            "med": 11.4027,
+            "max": 10828.2929,
+            "p(90)": 85.07220000000015,
+            "p(95)": 272.47090000000014
+        },
+        "http_req_connecting": {
+            "p(90)": 0.7405899999999993,
+            "p(95)": 1.1723149999999998,
+            "avg": 0.3050210344827588,
+            "min": 0,
+            "med": 0,
+            "max": 44.9333
+        },
+        "data_sent": {
+            "count": 889360,
+            "rate": 27927.198726716186
+        },
+        "http_req_receiving": {
+            "avg": 0.5827429153605023,
+            "min": 0,
+            "med": 0.5438,
+            "max": 9.1291,
+            "p(90)": 1.1199199999999998,
+            "p(95)": 1.3431399999999987
+        },
+        "http_req_tls_handshaking": {
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0
+        },
+        "checks": {
+            "passes": 3242,
+            "fails": 1434,
+            "value": 0.693327630453379
+        },
+        "iterations": {
+            "count": 1487,
+            "rate": 46.693964768627964
+        },
+        "http_req_duration": {
+            "p(95)": 187.80573499999917,
+            "avg": 50.71824394984336,
+            "min": 4.1869,
+            "med": 10.8733,
+            "max": 10828.2929,
+            "p(90)": 58.32203999999999,
+            "thresholds": {
+                "p(95)<1500": false,
+                "p(99)<2500": false
+            }
+        }
+    },
+    "root_group": {
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+                "place order status expected": {
+                    "name": "place order status expected",
+                    "path": "::place order status expected",
+                    "id": "9826a47349d3e4cfa8673888ba51ae2d",
+                    "passes": 770,
+                    "fails": 717
+                },
+                "place order has data": {
+                    "name": "place order has data",
+                    "path": "::place order has data",
+                    "id": "7d6754cf04499bd5ae3a51f26acec2d8",
+                    "passes": 770,
+                    "fails": 717
+                },
+                "list orders status 200": {
+                    "passes": 1487,
+                    "fails": 0,
+                    "name": "list orders status 200",
+                    "path": "::list orders status 200",
+                    "id": "cd835207113892f5ff4ef21724504695"
+                },
+                "cancel status expected": {
+                    "name": "cancel status expected",
+                    "path": "::cancel status expected",
+                    "id": "f2341d32070b9a4718ac8ebbd3d4eb3f",
+                    "passes": 215,
+                    "fails": 0
+                }
+            },
+        "name": ""
+    }
+}

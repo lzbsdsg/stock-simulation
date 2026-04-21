@@ -7,8 +7,8 @@ import com.lzbsdsg.stocksimulation.market.domain.service.QuoteMergePolicy;
 import jakarta.servlet.http.HttpServletResponse;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -25,7 +25,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 /**
  * 行情缓存网关（Redis）
  *
- * <p>L1 缓存：行情快照 TTL=5s，K线 TTL=60s
+ * <p>L1 缓存：行情快照 TTL=3s，K 线 TTL=15s；L2 Redis：K 线 TTL=60s
  */
 @Slf4j
 @Component
@@ -53,7 +53,8 @@ public class MarketCacheGateway {
   private static final long NULL_QUOTE_TTL_SECONDS = 30;
   private static final long KLINE_TTL_SECONDS = 60;
   private static final long STALE_QUOTE_TTL_SECONDS = 300;
-  private static final long LOAD_LOCK_TTL_SECONDS = 3;
+  private static final long QUOTE_LOAD_LOCK_TTL_SECONDS = 3;
+  private static final long KLINE_LOAD_LOCK_TTL_SECONDS = 30;
 
   public CacheResult<QuoteSnapshot> getQuote(String stockCode) {
     String normalizedCode = normalizeStockCode(stockCode);
@@ -63,16 +64,28 @@ public class MarketCacheGateway {
       if (isNullSentinel(l1)) {
         return CacheResult.nullHit(HIT_L1);
       }
-      return CacheResult.hit(castQuote(l1), HIT_L1);
+      try {
+        return CacheResult.hit(toQuoteSnapshot(l1), HIT_L1);
+      } catch (Exception ex) {
+        log.warn("Invalid quote L1 cache format for code={}, fallback to L2: {}", normalizedCode, ex.getMessage());
+        quoteCache.evict(normalizedCode);
+      }
     }
 
     Object l2 = redisTemplate.opsForValue().get(QUOTE_KEY_PREFIX + normalizedCode);
     if (l2 != null) {
-      quoteCache.put(normalizedCode, l2);
       if (isNullSentinel(l2)) {
+        quoteCache.put(normalizedCode, l2);
         return CacheResult.nullHit(HIT_L2);
       }
-      return CacheResult.hit(castQuote(l2), HIT_L2);
+      try {
+        QuoteSnapshot converted = toQuoteSnapshot(l2);
+        quoteCache.put(normalizedCode, converted);
+        return CacheResult.hit(converted, HIT_L2);
+      } catch (Exception ex) {
+        log.warn("Invalid quote L2 cache format for code={}, fallback to miss: {}", normalizedCode, ex.getMessage());
+        redisTemplate.delete(QUOTE_KEY_PREFIX + normalizedCode);
+      }
     }
 
     return CacheResult.miss();
@@ -140,13 +153,21 @@ public class MarketCacheGateway {
   }
 
   public boolean tryAcquireLoadLock(String stockCode) {
+    return tryAcquireLoadLock(stockCode, QUOTE_LOAD_LOCK_TTL_SECONDS);
+  }
+
+  public boolean tryAcquireKLineLoadLock(String cacheKey) {
+    return tryAcquireLoadLock(cacheKey, KLINE_LOAD_LOCK_TTL_SECONDS);
+  }
+
+  public boolean tryAcquireLoadLock(String stockCode, long ttlSeconds) {
     Boolean acquired =
         redisTemplate
             .opsForValue()
             .setIfAbsent(
                 LOAD_LOCK_KEY_PREFIX + normalizeStockCode(stockCode),
                 "1",
-                LOAD_LOCK_TTL_SECONDS,
+                ttlSeconds,
                 TimeUnit.SECONDS);
     return Boolean.TRUE.equals(acquired);
   }
@@ -156,23 +177,39 @@ public class MarketCacheGateway {
   }
 
   public void cacheKLine(String key, List<KLinePoint> kLineData) {
+    List<KLinePoint> cachedValue = List.copyOf(kLineData);
+    getKLineCache().put(key, cachedValue);
     redisTemplate
         .opsForValue()
-        .set(KLINE_KEY_PREFIX + key, kLineData, KLINE_TTL_SECONDS, TimeUnit.SECONDS);
+        .set(KLINE_KEY_PREFIX + key, cachedValue, KLINE_TTL_SECONDS, TimeUnit.SECONDS);
   }
 
   @SuppressWarnings("unchecked")
   public List<KLinePoint> getCachedKLine(String key) {
+    Cache kLineCache = getKLineCache();
+    Object l1 = kLineCache.get(key, Object.class);
+    if (l1 != null) {
+      try {
+        return toKLinePointList(l1);
+      } catch (Exception ex) {
+        log.warn("Invalid kline L1 cache format for key={}, fallback to L2: {}", key, ex.getMessage());
+        kLineCache.evict(key);
+      }
+    }
+
     String redisKey = KLINE_KEY_PREFIX + key;
     Object cached = redisTemplate.opsForValue().get(redisKey);
     if (cached == null) {
       return null;
     }
     try {
-      return toKLinePointList(cached);
+      List<KLinePoint> converted = toKLinePointList(cached);
+      kLineCache.put(key, converted);
+      return converted;
     } catch (Exception ex) {
       // 兼容历史缓存结构（例如 LinkedHashMap 列表）导致的反序列化问题，降级为 miss 并清理脏缓存。
       log.warn("Invalid kline cache format for key={}, fallback to miss: {}", redisKey, ex.getMessage());
+      kLineCache.evict(key);
       redisTemplate.delete(redisKey);
       return null;
     }
@@ -202,6 +239,14 @@ public class MarketCacheGateway {
     return cache;
   }
 
+  private Cache getKLineCache() {
+    Cache cache = cacheManager.getCache(CaffeineConfig.CACHE_KLINE);
+    if (cache == null) {
+      throw new IllegalStateException("kline cache region not configured");
+    }
+    return cache;
+  }
+
   private boolean isNullSentinel(Object value) {
     return NULL_SENTINEL.equals(value);
   }
@@ -211,6 +256,16 @@ public class MarketCacheGateway {
       return quoteSnapshot;
     }
     return null;
+  }
+
+  private QuoteSnapshot toQuoteSnapshot(Object cached) {
+    if (cached instanceof QuoteSnapshot quoteSnapshot) {
+      return quoteSnapshot;
+    }
+    if (cached instanceof Map<?, ?> mapItem) {
+      return fromQuoteMap(mapItem);
+    }
+    throw new IllegalStateException("quote cache type unsupported: " + cached.getClass().getName());
   }
 
   private List<KLinePoint> toKLinePointList(Object cached) {
@@ -245,6 +300,26 @@ public class MarketCacheGateway {
     return point;
   }
 
+  private QuoteSnapshot fromQuoteMap(Map<?, ?> mapItem) {
+    QuoteSnapshot snapshot = new QuoteSnapshot();
+    snapshot.setStockCode(parseString(mapItem.get("stockCode")));
+    snapshot.setStockName(parseString(mapItem.get("stockName")));
+    snapshot.setCurrentPrice(parseBigDecimal(mapItem.get("currentPrice")));
+    snapshot.setOpenPrice(parseBigDecimal(mapItem.get("openPrice")));
+    snapshot.setClosePrice(parseBigDecimal(mapItem.get("closePrice")));
+    snapshot.setHighPrice(parseBigDecimal(mapItem.get("highPrice")));
+    snapshot.setLowPrice(parseBigDecimal(mapItem.get("lowPrice")));
+    snapshot.setVolume(parseLong(mapItem.get("volume")));
+    snapshot.setAmount(parseBigDecimal(mapItem.get("amount")));
+    snapshot.setChangePercent(parseBigDecimal(mapItem.get("changePercent")));
+    snapshot.setUpperLimitPrice(parseBigDecimal(mapItem.get("upperLimitPrice")));
+    snapshot.setLowerLimitPrice(parseBigDecimal(mapItem.get("lowerLimitPrice")));
+    snapshot.setTimestamp(parseLocalDateTime(mapItem.get("timestamp")));
+    snapshot.setSource(parseString(mapItem.get("source")));
+    snapshot.setSourceTimestamp(parseLocalDateTime(mapItem.get("sourceTimestamp")));
+    return snapshot;
+  }
+
   private LocalDate parseLocalDate(Object value) {
     if (value == null) {
       return null;
@@ -257,6 +332,20 @@ public class MarketCacheGateway {
       return null;
     }
     return LocalDate.parse(text);
+  }
+
+  private LocalDateTime parseLocalDateTime(Object value) {
+    if (value == null) {
+      return null;
+    }
+    if (value instanceof LocalDateTime localDateTime) {
+      return localDateTime;
+    }
+    String text = String.valueOf(value).trim();
+    if (text.isBlank()) {
+      return null;
+    }
+    return LocalDateTime.parse(text);
   }
 
   private BigDecimal parseBigDecimal(Object value) {
@@ -285,6 +374,14 @@ public class MarketCacheGateway {
       return 0L;
     }
     return Long.parseLong(text);
+  }
+
+  private String parseString(Object value) {
+    if (value == null) {
+      return null;
+    }
+    String text = String.valueOf(value).trim();
+    return text.isBlank() ? null : text;
   }
 
   public record CacheResult<T>(T value, String status, boolean hit, boolean nullValue) {
