@@ -30,8 +30,8 @@ const watchlistStore = useWatchlistStore()
 const KLineChart = defineAsyncComponent(() => import('@/components/market/KLineChart.vue'))
 const period = ref<KLinePeriod>('DAILY')
 const rangePreset = ref<RangePreset>('1Y')
-let refreshTimer: number | null = null
 let marketRefreshTimer: number | null = null
+let visibilityHandler: (() => void) | null = null
 let lastKlineRefreshAt = 0
 
 const stockCode = computed(() => String(route.params.stockCode || '').toLowerCase())
@@ -42,6 +42,9 @@ const statusPillClass = computed(() => {
     return 'pill-risk'
   }
   return 'pill-safe'
+})
+const shouldUseQuotePolling = computed(() => {
+  return marketStore.wsStatus !== 'CONNECTED' || marketStore.wsDegraded
 })
 
 async function loadDetail(code: string): Promise<void> {
@@ -103,48 +106,47 @@ watch(
   },
 )
 
+watch(
+  () => shouldUseQuotePolling.value,
+  (enabled) => {
+    if (enabled) {
+      startMarketRefresh()
+      return
+    }
+    stopMarketRefresh()
+  },
+)
+
 onMounted(async () => {
   marketStore.connectRealtime()
   await loadDetail(stockCode.value)
-  void Promise.all([tradeStore.loadOrders(), tradeStore.loadTrades()]).catch(() => undefined)
+  void tradeStore.refreshTradeData().catch(() => undefined)
   void watchlistStore
     .load()
     .then(() => {
       marketStore.setWatchlistCodes(watchlistStore.items.map((item) => item.stockCode))
     })
     .catch(() => undefined)
-  startAutoRefresh()
-  startMarketRefresh()
+  if (shouldUseQuotePolling.value) {
+    startMarketRefresh()
+  }
+  visibilityHandler = () => {
+    if (document.visibilityState !== 'visible') {
+      return
+    }
+    void refreshMarketPanels().catch(() => undefined)
+    void tradeStore.refreshTradeData().catch(() => undefined)
+  }
+  document.addEventListener('visibilitychange', visibilityHandler)
 })
 
 onBeforeUnmount(() => {
-  stopAutoRefresh()
   stopMarketRefresh()
+  if (visibilityHandler) {
+    document.removeEventListener('visibilitychange', visibilityHandler)
+    visibilityHandler = null
+  }
 })
-
-function startAutoRefresh(): void {
-  if (refreshTimer !== null) {
-    return
-  }
-  refreshTimer = window.setInterval(() => {
-    if (tradeStore.loadingOrders || tradeStore.loadingTrades || tradeStore.placingOrder) {
-      return
-    }
-    void refreshTradePanels().catch(() => undefined)
-  }, 3000)
-}
-
-function stopAutoRefresh(): void {
-  if (refreshTimer === null) {
-    return
-  }
-  window.clearInterval(refreshTimer)
-  refreshTimer = null
-}
-
-async function refreshTradePanels(): Promise<void> {
-  await Promise.all([tradeStore.loadOrders(), tradeStore.loadTrades()])
-}
 
 function startMarketRefresh(): void {
   if (marketRefreshTimer !== null) {
@@ -152,6 +154,9 @@ function startMarketRefresh(): void {
   }
 
   marketRefreshTimer = window.setInterval(() => {
+    if (!shouldUseQuotePolling.value) {
+      return
+    }
     void refreshMarketPanels().catch(() => undefined)
   }, DETAIL_QUOTE_POLL_MS)
 }
@@ -170,10 +175,12 @@ async function refreshMarketPanels(): Promise<void> {
     return
   }
 
-  await marketStore.loadQuote(code, {
-    preferCache: false,
-    backgroundRefresh: false,
-  })
+  if (shouldUseQuotePolling.value) {
+    await marketStore.loadQuote(code, {
+      preferCache: false,
+      backgroundRefresh: false,
+    })
+  }
 
   const now = Date.now()
   if (now - lastKlineRefreshAt < DETAIL_KLINE_REFRESH_MS) {
@@ -259,14 +266,35 @@ async function addCurrentStockToWatchlist(): Promise<void> {
           <span class="panel-tag">{{ marketStore.wsStatus }}</span>
         </div>
 
-        <el-alert
-          v-if="marketStore.wsDegraded"
-          type="warning"
-          :closable="false"
-          title="检测到推送延迟超过5秒，页面已进入降级展示。"
-          show-icon
-        />
-        <el-alert v-else type="success" :closable="false" title="实时链路正常，数据持续更新中。" show-icon />
+        <el-descriptions :column="1" border>
+          <el-descriptions-item label="推送延迟">
+            <span class="mono-number">{{ marketStore.wsLagMs }} ms</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="行情刷新方式">
+            {{ shouldUseQuotePolling ? '降级轮询兜底' : '原生 WebSocket 实时推送' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="当前代码">
+            <span class="mono-number">{{ stockCode.toUpperCase() }}</span>
+          </el-descriptions-item>
+        </el-descriptions>
+
+        <div class="status-tip-stack">
+          <el-alert
+            v-if="marketStore.wsDegraded"
+            type="warning"
+            :closable="false"
+            title="检测到推送延迟超过5秒，页面已切换为降级轮询。"
+            show-icon
+          />
+          <el-alert
+            v-else-if="marketStore.wsStatus !== 'CONNECTED'"
+            type="info"
+            :closable="false"
+            title="实时链路未连接，页面使用轮询兜底。"
+            show-icon
+          />
+          <el-alert v-else type="success" :closable="false" title="实时链路正常，页面以原生 WebSocket 为主。" show-icon />
+        </div>
       </section>
     </section>
 
@@ -300,7 +328,7 @@ async function addCurrentStockToWatchlist(): Promise<void> {
     </section>
 
     <section class="detail-trade-grid">
-      <OrderForm :stock-code="stockCode" @placed="refreshTradePanels" />
+      <OrderForm :stock-code="stockCode" />
       <OrderList />
       <TradeHistory />
     </section>
@@ -327,6 +355,12 @@ async function addCurrentStockToWatchlist(): Promise<void> {
 .detail-trade-grid {
   display: grid;
   gap: 14px;
+}
+
+.status-tip-stack {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 @media (max-width: 1080px) {

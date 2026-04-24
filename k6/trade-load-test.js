@@ -16,8 +16,14 @@ const HEALTH_PATH = __ENV.HEALTH_PATH || '/actuator/health';
 const HEALTH_TIMEOUT = __ENV.HEALTH_TIMEOUT || '15s';
 const RATE_LIMIT_IDENTITY_PREFIX = __ENV.RATE_LIMIT_IDENTITY_PREFIX || 'k6-trade';
 const AUTO_ORDER_PRICE = (__ENV.AUTO_ORDER_PRICE || 'true').toLowerCase() === 'true';
+const K6_USER_ID_BASE = Number(__ENV.K6_USER_ID_BASE || '1000');
+const K6_USER_ID_SPAN = Math.max(Number(__ENV.K6_USER_ID_SPAN || '200'), 1);
 
 const hardFailureRate = new Rate('hard_failure_rate');
+
+if (ACCEPT_429) {
+  http.setResponseCallback(http.expectedStatuses(200, 429));
+}
 
 const thresholds = {
   http_req_duration: ['p(95)<1500', 'p(99)<2500'],
@@ -36,6 +42,10 @@ export const options = {
   thresholds,
 };
 
+function effectiveUserId() {
+  return K6_USER_ID_BASE + ((__VU - 1) % K6_USER_ID_SPAN);
+}
+
 function authHeaders() {
   const headers = {
     'Content-Type': 'application/json',
@@ -46,12 +56,13 @@ function authHeaders() {
   }
   if (K6_BYPASS_KEY) {
     headers['X-K6-Bypass-Key'] = K6_BYPASS_KEY;
+    headers['X-K6-Bypass-User-Id'] = String(effectiveUserId());
   }
   return headers;
 }
 
 function buildClientOrderId() {
-  return `k6-${Date.now()}-${__VU}-${__ITER}`;
+  return `k6-${effectiveUserId()}-${Date.now()}-${__VU}-${__ITER}`;
 }
 
 function isNetworkOrServerFailure(res) {

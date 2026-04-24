@@ -8,7 +8,8 @@ import type { KLinePeriod, KLinePoint, MarketListedItem, Quote } from '@/types/m
 
 const DEFAULT_CODES = ['sh600519', 'sz000001', 'sh601318', 'sh600036']
 const LISTED_UNIVERSE_CACHE_TTL_MS = 10 * 60 * 1000
-const VISIBLE_CODES_HEARTBEAT_MS = 5000
+const VISIBLE_CODES_HEARTBEAT_MS = 15000
+const MARKET_NATIVE_ENDPOINT = '/ws/market-native'
 
 interface LoadKLineOptions {
   preferCache?: boolean
@@ -64,7 +65,7 @@ export const useMarketStore = defineStore('market', () => {
   const authStore = useAuthStore()
 
   const ws = useWebSocket({
-    endpoint: '/ws/market',
+    endpoint: MARKET_NATIVE_ENDPOINT,
     getToken: () => authStore.accessToken || null,
     onQuotes: (quotes) => {
       mergeQuotes(quotes)
@@ -192,8 +193,19 @@ export const useMarketStore = defineStore('market', () => {
     return Array.from(new Set(merged.filter((code) => code.length > 0)))
   }
 
+  function shouldReportVisibleCodes(): boolean {
+    if (typeof document === 'undefined') {
+      return true
+    }
+    return document.visibilityState === 'visible' && statusAllowsHeartbeat()
+  }
+
+  function statusAllowsHeartbeat(): boolean {
+    return ws.status.value === 'CONNECTED' || ws.status.value === 'CONNECTING'
+  }
+
   async function reportVisibleCodes(): Promise<void> {
-    if (!authStore.isAuthenticated) {
+    if (!authStore.isAuthenticated || !shouldReportVisibleCodes()) {
       return
     }
     const visibleCodes = collectVisibleCodes()
@@ -213,6 +225,9 @@ export const useMarketStore = defineStore('market', () => {
     }
     void reportVisibleCodes()
     visibleHeartbeatTimer = window.setInterval(() => {
+      if (!shouldReportVisibleCodes()) {
+        return
+      }
       void reportVisibleCodes()
     }, VISIBLE_CODES_HEARTBEAT_MS)
   }

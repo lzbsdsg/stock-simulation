@@ -43,8 +43,8 @@ public class MarketDataFacade {
   private final Counter quoteCacheHitL2Counter;
   private final Map<String, ProviderCircuitBreaker> circuitBreakers = new ConcurrentHashMap<>();
   private static final long PROVIDER_READ_TIMEOUT_MS = 1200L;
-  private static final int QUOTE_CACHE_WAIT_RETRIES = 3;
-  private static final long QUOTE_CACHE_WAIT_MILLIS = 50L;
+  private static final int QUOTE_CACHE_WAIT_RETRIES = 2;
+  private static final long QUOTE_CACHE_WAIT_MILLIS = 25L;
   private static final int KLINE_CACHE_WAIT_RETRIES = 12;
   private static final long KLINE_CACHE_WAIT_MILLIS = 80L;
 
@@ -90,8 +90,14 @@ public class MarketDataFacade {
       return cacheResult.value();
     }
 
+    QuoteSnapshot staleQuote = marketCacheGateway.getStaleQuote(normalizedCode);
     boolean acquiredLock = marketCacheGateway.tryAcquireLoadLock(normalizedCode);
     if (!acquiredLock) {
+      if (staleQuote != null) {
+        marketCacheGateway.setCacheStatusHeader(MarketCacheGateway.STALE);
+        return staleQuote;
+      }
+
       MarketCacheGateway.CacheResult<QuoteSnapshot> lockWaitResult =
           waitForQuoteCacheFill(normalizedCode, QUOTE_CACHE_WAIT_RETRIES, QUOTE_CACHE_WAIT_MILLIS);
       if (lockWaitResult.hit()) {
@@ -103,10 +109,10 @@ public class MarketDataFacade {
         return lockWaitResult.value();
       }
 
-      QuoteSnapshot staleWhenWaiting = marketCacheGateway.getStaleQuote(normalizedCode);
-      if (staleWhenWaiting != null) {
+      staleQuote = marketCacheGateway.getStaleQuote(normalizedCode);
+      if (staleQuote != null) {
         marketCacheGateway.setCacheStatusHeader(MarketCacheGateway.STALE);
-        return staleWhenWaiting;
+        return staleQuote;
       }
     }
 
@@ -123,16 +129,22 @@ public class MarketDataFacade {
       }
     }
 
-    QuoteSnapshot staleQuote = marketCacheGateway.getStaleQuote(normalizedCode);
     if (staleQuote != null) {
       marketCacheGateway.setCacheStatusHeader(MarketCacheGateway.STALE);
       return staleQuote;
+    }
+
+    QuoteSnapshot fallbackStale = marketCacheGateway.getStaleQuote(normalizedCode);
+    if (fallbackStale != null) {
+      marketCacheGateway.setCacheStatusHeader(MarketCacheGateway.STALE);
+      return fallbackStale;
     }
 
     marketCacheGateway.cacheNullQuote(normalizedCode);
     marketCacheGateway.setCacheStatusHeader(MarketCacheGateway.MISS);
     throw new BizException(ErrorCode.MARKET_STOCK_NOT_FOUND);
   }
+
 
   /** 批量获取行情 */
   public List<QuoteSnapshot> batchGetQuotes(List<String> stockCodes) {
@@ -143,6 +155,7 @@ public class MarketDataFacade {
     }
 
     Map<String, QuoteSnapshot> resolvedQuotes = new LinkedHashMap<>();
+    Map<String, QuoteSnapshot> staleQuotes = new HashMap<>();
     List<String> misses = new ArrayList<>();
     boolean hasL2Hit = false;
 
@@ -157,9 +170,14 @@ public class MarketDataFacade {
         if (MarketCacheGateway.HIT_L2.equals(cacheResult.status())) {
           hasL2Hit = true;
         }
-      } else {
-        misses.add(code);
+        continue;
       }
+
+      QuoteSnapshot stale = marketCacheGateway.getStaleQuote(code);
+      if (stale != null) {
+        staleQuotes.put(code, stale);
+      }
+      misses.add(code);
     }
 
     boolean hasStale = false;
@@ -173,7 +191,7 @@ public class MarketDataFacade {
           continue;
         }
 
-        QuoteSnapshot stale = marketCacheGateway.getStaleQuote(missCode);
+        QuoteSnapshot stale = staleQuotes.get(missCode);
         if (stale != null) {
           resolvedQuotes.put(missCode, stale);
           hasStale = true;

@@ -34,12 +34,17 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
+      timeout: ${REDIS_TIMEOUT:2000ms}
       database: 0
       lettuce:
+        cluster:
+          refresh:
+            adaptive: ${REDIS_CLUSTER_REFRESH_ADAPTIVE:true}
+            period: ${REDIS_CLUSTER_REFRESH_PERIOD:30s}
         pool:
-          max-active: 16
-          max-idle: 8
-          min-idle: 2
+          max-active: ${REDIS_POOL_MAX_ACTIVE:64}
+          max-idle: ${REDIS_POOL_MAX_IDLE:32}
+          min-idle: ${REDIS_POOL_MIN_IDLE:8}
 
   # ---- RabbitMQ ----
   rabbitmq:
@@ -114,6 +119,9 @@ trade:
 
 # ---- 行情采样开关 ----
 market:
+  visible-codes:
+    report-min-interval-ms: ${MARKET_VISIBLE_CODES_REPORT_MIN_INTERVAL_MS:1200}
+    cleanup-interval-ms: ${MARKET_VISIBLE_CODES_CLEANUP_INTERVAL_MS:60000}
   kline:
     # 东方财富历史K线复权模式: 0=不复权, 1=前复权, 2=后复权
     fqt: ${MARKET_KLINE_FQT:1}
@@ -139,6 +147,8 @@ market:
     quote-destination-prefix: ${MARKET_WS_QUOTE_DESTINATION_PREFIX:/topic/market/quote/}
     backpressure-queue-depth: ${MARKET_WS_BACKPRESSURE_QUEUE_DEPTH:1000}
     payload-bytes-limit: ${MARKET_WS_PAYLOAD_BYTES_LIMIT:65536}
+    payload-size-check-enabled: ${MARKET_WS_PAYLOAD_SIZE_CHECK_ENABLED:false}
+    attach-push-timestamp: ${MARKET_WS_ATTACH_PUSH_TIMESTAMP:false}
     push-interval-ms: ${MARKET_WS_PUSH_INTERVAL_MS:200}
     degraded-push-interval-ms: ${MARKET_WS_DEGRADED_PUSH_INTERVAL_MS:1000}
     degrade-lag-threshold-ms: ${MARKET_WS_DEGRADE_LAG_THRESHOLD_MS:5000}

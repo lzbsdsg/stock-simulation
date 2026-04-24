@@ -64,6 +64,7 @@ public class PortfolioApplicationService {
    *
    * <p>总资产 = 可用资金 + 冻结资金 + 持仓市值
    */
+  @ReadOnly
   public OverviewVO getOverview() {
     Long userId = currentUserId();
     Account account =
@@ -115,6 +116,7 @@ public class PortfolioApplicationService {
   }
 
   /** 获取持仓列表（含实时盈亏） */
+  @ReadOnly
   public PageResult<PositionVO> getPositions(int page, int size) {
     Long userId = currentUserId();
     int safePage = sanitizePage(page);

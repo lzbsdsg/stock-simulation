@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./mvnw *)",
+      "Bash(npm *)",
+      "Bash(docker compose *)",
+      "Bash(docker exec stock-pg-master *)",
+      "Bash(docker exec *)",
+      "Bash(curl *)"
+    ]
+  }
+}

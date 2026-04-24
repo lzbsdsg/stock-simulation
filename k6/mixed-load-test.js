@@ -16,6 +16,8 @@ const PORTFOLIO_RATIO = Number(__ENV.PORTFOLIO_RATIO || '0.10');
 const REQUEST_SLEEP = Number(__ENV.REQUEST_SLEEP || '0.5');
 const PORTFOLIO_PAGE_SIZE = Number(__ENV.PORTFOLIO_PAGE_SIZE || '20');
 const RATE_LIMIT_IDENTITY_PREFIX = __ENV.RATE_LIMIT_IDENTITY_PREFIX || 'k6-mixed';
+const K6_USER_ID_BASE = Number(__ENV.K6_USER_ID_BASE || '1000');
+const K6_USER_ID_SPAN = Math.max(Number(__ENV.K6_USER_ID_SPAN || '200'), 1);
 
 export const options = {
   vus: VUS,
@@ -25,6 +27,14 @@ export const options = {
     http_req_duration: ['p(99)<300'],
   },
 };
+
+if (ACCEPT_429) {
+  http.setResponseCallback(http.expectedStatuses(200, 429));
+}
+
+function effectiveUserId() {
+  return K6_USER_ID_BASE + ((__VU - 1) % K6_USER_ID_SPAN);
+}
 
 function authHeaders() {
   const headers = {
@@ -36,12 +46,13 @@ function authHeaders() {
   }
   if (K6_BYPASS_KEY) {
     headers['X-K6-Bypass-Key'] = K6_BYPASS_KEY;
+    headers['X-K6-Bypass-User-Id'] = String(effectiveUserId());
   }
   return headers;
 }
 
 function randomClientOrderId() {
-  return `k6-mix-${Date.now()}-${__VU}-${__ITER}-${Math.floor(Math.random() * 10000)}`;
+  return `k6-mix-${effectiveUserId()}-${Date.now()}-${__VU}-${__ITER}-${Math.floor(Math.random() * 10000)}`;
 }
 
 function hitMarket() {
@@ -50,7 +61,8 @@ function hitMarket() {
     tags: { endpoint: 'market-quote' },
   });
   check(quoteRes, {
-    'mixed quote status expected': (r) => (ACCEPT_429 ? r.status === 200 || r.status === 429 : r.status === 200),
+    'mixed quote status expected': (r) =>
+      ACCEPT_429 ? r.status === 200 || r.status === 429 : r.status === 200,
   });
 
   const quotesRes = http.get(`${BASE_URL}/api/v1/market/quotes?codes=${STOCK_CODE}&codes=sz000001`, {
@@ -58,7 +70,8 @@ function hitMarket() {
     tags: { endpoint: 'market-quotes' },
   });
   check(quotesRes, {
-    'mixed quotes status expected': (r) => (ACCEPT_429 ? r.status === 200 || r.status === 429 : r.status === 200),
+    'mixed quotes status expected': (r) =>
+      ACCEPT_429 ? r.status === 200 || r.status === 429 : r.status === 200,
   });
 
   const searchRes = http.get(`${BASE_URL}/api/v1/market/search?keyword=%E8%8C%85%E5%8F%B0`, {
@@ -66,7 +79,8 @@ function hitMarket() {
     tags: { endpoint: 'market-search' },
   });
   check(searchRes, {
-    'mixed search status expected': (r) => (ACCEPT_429 ? r.status === 200 || r.status === 429 : r.status === 200),
+    'mixed search status expected': (r) =>
+      ACCEPT_429 ? r.status === 200 || r.status === 429 : r.status === 200,
   });
 }
 
@@ -76,7 +90,8 @@ function hitPortfolio() {
     tags: { endpoint: 'portfolio-overview' },
   });
   check(overviewRes, {
-    'mixed overview status expected': (r) => (ACCEPT_429 ? r.status === 200 || r.status === 429 : r.status === 200),
+    'mixed overview status expected': (r) =>
+      ACCEPT_429 ? r.status === 200 || r.status === 429 : r.status === 200,
   });
 
   const positionsRes = http.get(`${BASE_URL}/api/v1/portfolio/positions?page=1&size=${PORTFOLIO_PAGE_SIZE}`, {
@@ -84,7 +99,8 @@ function hitPortfolio() {
     tags: { endpoint: 'portfolio-positions' },
   });
   check(positionsRes, {
-    'mixed positions status expected': (r) => (ACCEPT_429 ? r.status === 200 || r.status === 429 : r.status === 200),
+    'mixed positions status expected': (r) =>
+      ACCEPT_429 ? r.status === 200 || r.status === 429 : r.status === 200,
   });
 }
 

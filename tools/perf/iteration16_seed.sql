@@ -1,19 +1,37 @@
 -- Iteration 16 performance seed data
 -- Idempotent inserts for benchmark only.
 
-INSERT INTO t_user(email, password_hash, nickname, avatar_url, status, role, failed_attempts, created_at, updated_at)
+INSERT INTO t_user(id, email, password_hash, nickname, avatar_url, status, role, failed_attempts, created_at, updated_at)
 SELECT
+  1000 + gs - 1,
   format('bench_user_%s@example.com', gs),
   'bench_hash',
   format('bench_user_%s', gs),
   NULL,
-  CASE WHEN gs % 20 = 0 THEN 'DISABLED' ELSE 'ACTIVE' END,
-  CASE WHEN gs % 25 = 0 THEN 'ADMIN' ELSE 'USER' END,
+  'ACTIVE',
+  'USER',
   0,
   NOW() - (gs || ' minutes')::interval,
   NOW() - (gs || ' minutes')::interval
-FROM generate_series(1, 20000) gs
-ON CONFLICT (email) DO NOTHING;
+FROM generate_series(1, 2000) gs
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO t_user_account(user_id, initial_balance, available_balance, frozen_balance, version, created_at, updated_at)
+SELECT
+  1000 + gs - 1,
+  100000000.00,
+  100000000.00,
+  0.00,
+  0,
+  NOW() - (gs || ' minutes')::interval,
+  NOW() - (gs || ' minutes')::interval
+FROM generate_series(1, 2000) gs
+ON CONFLICT (user_id) DO UPDATE SET
+  initial_balance = EXCLUDED.initial_balance,
+  available_balance = EXCLUDED.available_balance,
+  frozen_balance = EXCLUDED.frozen_balance,
+  version = 0,
+  updated_at = NOW();
 
 INSERT INTO t_trade_order(
   user_id, client_order_id, stock_code, stock_name, side, order_type, status,
@@ -21,7 +39,7 @@ INSERT INTO t_trade_order(
   created_at, updated_at
 )
 SELECT
-  1,
+  1000 + ((gs - 1) % 2000),
   format('bench-order-%s', gs),
   'sh600519',
   'bench-stock',
@@ -75,11 +93,11 @@ INSERT INTO t_portfolio_position(
   frozen_quantity, cost_price, total_cost, frozen_until, version, created_at, updated_at
 )
 SELECT
-  1,
+  1000 + ((gs - 1) % 2000),
   format('bench%s', lpad(gs::text, 6, '0')),
   format('bench-stock-%s', gs),
-  CASE WHEN gs % 3 = 0 THEN 0 ELSE 100 + (gs % 1000) END,
-  CASE WHEN gs % 3 = 0 THEN 0 ELSE 100 + (gs % 1000) END,
+  100 + (gs % 1000),
+  100 + (gs % 1000),
   0,
   10 + (gs % 90),
   1000 + (gs % 9000),
@@ -91,6 +109,7 @@ FROM generate_series(1, 30000) gs
 ON CONFLICT (user_id, stock_code) DO NOTHING;
 
 ANALYZE t_user;
+ANALYZE t_user_account;
 ANALYZE t_trade_order;
 ANALYZE t_trade_record;
 ANALYZE t_portfolio_position;

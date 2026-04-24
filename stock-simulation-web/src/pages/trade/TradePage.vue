@@ -9,7 +9,7 @@ import { useTradeStore } from '@/stores/trade'
 import { formatPrice } from '@/utils/format'
 
 const tradeStore = useTradeStore()
-let refreshTimer: number | null = null
+let visibilityHandler: (() => void) | null = null
 
 const pendingOrders = computed(
   () => tradeStore.orders.filter((item) => item.status === 'PENDING' || item.status === 'PARTIAL_FILLED').length,
@@ -27,8 +27,14 @@ const lastTradeInfo = computed(() => {
 
 onMounted(async () => {
   try {
-    await Promise.all([tradeStore.loadOrders(), tradeStore.loadTrades()])
-    startAutoRefresh()
+    await tradeStore.refreshTradeData()
+    visibilityHandler = () => {
+      if (document.visibilityState !== 'visible') {
+        return
+      }
+      void refreshAll().catch(() => undefined)
+    }
+    document.addEventListener('visibilitychange', visibilityHandler)
   } catch (error) {
     const message = error instanceof Error ? error.message : '交易数据加载失败'
     ElMessage.error(message)
@@ -36,31 +42,14 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
-  stopAutoRefresh()
+  if (visibilityHandler) {
+    document.removeEventListener('visibilitychange', visibilityHandler)
+    visibilityHandler = null
+  }
 })
 
-function startAutoRefresh(): void {
-  if (refreshTimer !== null) {
-    return
-  }
-  refreshTimer = window.setInterval(() => {
-    if (tradeStore.loadingOrders || tradeStore.loadingTrades || tradeStore.placingOrder) {
-      return
-    }
-    void refreshAll().catch(() => undefined)
-  }, 3000)
-}
-
-function stopAutoRefresh(): void {
-  if (refreshTimer === null) {
-    return
-  }
-  window.clearInterval(refreshTimer)
-  refreshTimer = null
-}
-
 async function refreshAll(): Promise<void> {
-  await Promise.all([tradeStore.loadOrders(), tradeStore.loadTrades()])
+  await tradeStore.refreshTradeData()
 }
 </script>
 
@@ -93,7 +82,7 @@ async function refreshAll(): Promise<void> {
 
     <section class="trade-main-grid">
       <div class="trade-left-column">
-        <OrderForm @placed="refreshAll" />
+        <OrderForm />
 
         <section class="section-card trade-tips-panel">
           <div class="section-card-head">

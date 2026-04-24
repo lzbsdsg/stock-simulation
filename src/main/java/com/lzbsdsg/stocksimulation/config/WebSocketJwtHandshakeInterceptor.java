@@ -16,6 +16,7 @@ import org.springframework.web.socket.server.HandshakeInterceptor;
 public class WebSocketJwtHandshakeInterceptor implements HandshakeInterceptor {
 
   private static final String K6_BYPASS_HEADER = "X-K6-Bypass-Key";
+  private static final String K6_BYPASS_USER_ID_HEADER = "X-K6-Bypass-User-Id";
 
   private final JwtTokenProvider jwtTokenProvider;
   private final MarketWebSocketSessionRegistry sessionRegistry;
@@ -51,7 +52,7 @@ public class WebSocketJwtHandshakeInterceptor implements HandshakeInterceptor {
         && k6BypassKey != null
         && !k6BypassKey.isBlank()
         && k6BypassKey.equals(bypassKey)) {
-      attributes.put("wsUserId", String.valueOf(k6BypassUserId));
+      attributes.put("wsUserId", resolveBypassUserId(request));
       return true;
     }
 
@@ -94,5 +95,17 @@ public class WebSocketJwtHandshakeInterceptor implements HandshakeInterceptor {
       }
     }
     return null;
+  }
+
+  private String resolveBypassUserId(ServerHttpRequest request) {
+    String headerValue = request.getHeaders().getFirst(K6_BYPASS_USER_ID_HEADER);
+    if (headerValue == null || headerValue.isBlank()) {
+      return String.valueOf(k6BypassUserId);
+    }
+    try {
+      return String.valueOf(Long.parseLong(headerValue.trim()));
+    } catch (NumberFormatException ex) {
+      return String.valueOf(k6BypassUserId);
+    }
   }
 }

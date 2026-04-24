@@ -38,6 +38,8 @@ public class MarketWebSocketHandler {
   private final int degradeLagThresholdMs;
   private final int normalDrainBatchSize;
   private final int degradedDrainBatchSize;
+  private final boolean payloadSizeCheckEnabled;
+  private final boolean attachPushTimestamp;
 
   // Maintain insertion order and coalesce by stock code to keep only the latest pending quote per symbol.
   private final LinkedHashMap<String, PushTask> pushQueue = new LinkedHashMap<>();
@@ -63,7 +65,9 @@ public class MarketWebSocketHandler {
       @Value("${market.websocket.degraded-push-interval-ms:10000}") int degradedPushIntervalMs,
       @Value("${market.websocket.degrade-lag-threshold-ms:5000}") int degradeLagThresholdMs,
       @Value("${market.websocket.drain-batch-size:32}") int normalDrainBatchSize,
-      @Value("${market.websocket.degraded-drain-batch-size:128}") int degradedDrainBatchSize) {
+      @Value("${market.websocket.degraded-drain-batch-size:128}") int degradedDrainBatchSize,
+      @Value("${market.websocket.payload-size-check-enabled:false}") boolean payloadSizeCheckEnabled,
+      @Value("${market.websocket.attach-push-timestamp:false}") boolean attachPushTimestamp) {
     this.messagingTemplate = messagingTemplate;
     this.objectMapper = objectMapper;
     this.sessionRegistry = sessionRegistry;
@@ -78,6 +82,8 @@ public class MarketWebSocketHandler {
     this.degradeLagThresholdMs = degradeLagThresholdMs;
     this.normalDrainBatchSize = Math.max(1, normalDrainBatchSize);
     this.degradedDrainBatchSize = Math.max(this.normalDrainBatchSize, degradedDrainBatchSize);
+    this.payloadSizeCheckEnabled = payloadSizeCheckEnabled;
+    this.attachPushTimestamp = attachPushTimestamp;
     this.wsPushDroppedCounter = meterRegistry.counter("ws_push_dropped_total");
     this.wsQueueDelayTimer = Timer.builder(WS_QUEUE_DELAY_TIMER_METRIC)
         .description("Queue waiting delay before websocket send")
@@ -171,7 +177,7 @@ public class MarketWebSocketHandler {
 
     for (PushTask taskToSend : tasksToSend) {
       String destination = quoteDestinationPrefix + taskToSend.stockCode();
-      Object payloadToSend = enrichPayloadWithLatency(taskToSend.payload());
+      Object payloadToSend = attachPushTimestamp ? enrichPayloadWithLatency(taskToSend.payload()) : taskToSend.payload();
       long queueDelayMs = Math.max(now - taskToSend.enqueuedAtMs(), 0L);
       wsQueueDelayTimer.record(queueDelayMs, java.util.concurrent.TimeUnit.MILLISECONDS);
       wsPushDurationTimer.record(() -> messagingTemplate.convertAndSend(destination, payloadToSend));
@@ -212,6 +218,9 @@ public class MarketWebSocketHandler {
   }
 
   private boolean payloadExceedsLimit(Object payload) {
+    if (!payloadSizeCheckEnabled || payloadBytesLimit <= 0) {
+      return false;
+    }
     try {
       return objectMapper.writeValueAsBytes(payload).length > payloadBytesLimit;
     } catch (JsonProcessingException ex) {

@@ -27,6 +27,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class K6BypassAuthenticationFilter extends OncePerRequestFilter {
 
   private static final String K6_BYPASS_HEADER = "X-K6-Bypass-Key";
+  private static final String K6_BYPASS_USER_ID_HEADER = "X-K6-Bypass-User-Id";
 
   @Value("${app.security.k6-bypass.enabled:false}")
   private boolean enabled;
@@ -65,6 +66,8 @@ public class K6BypassAuthenticationFilter extends OncePerRequestFilter {
       return;
     }
 
+    long effectiveUserId = resolveBypassUserId(request);
+
     String normalizedRole =
         (bypassRole == null || bypassRole.isBlank())
             ? "USER"
@@ -73,9 +76,21 @@ public class K6BypassAuthenticationFilter extends OncePerRequestFilter {
     authorities.add(new SimpleGrantedAuthority("ROLE_" + normalizedRole));
 
     UsernamePasswordAuthenticationToken authentication =
-        new UsernamePasswordAuthenticationToken(String.valueOf(bypassUserId), null, authorities);
+        new UsernamePasswordAuthenticationToken(String.valueOf(effectiveUserId), null, authorities);
     SecurityContextHolder.getContext().setAuthentication(authentication);
 
     filterChain.doFilter(request, response);
+  }
+
+  private long resolveBypassUserId(HttpServletRequest request) {
+    String headerValue = request.getHeader(K6_BYPASS_USER_ID_HEADER);
+    if (headerValue == null || headerValue.isBlank()) {
+      return bypassUserId;
+    }
+    try {
+      return Long.parseLong(headerValue.trim());
+    } catch (NumberFormatException ex) {
+      return bypassUserId;
+    }
   }
 }

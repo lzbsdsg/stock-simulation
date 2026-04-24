@@ -57,6 +57,7 @@ class MarketDataFacadeTest {
   void should_call_provider_on_cache_miss() {
     QuoteSnapshot fromProvider = quote("sh600519", "贵州茅台", "1700.01");
     when(marketCacheGateway.getQuote("sh600519")).thenReturn(MarketCacheGateway.CacheResult.miss());
+    when(marketCacheGateway.getStaleQuote("sh600519")).thenReturn(null);
     when(marketCacheGateway.tryAcquireLoadLock("sh600519")).thenReturn(true);
     when(primaryProvider.getQuote("sh600519")).thenReturn(fromProvider);
 
@@ -71,6 +72,7 @@ class MarketDataFacadeTest {
   void should_fallback_to_backup_provider_on_primary_failure() {
     QuoteSnapshot fromBackup = quote("sz000001", "平安银行", "12.34");
     when(marketCacheGateway.getQuote("sz000001")).thenReturn(MarketCacheGateway.CacheResult.miss());
+    when(marketCacheGateway.getStaleQuote("sz000001")).thenReturn(null);
     when(marketCacheGateway.tryAcquireLoadLock("sz000001")).thenReturn(true);
     when(primaryProvider.getQuote("sz000001")).thenThrow(new RuntimeException("timeout"));
     when(backupProvider.getQuote("sz000001")).thenReturn(fromBackup);
@@ -85,9 +87,9 @@ class MarketDataFacadeTest {
   void should_use_stale_when_all_providers_failed() {
     QuoteSnapshot stale = quote("sh600519", "贵州茅台", "1688.00");
     when(marketCacheGateway.getQuote("sh600519")).thenReturn(MarketCacheGateway.CacheResult.miss());
+    when(marketCacheGateway.getStaleQuote("sh600519")).thenReturn(stale);
     when(marketCacheGateway.tryAcquireLoadLock("sh600519")).thenReturn(true);
     when(primaryProvider.getQuote("sh600519")).thenThrow(new RuntimeException("error"));
-    when(marketCacheGateway.getStaleQuote("sh600519")).thenReturn(stale);
 
     QuoteSnapshot result = marketDataFacade.getQuote("sh600519");
 
@@ -98,10 +100,10 @@ class MarketDataFacadeTest {
   @Test
   void should_cache_null_value_to_prevent_penetration_when_all_failed() {
     when(marketCacheGateway.getQuote("sh999999")).thenReturn(MarketCacheGateway.CacheResult.miss());
+    when(marketCacheGateway.getStaleQuote("sh999999")).thenReturn(null);
     when(marketCacheGateway.tryAcquireLoadLock("sh999999")).thenReturn(true);
     when(primaryProvider.getQuote("sh999999")).thenThrow(new RuntimeException("unavailable"));
     when(backupProvider.getQuote("sh999999")).thenThrow(new RuntimeException("unavailable"));
-    when(marketCacheGateway.getStaleQuote("sh999999")).thenReturn(null);
 
     assertThrows(BizException.class, () -> marketDataFacade.getQuote("sh999999"));
 
@@ -136,11 +138,11 @@ class MarketDataFacadeTest {
   }
 
   @Test
-  void should_use_stale_when_waiting_for_quote_lock_timeout() {
+  void should_use_stale_immediately_when_waiting_for_quote_lock_and_stale_exists() {
     QuoteSnapshot stale = quote("sh600519", "贵州茅台", "1686.66");
     when(marketCacheGateway.getQuote("sh600519")).thenReturn(MarketCacheGateway.CacheResult.miss());
-    when(marketCacheGateway.tryAcquireLoadLock("sh600519")).thenReturn(false);
     when(marketCacheGateway.getStaleQuote("sh600519")).thenReturn(stale);
+    when(marketCacheGateway.tryAcquireLoadLock("sh600519")).thenReturn(false);
 
     QuoteSnapshot result = marketDataFacade.getQuote("sh600519");
 
@@ -155,6 +157,7 @@ class MarketDataFacadeTest {
     when(marketCacheGateway.getQuote("sh600519"))
         .thenReturn(MarketCacheGateway.CacheResult.hit(hit, MarketCacheGateway.HIT_L1));
     when(marketCacheGateway.getQuote("sz000001")).thenReturn(MarketCacheGateway.CacheResult.miss());
+    when(marketCacheGateway.getStaleQuote("sz000001")).thenReturn(null);
     when(primaryProvider.batchGetQuotes(List.of("sz000001"))).thenReturn(List.of(loaded));
 
     List<QuoteSnapshot> result = marketDataFacade.batchGetQuotes(List.of("sh600519", "sz000001"));
@@ -188,6 +191,8 @@ class MarketDataFacadeTest {
 
     when(marketCacheGateway.getQuote("sz000001")).thenReturn(MarketCacheGateway.CacheResult.miss());
     when(marketCacheGateway.getQuote("sz000004")).thenReturn(MarketCacheGateway.CacheResult.miss());
+    when(marketCacheGateway.getStaleQuote("sz000001")).thenReturn(null);
+    when(marketCacheGateway.getStaleQuote("sz000004")).thenReturn(null);
     when(primaryProvider.batchGetQuotes(List.of("sz000001", "sz000004")))
         .thenReturn(List.of(loaded1, loaded2));
 
@@ -199,6 +204,20 @@ class MarketDataFacadeTest {
     verify(primaryProvider).batchGetQuotes(List.of("sz000001", "sz000004"));
     verify(marketCacheGateway).cacheQuote("sz000001", loaded1);
     verify(marketCacheGateway).cacheQuote("sz000004", loaded2);
+  }
+
+  @Test
+  void should_batch_get_quotes_use_stale_for_provider_miss() {
+    QuoteSnapshot stale = quote("sz000001", "平安银行", "12.30");
+    when(marketCacheGateway.getQuote("sz000001")).thenReturn(MarketCacheGateway.CacheResult.miss());
+    when(marketCacheGateway.getStaleQuote("sz000001")).thenReturn(stale);
+    when(primaryProvider.batchGetQuotes(List.of("sz000001"))).thenReturn(List.of());
+    when(backupProvider.batchGetQuotes(List.of("sz000001"))).thenReturn(List.of());
+
+    List<QuoteSnapshot> result = marketDataFacade.batchGetQuotes(List.of("sz000001"));
+
+    assertEquals(1, result.size());
+    assertEquals(new BigDecimal("12.30"), result.get(0).getCurrentPrice());
   }
 
   private QuoteSnapshot quote(String code, String name, String price) {

@@ -35,11 +35,15 @@ export const useTradeStore = defineStore('trade', () => {
     }
   }
 
+  async function refreshTradeData(): Promise<void> {
+    await Promise.all([loadOrders(), loadTrades()])
+  }
+
   async function place(payload: PlaceOrderPayload): Promise<OrderItem> {
     placingOrder.value = true
     try {
       const order = await tradeApi.placeOrder(payload)
-      await loadOrders()
+      await refreshTradeData()
       return order
     } finally {
       placingOrder.value = false
@@ -48,7 +52,7 @@ export const useTradeStore = defineStore('trade', () => {
 
   async function cancel(orderId: number): Promise<void> {
     await tradeApi.cancelOrder(orderId)
-    await loadOrders()
+    await refreshTradeData()
   }
 
   function setScope(scope: string): void {
@@ -66,6 +70,7 @@ export const useTradeStore = defineStore('trade', () => {
     placingOrder,
     loadOrders,
     loadTrades,
+    refreshTradeData,
     place,
     cancel,
     setScope,

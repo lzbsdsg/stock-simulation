@@ -238,6 +238,10 @@ services:
       - -c
       - |
         sleep 10
+        if redis-cli -h redis-node-1 -p 7000 -a ${REDIS_PASSWORD} cluster info 2>/dev/null | grep -q 'cluster_state:ok'; then
+          echo 'Redis cluster already initialized, skipping'
+          exit 0
+        fi
         echo 'yes' | redis-cli -a ${REDIS_PASSWORD} --cluster create \
           redis-node-1:7000 \
           redis-node-2:7001 \
@@ -472,14 +476,27 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - REDIS_CLUSTER_NODES=172.29.0.11:7000,172.29.0.12:7001,172.29.0.13:7002,172.29.0.14:7003,172.29.0.15:7004,172.29.0.16:7005
       - APP_REDIS_CLUSTER_MAP_TO_LOOPBACK=false
+      - REDIS_POOL_MAX_ACTIVE=128
+      - REDIS_POOL_MAX_IDLE=64
+      - REDIS_POOL_MIN_IDLE=16
+      - REDIS_CLUSTER_REFRESH_ADAPTIVE=true
+      - REDIS_CLUSTER_REFRESH_PERIOD=15s
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
       - RABBITMQ_USER=stock_app
       - RABBITMQ_PASSWORD=${RABBITMQ_DEFAULT_PASS}
+      - SERVER_TOMCAT_THREADS_MAX=600
+      - SERVER_TOMCAT_THREADS_MIN_SPARE=80
+      - SERVER_TOMCAT_ACCEPT_COUNT=40000
+      - SERVER_TOMCAT_MAX_CONNECTIONS=100000
+      - DB_MASTER_MAX_POOL_SIZE=50
+      - DB_SLAVE_MAX_POOL_SIZE=80
       - MARKET_INGEST_ENABLED=true
-      - MARKET_BROADCAST_MODE=broker
-      - MARKET_REDIS_PUBSUB_ENABLED=false
-      - MARKET_WS_BROKER_RELAY_ENABLED=true
+      - MARKET_INGEST_ACTIVE_BATCH_SIZE=120
+      - MARKET_INGEST_ROUND_ROBIN_BATCH_SIZE=20
+      - MARKET_BROADCAST_MODE=redis
+      - MARKET_REDIS_PUBSUB_ENABLED=true
+      - MARKET_WS_BROKER_RELAY_ENABLED=false
       - MARKET_WS_BROKER_RELAY_HOST=rabbitmq
       - MARKET_WS_BROKER_RELAY_PORT=61613
       - MARKET_WS_BROKER_CLIENT_LOGIN=stock_app
@@ -487,16 +504,21 @@ services:
       - MARKET_WS_BROKER_SYSTEM_LOGIN=stock_app
       - MARKET_WS_BROKER_SYSTEM_PASSCODE=${RABBITMQ_DEFAULT_PASS}
       - MARKET_WS_BROKER_VIRTUAL_HOST=/
-      - MARKET_WS_QUOTE_DESTINATION_PREFIX=/topic/market.quote.
-      - MARKET_WEBSOCKET_DISPATCH_ENABLED=true
+      - MARKET_WS_ATTACH_PUSH_TIMESTAMP=true
       - JWT_SECRET=${JWT_SECRET}
       - DEV_BASIC_AUTH_USER=${DEV_BASIC_AUTH_USER:-dev}
       - DEV_BASIC_AUTH_PASSWORD=${DEV_BASIC_AUTH_PASSWORD}
       - APP_SECURITY_K6_BYPASS_ENABLED=true
       - APP_SECURITY_K6_BYPASS_KEY=${APP_SECURITY_K6_BYPASS_KEY:-k6-bypass-20260420}
       - APP_SECURITY_K6_BYPASS_USER_ID=${APP_SECURITY_K6_BYPASS_USER_ID:-3}
+      - APP_ASYNC_CORE_POOL_SIZE=16
+      - APP_ASYNC_MAX_POOL_SIZE=64
+      - APP_ASYNC_QUEUE_CAPACITY=2000
+      - APP_RABBIT_MATCH_PREFETCH=30
+      - APP_RABBIT_MATCH_CONCURRENT_CONSUMERS=12
+      - APP_RABBIT_MATCH_MAX_CONCURRENT_CONSUMERS=24
       - MANAGEMENT_HEALTH_MAIL_ENABLED=false
-      - JAVA_OPTS=-XX:+UseG1GC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom
+      - JAVA_OPTS=-XX:+UseG1GC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:MaxGCPauseMillis=100 -XX:+ParallelRefProcEnabled -XX:+UseStringDeduplication -Djava.security.egd=file:/dev/./urandom
     volumes:
       - ./logs/app-1:/app/logs
     ulimits:
@@ -542,14 +564,27 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - REDIS_CLUSTER_NODES=172.29.0.11:7000,172.29.0.12:7001,172.29.0.13:7002,172.29.0.14:7003,172.29.0.15:7004,172.29.0.16:7005
       - APP_REDIS_CLUSTER_MAP_TO_LOOPBACK=false
+      - REDIS_POOL_MAX_ACTIVE=128
+      - REDIS_POOL_MAX_IDLE=64
+      - REDIS_POOL_MIN_IDLE=16
+      - REDIS_CLUSTER_REFRESH_ADAPTIVE=true
+      - REDIS_CLUSTER_REFRESH_PERIOD=15s
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
       - RABBITMQ_USER=stock_app
       - RABBITMQ_PASSWORD=${RABBITMQ_DEFAULT_PASS}
+      - SERVER_TOMCAT_THREADS_MAX=600
+      - SERVER_TOMCAT_THREADS_MIN_SPARE=80
+      - SERVER_TOMCAT_ACCEPT_COUNT=40000
+      - SERVER_TOMCAT_MAX_CONNECTIONS=100000
+      - DB_MASTER_MAX_POOL_SIZE=50
+      - DB_SLAVE_MAX_POOL_SIZE=80
       - MARKET_INGEST_ENABLED=false
-      - MARKET_BROADCAST_MODE=broker
-      - MARKET_REDIS_PUBSUB_ENABLED=false
-      - MARKET_WS_BROKER_RELAY_ENABLED=true
+      - MARKET_INGEST_ACTIVE_BATCH_SIZE=120
+      - MARKET_INGEST_ROUND_ROBIN_BATCH_SIZE=20
+      - MARKET_BROADCAST_MODE=redis
+      - MARKET_REDIS_PUBSUB_ENABLED=true
+      - MARKET_WS_BROKER_RELAY_ENABLED=false
       - MARKET_WS_BROKER_RELAY_HOST=rabbitmq
       - MARKET_WS_BROKER_RELAY_PORT=61613
       - MARKET_WS_BROKER_CLIENT_LOGIN=stock_app
@@ -557,16 +592,21 @@ services:
       - MARKET_WS_BROKER_SYSTEM_LOGIN=stock_app
       - MARKET_WS_BROKER_SYSTEM_PASSCODE=${RABBITMQ_DEFAULT_PASS}
       - MARKET_WS_BROKER_VIRTUAL_HOST=/
-      - MARKET_WS_QUOTE_DESTINATION_PREFIX=/topic/market.quote.
-      - MARKET_WEBSOCKET_DISPATCH_ENABLED=false
+      - MARKET_WS_ATTACH_PUSH_TIMESTAMP=true
       - JWT_SECRET=${JWT_SECRET}
       - DEV_BASIC_AUTH_USER=${DEV_BASIC_AUTH_USER:-dev}
       - DEV_BASIC_AUTH_PASSWORD=${DEV_BASIC_AUTH_PASSWORD}
       - APP_SECURITY_K6_BYPASS_ENABLED=true
       - APP_SECURITY_K6_BYPASS_KEY=${APP_SECURITY_K6_BYPASS_KEY:-k6-bypass-20260420}
       - APP_SECURITY_K6_BYPASS_USER_ID=${APP_SECURITY_K6_BYPASS_USER_ID:-3}
+      - APP_ASYNC_CORE_POOL_SIZE=16
+      - APP_ASYNC_MAX_POOL_SIZE=64
+      - APP_ASYNC_QUEUE_CAPACITY=2000
+      - APP_RABBIT_MATCH_PREFETCH=30
+      - APP_RABBIT_MATCH_CONCURRENT_CONSUMERS=12
+      - APP_RABBIT_MATCH_MAX_CONCURRENT_CONSUMERS=24
       - MANAGEMENT_HEALTH_MAIL_ENABLED=false
-      - JAVA_OPTS=-XX:+UseG1GC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom
+      - JAVA_OPTS=-XX:+UseG1GC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:MaxGCPauseMillis=100 -XX:+ParallelRefProcEnabled -XX:+UseStringDeduplication -Djava.security.egd=file:/dev/./urandom
     volumes:
       - ./logs/app-2:/app/logs
     ulimits:
@@ -602,14 +642,18 @@ services:
   nginx:
     image: nginx:alpine
     container_name: stock-nginx
+    profiles:
+      - nonprod-app
     ports:
       - "80:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./stock-simulation-web/dist:/usr/share/nginx/html:ro
     depends_on:
-      - pg-master
-      - redis-node-1
-      - rabbitmq
+      app-1:
+        condition: service_healthy
+      app-2:
+        condition: service_healthy
     networks:
       - stock-network
 

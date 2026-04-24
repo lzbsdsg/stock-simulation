@@ -12,8 +12,8 @@ import io.lettuce.core.resource.ClientResources;
 import io.lettuce.core.resource.DefaultClientResources;
 import io.lettuce.core.resource.DnsResolvers;
 import io.lettuce.core.resource.MappingSocketAddressResolver;
-import org.springframework.boot.autoconfigure.data.redis.LettuceClientConfigurationBuilderCustomizer;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.data.redis.LettuceClientConfigurationBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -42,9 +42,14 @@ public class RedisConfig {
             MappingSocketAddressResolver.create(
                 DnsResolvers.UNRESOLVED,
                 hostAndPort -> {
+                  if (!mapClusterNodesToLoopback) {
+                    return hostAndPort;
+                  }
+
                   String host = hostAndPort.getHostText();
-                  if (mapClusterNodesToLoopback && host != null && host.startsWith("redis-node-")) {
-                    return HostAndPort.of("127.0.0.1", hostAndPort.getPort());
+                  int port = hostAndPort.getPort();
+                  if (shouldMapClusterNodeToLoopback(host, port)) {
+                    return HostAndPort.of("127.0.0.1", port);
                   }
                   return hostAndPort;
                 }))
@@ -63,12 +68,10 @@ public class RedisConfig {
     RedisTemplate<String, Object> template = new RedisTemplate<>();
     template.setConnectionFactory(connectionFactory);
 
-    // Key 使用 String 序列化
     StringRedisSerializer stringSerializer = new StringRedisSerializer();
     template.setKeySerializer(stringSerializer);
     template.setHashKeySerializer(stringSerializer);
 
-    // Value 使用 JSON 序列化
     ObjectMapper objectMapper =
         new ObjectMapper()
             .registerModule(new JavaTimeModule())
@@ -96,5 +99,15 @@ public class RedisConfig {
       container.addMessageListener(marketPubSubListener, new PatternTopic("market:quote:broadcast"));
     }
     return container;
+  }
+
+  private boolean shouldMapClusterNodeToLoopback(String host, int port) {
+    if (host == null || host.isBlank() || port < 7000 || port > 7005) {
+      return false;
+    }
+    if (host.startsWith("redis-node-")) {
+      return true;
+    }
+    return host.startsWith("172.") || host.startsWith("192.168.") || host.startsWith("10.");
   }
 }

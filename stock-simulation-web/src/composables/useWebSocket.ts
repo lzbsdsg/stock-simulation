@@ -26,6 +26,35 @@ export function calculateLagMillis(pushTsMillis?: number, nowMs = Date.now()): n
   return Math.max(0, nowMs - pushTsMillis)
 }
 
+export function shouldUseNativeTransport(endpoint: string): boolean {
+  return endpoint.startsWith('ws://') || endpoint.startsWith('wss://') || endpoint.includes('-native')
+}
+
+export function resolveWsEndpoint(endpoint: string): string {
+  if (typeof window === 'undefined') {
+    return endpoint
+  }
+  if (endpoint.startsWith('ws://') || endpoint.startsWith('wss://')) {
+    return endpoint
+  }
+  if (endpoint.startsWith('http://')) {
+    return `ws://${endpoint.slice('http://'.length)}`
+  }
+  if (endpoint.startsWith('https://')) {
+    return `wss://${endpoint.slice('https://'.length)}`
+  }
+  if (endpoint.startsWith('/')) {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    return `${protocol}//${window.location.host}${endpoint}`
+  }
+  return endpoint
+}
+
+function appendAccessToken(endpoint: string, token: string): string {
+  const separator = endpoint.includes('?') ? '&' : '?'
+  return `${endpoint}${separator}access_token=${encodeURIComponent(token)}`
+}
+
 interface UseWebSocketOptions {
   endpoint: string
   getToken: () => string | null
@@ -252,12 +281,14 @@ export function useWebSocket(options: UseWebSocketOptions) {
     manualDisconnected = false
     notifyStatus(reconnectAttempt.value > 0 ? 'RECONNECTING' : 'CONNECTING')
 
-    const encodedToken = encodeURIComponent(token)
-    const sockJsEndpoint = resolveSockJsEndpoint(options.endpoint)
-    const sockJsUrl = `${sockJsEndpoint}?access_token=${encodedToken}`
+    const isNativeTransport = shouldUseNativeTransport(options.endpoint)
+    const endpointWithToken = isNativeTransport
+      ? appendAccessToken(resolveWsEndpoint(options.endpoint), token)
+      : appendAccessToken(resolveSockJsEndpoint(options.endpoint), token)
 
     stompClient = new Client({
-      webSocketFactory: () => new SockJS(sockJsUrl),
+      brokerURL: isNativeTransport ? endpointWithToken : undefined,
+      webSocketFactory: isNativeTransport ? undefined : () => new SockJS(endpointWithToken),
       connectHeaders: {
         Authorization: `Bearer ${token}`,
       },
@@ -271,6 +302,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
       },
       onWebSocketClose: () => {
         subscriptions.clear()
+        lastLagMs.value = 0
+        isDegraded.value = false
         if (!manualDisconnected) {
           scheduleReconnect()
         } else {
@@ -290,6 +323,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
     clearReconnectTimer()
     clearFlushHandle()
     pendingQuotesByCode.clear()
+    lastLagMs.value = 0
+    isDegraded.value = false
 
     for (const [topic, subscription] of subscriptions.entries()) {
       subscription.unsubscribe()

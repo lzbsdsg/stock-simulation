@@ -35,6 +35,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +62,7 @@ public class MarketApplicationService {
   private static final String WS_QUEUE_DELAY_TIMER_METRIC = "market.ws.queue.delay";
   private static final String WS_PUSH_TIMER_METRIC = "ws_push_duration_seconds";
   private static final List<String> INDEX_CODES = List.of("sh000001", "sz399001", "sh000300");
+  private static final long DEFAULT_VISIBLE_CODE_RECENT_TTL_MS = 60_000L;
 
   private final MarketDataFacade marketDataFacade;
   private final StockInfoRepository stockInfoRepository;
@@ -69,6 +72,7 @@ public class MarketApplicationService {
   private final EastMoneyOfficialBoardGateway eastMoneyOfficialBoardGateway;
   private final MarketWebSocketHandler marketWebSocketHandler;
   private final MeterRegistry meterRegistry;
+  private final ConcurrentMap<String, Long> visibleCodeLastReportAt = new ConcurrentHashMap<>();
 
   private volatile List<MarketIndexQuoteVO> indexQuoteCache = List.of();
 
@@ -80,6 +84,9 @@ public class MarketApplicationService {
 
   @Value("${market.kline.prewarm.codes:sh600519,sz000001,sh601318}")
   private String klinePrewarmCodes;
+
+  @Value("${market.visible-codes.report-min-interval-ms:1200}")
+  private long visibleCodesReportMinIntervalMs;
 
   @PostConstruct
   void warmupOfficialBoardCache() {
@@ -243,8 +250,40 @@ public class MarketApplicationService {
     }
   }
 
+  @Scheduled(fixedRateString = "${market.visible-codes.cleanup-interval-ms:60000}")
+  public void cleanupVisibleCodeReportCache() {
+    long now = System.currentTimeMillis();
+    long keepAliveMs = Math.max(visibleCodesReportMinIntervalMs * 20L, DEFAULT_VISIBLE_CODE_RECENT_TTL_MS);
+    visibleCodeLastReportAt.entrySet().removeIf(entry -> now - entry.getValue() > keepAliveMs);
+  }
+
   public void reportVisibleCodes(List<String> stockCodes) {
-    marketActiveQuoteRegistry.reportVisibleCodes(stockCodes);
+    if (stockCodes == null || stockCodes.isEmpty()) {
+      return;
+    }
+
+    long now = System.currentTimeMillis();
+    long minIntervalMs = Math.max(visibleCodesReportMinIntervalMs, 0L);
+    List<String> filtered = new ArrayList<>(stockCodes.size());
+    for (String code : stockCodes) {
+      if (code == null || code.isBlank()) {
+        continue;
+      }
+
+      String normalizedCode = code.trim().toLowerCase(Locale.ROOT);
+      Long lastReportAt = visibleCodeLastReportAt.get(normalizedCode);
+      if (lastReportAt != null && now - lastReportAt < minIntervalMs) {
+        continue;
+      }
+
+      visibleCodeLastReportAt.put(normalizedCode, now);
+      filtered.add(normalizedCode);
+    }
+
+    if (filtered.isEmpty()) {
+      return;
+    }
+    marketActiveQuoteRegistry.reportVisibleCodes(filtered);
   }
 
   public MarketRealtimeMetricsVO getRealtimeMetrics() {

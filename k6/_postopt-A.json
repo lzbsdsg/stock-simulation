@@ -1,0 +1,216 @@
+{
+    "metrics": {
+        "http_req_duration{scenario:endpoint_portfolio_overview}": {
+            "p(90)": 18.228007900000005,
+            "p(95)": 29.72083754999998,
+            "avg": 9.0927221961942,
+            "min": 1.97242,
+            "med": 4.307621,
+            "max": 1240.937833,
+            "thresholds": {
+                "p(95)<120": false,
+                "p(99)<280": false
+            }
+        },
+        "data_received": {
+            "count": 24831004,
+            "rate": 1301708.444972732
+        },
+        "data_sent": {
+            "count": 4513359,
+            "rate": 236602.49603655518
+        },
+        "http_req_duration{scenario:endpoint_trade_list}": {
+            "avg": 3.3623038267716505,
+            "min": 1.117239,
+            "med": 2.3326320000000003,
+            "max": 1239.743574,
+            "p(90)": 3.3634539,
+            "p(95)": 4.1499508,
+            "thresholds": {
+                "p(95)<150": false,
+                "p(99)<300": false
+            }
+        },
+        "http_req_receiving": {
+            "med": 0.103128,
+            "max": 22.055113,
+            "p(90)": 0.28048879999999987,
+            "p(95)": 0.36004019999999987,
+            "avg": 0.15260423922381944,
+            "min": 0.011152
+        },
+        "http_req_duration": {
+            "min": 0.481496,
+            "med": 1.643301,
+            "max": 1240.937833,
+            "p(90)": 7.738482399999998,
+            "p(95)": 16.61709139999985,
+            "avg": 4.625644377129309
+        },
+        "http_req_sending": {
+            "min": 0.003931,
+            "med": 0.016994,
+            "max": 2.652587,
+            "p(90)": 0.053911199999999986,
+            "p(95)": 0.07382599999999996,
+            "avg": 0.02684304419098388
+        },
+        "http_req_waiting": {
+            "max": 1240.880104,
+            "p(90)": 7.5133963999999995,
+            "p(95)": 16.107480999999776,
+            "avg": 4.446197093714516,
+            "min": 0.433492,
+            "med": 1.447301
+        },
+        "vus": {
+            "value": 17,
+            "min": 9,
+            "max": 23
+        },
+        "http_req_tls_handshaking": {
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0
+        },
+        "http_req_duration{scenario:endpoint_market_quote}": {
+            "max": 1238.84773,
+            "p(90)": 1.7629598000000004,
+            "p(95)": 2.3067698,
+            "avg": 2.0012854998360186,
+            "min": 0.481496,
+            "med": 1.125017,
+            "thresholds": {
+                "p(95)<120": false,
+                "p(99)<250": false
+            }
+        },
+        "vus_max": {
+            "value": 460,
+            "min": 460,
+            "max": 460
+        },
+        "http_req_blocked": {
+            "p(95)": 0.026836199999999862,
+            "avg": 0.06516986263763441,
+            "min": 0.00089,
+            "med": 0.004442,
+            "max": 30.989517,
+            "p(90)": 0.008924999999999997
+        },
+        "iterations": {
+            "count": 13705,
+            "rate": 718.4531982013814
+        },
+        "http_req_duration{scenario:full_chain_mix}": {
+            "med": 1.5821605,
+            "max": 1238.945145,
+            "p(90)": 8.607982499999999,
+            "p(95)": 24.248716,
+            "avg": 4.845987314354337,
+            "min": 0.500747,
+            "thresholds": {
+                "p(95)<150": false,
+                "p(99)<450": false
+            }
+        },
+        "checks": {
+            "passes": 20253,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.99": false
+            },
+            "value": 1
+        },
+        "http_reqs": {
+            "count": 20253,
+            "rate": 1061.717083047981
+        },
+        "http_req_connecting": {
+            "avg": 0.056550254875820875,
+            "min": 0,
+            "med": 0,
+            "max": 30.900231,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 20253,
+            "thresholds": {
+                "rate<0.01": false
+            },
+            "value": 0
+        },
+        "http_req_duration{expected_response:true}": {
+            "p(95)": 16.61709139999985,
+            "avg": 4.625644377129309,
+            "min": 0.481496,
+            "med": 1.643301,
+            "max": 1240.937833,
+            "p(90)": 7.738482399999998
+        },
+        "iteration_duration": {
+            "avg": 18.011801994673487,
+            "min": 0.58465,
+            "med": 21.490116,
+            "max": 275.109748,
+            "p(90)": 31.729215399999998,
+            "p(95)": 49.9191692
+        }
+    },
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+                "market-quote-only status expected": {
+                    "id": "5195bb924d770baf7d4d775c7005b03b",
+                    "passes": 3049,
+                    "fails": 0,
+                    "name": "market-quote-only status expected",
+                    "path": "::market-quote-only status expected"
+                },
+                "trade-list-only status expected": {
+                    "passes": 1524,
+                    "fails": 0,
+                    "name": "trade-list-only status expected",
+                    "path": "::trade-list-only status expected",
+                    "id": "a222b071530971cda5ee5f2c680b8e4f"
+                },
+                "market-quote status expected": {
+                    "name": "market-quote status expected",
+                    "path": "::market-quote status expected",
+                    "id": "86c989f13ff3ea313f3f24371e67e12c",
+                    "passes": 7621,
+                    "fails": 0
+                },
+                "portfolio-overview-only status expected": {
+                    "name": "portfolio-overview-only status expected",
+                    "path": "::portfolio-overview-only status expected",
+                    "id": "9d075f11526317fba2ff01628f893a06",
+                    "passes": 1524,
+                    "fails": 0
+                },
+                "portfolio-overview status expected": {
+                    "name": "portfolio-overview status expected",
+                    "path": "::portfolio-overview status expected",
+                    "id": "f5faa6c27336678afa9841062ae6a441",
+                    "passes": 3836,
+                    "fails": 0
+                },
+                "trade-list-orders status expected": {
+                    "passes": 2699,
+                    "fails": 0,
+                    "name": "trade-list-orders status expected",
+                    "path": "::trade-list-orders status expected",
+                    "id": "6d5e27bb649c4de21f6e747c3266bf26"
+                }
+            }
+    }
+}

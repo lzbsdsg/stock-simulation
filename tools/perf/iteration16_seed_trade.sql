@@ -1,15 +1,44 @@
--- Fill trade/order/position benchmark data using existing user id
+-- Fill trade/order/position benchmark data using deterministic perf user pool
 
-WITH base_user AS (
-  SELECT id AS user_id FROM t_user ORDER BY id LIMIT 1
-)
+INSERT INTO t_user(id, email, password_hash, nickname, avatar_url, status, role, failed_attempts, created_at, updated_at)
+SELECT
+  1000 + gs - 1,
+  format('bench_user_%s@example.com', gs),
+  'bench_hash',
+  format('bench_user_%s', gs),
+  NULL,
+  'ACTIVE',
+  'USER',
+  0,
+  NOW() - (gs || ' minutes')::interval,
+  NOW() - (gs || ' minutes')::interval
+FROM generate_series(1, 2000) gs
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO t_user_account(user_id, initial_balance, available_balance, frozen_balance, version, created_at, updated_at)
+SELECT
+  1000 + gs - 1,
+  100000000.00,
+  100000000.00,
+  0.00,
+  0,
+  NOW() - (gs || ' minutes')::interval,
+  NOW() - (gs || ' minutes')::interval
+FROM generate_series(1, 2000) gs
+ON CONFLICT (user_id) DO UPDATE SET
+  initial_balance = EXCLUDED.initial_balance,
+  available_balance = EXCLUDED.available_balance,
+  frozen_balance = EXCLUDED.frozen_balance,
+  version = 0,
+  updated_at = NOW();
+
 INSERT INTO t_trade_order(
   user_id, client_order_id, stock_code, stock_name, side, order_type, status,
   price, quantity, filled_quantity, filled_amount, commission, frozen_amount, version,
   created_at, updated_at
 )
 SELECT
-  b.user_id,
+  1000 + ((gs - 1) % 2000),
   format('bench-order-%s', gs),
   'sh600519',
   'bench-stock',
@@ -31,7 +60,7 @@ SELECT
   0,
   NOW() - (gs || ' seconds')::interval,
   NOW() - (gs || ' seconds')::interval
-FROM base_user b, generate_series(1, 120000) gs
+FROM generate_series(1, 120000) gs
 ON CONFLICT (client_order_id) DO NOTHING;
 
 INSERT INTO t_trade_record(
@@ -58,19 +87,16 @@ WHERE o.client_order_id LIKE 'bench-order-%'
   )
 LIMIT 40000;
 
-WITH base_user AS (
-  SELECT id AS user_id FROM t_user ORDER BY id LIMIT 1
-)
 INSERT INTO t_portfolio_position(
   user_id, stock_code, stock_name, total_quantity, available_quantity,
   frozen_quantity, cost_price, total_cost, frozen_until, version, created_at, updated_at
 )
 SELECT
-  b.user_id,
+  1000 + ((gs - 1) % 2000),
   format('bench%s', lpad(gs::text, 6, '0')),
   format('bench-stock-%s', gs),
-  CASE WHEN gs % 3 = 0 THEN 0 ELSE 100 + (gs % 1000) END,
-  CASE WHEN gs % 3 = 0 THEN 0 ELSE 100 + (gs % 1000) END,
+  100 + (gs % 1000),
+  100 + (gs % 1000),
   0,
   10 + (gs % 90),
   1000 + (gs % 9000),
@@ -78,9 +104,11 @@ SELECT
   0,
   NOW() - (gs || ' minutes')::interval,
   NOW() - (gs || ' minutes')::interval
-FROM base_user b, generate_series(1, 30000) gs
+FROM generate_series(1, 30000) gs
 ON CONFLICT (user_id, stock_code) DO NOTHING;
 
+ANALYZE t_user;
+ANALYZE t_user_account;
 ANALYZE t_trade_order;
 ANALYZE t_trade_record;
 ANALYZE t_portfolio_position;
