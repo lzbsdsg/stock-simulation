@@ -148,25 +148,11 @@ WebSocket 入口：
 
 ## 性能表现
 
-README 中展示的性能口径采用了 **Iteration 17 与 Iteration 18 综合结论中的最优展示方案**：
+最新一轮压测报告见 [docs/performance-report-2026-04-26.md](docs/performance-report-2026-04-26.md)。
 
-- HTTP 混合链路能力：采用 **Iteration 18 B 组**
-  - 原因：它最接近真实混合业务负载，而且在更高吞吐下仍保持 `0` 失败，最适合代表项目的稳定容量。
-- 查询接口族能力：补充 **Iteration 18 common-qps**
-  - 原因：能更清楚展示查询类接口整体吞吐与尾延迟。
-- WebSocket：采用 **Iteration 17 的链路可用性结论**
-  - 原因：这一轮能稳定证明 1000 连接握手、订阅、收消息链路可用；但正式高并发推送时延仍在继续补测，因此 README 不夸大为最终 WS SLA。
+### 1. HTTP 推荐稳态档
 
-### 1. 最适合展示项目 HTTP 性能的结果：Iteration 18 B 组
-
-压测模型：
-
-- `full_chain_mix` 混合业务流量
-- `endpoint_market_quote` 单独持续压行情接口
-- `endpoint_portfolio_overview` 单独持续压资产总览
-- `endpoint_trade_list` 单独持续压订单列表
-
-参数：
+当前项目最适合作为 README 主展示结果的，是 `60s` 稳态混合压测的 **推荐档 F**：
 
 - `FULL_CHAIN_RPS=650`
 - `QUOTE_RPS=260`
@@ -175,61 +161,61 @@ README 中展示的性能口径采用了 **Iteration 17 与 Iteration 18 综合�
 
 结果：
 
-- 总 HTTP 吞吐：`1816.15 req/s`
-- HTTP 失败率：`0`
-- 全链路业务 `p95`：`31ms`
-- quote-only `p95`：`2.36ms`
-- portfolio-overview-only `p95`：`26.17ms`
-- trade-list-only `p95`：`5.28ms`
+- 总吞吐：`1762.07 req/s`
+- 总延迟：`p95=13.24ms`，`p99=34.02ms`
+- 全链路业务：`39001` 成功，`0` 失败
+- 行情独立场景：`251.73 qps`，`p95=3.05ms`
+- 资产总览独立场景：`125.87 qps`，`p95=28.21ms`
+- 订单列表独立场景：`125.87 qps`，`p95=6.31ms`
 
-为什么选择它作为 README 主展示结果：
+为什么选它：
 
-- 吞吐明显高于保守档
-- 失败率仍保持 `0`
-- 是真实混合业务模型下的稳定容量点
-- 比单接口压测更能代表系统整体能力
+- 比 `450/180/90/90`、`550/220/110/110`、`600/240/120/120` 吞吐更高
+- `business_failure_total=0`、`full_chain_failure_total=0`
+- 再上探到 `800/320/160/160` 后，已经出现 `8642` 次业务失败，不再属于稳态容量
 
-### 2. 查询接口族补充结果：Iteration 18 common-qps
+### 2. 查询接口族
 
-结果：
+顺序压测 `k6/perf-endpoints-common-qps.js` 的最新结果：
 
-- 总 HTTP 吞吐：`1347.39 req/s`
-- HTTP 失败率：`0`
-- 整体 `p95`：`7.53ms`
+- 总吞吐：`1305.12 req/s`
+- 总延迟：`p95=102.67ms`，`p99=716.03ms`
+- `endpoint_failure_total=1`
 
 关键接口：
 
-- `market_quote`：`219.56 qps`，`p95=2.11ms`
-- `portfolio_overview`：`119.75 qps`，`p95=21.38ms`
-- `portfolio_positions`：`89.83 qps`，`p95=21.38ms`
-- `trade_orders`：`99.81 qps`，`p95=4.99ms`
-- `trade_trades`：`79.85 qps`，`p95=5.19ms`
+- `market_quote`：`213.07 qps`，`p95=56.31ms`
+- `portfolio_overview`：`114.79 qps`，`p95=510.70ms`
+- `portfolio_positions`：`86.18 qps`，`p95=492.88ms`
+- `trade_orders`：`96.86 qps`，`p95=102.61ms`
+
+结论：
+
+- 行情、订单、通知、自选股等查询链路整体健康。
+- 当前最需要继续优化的是 `portfolio_overview` 和 `portfolio_positions` 这两条资产聚合查询链路。
+
+### 3. WebSocket
+
+顺序压测 `k6/websocket-load-test.js` 的当前稳定结论：
+
+- `500` 并发连接
+- `500` 次 STOMP 建连成功
+- `3500` 条有效推送时延样本
+- 握手 `p95=291.73ms`
+- 推送时延 `p95=41ms`
 
 说明：
 
-- 这组结果更适合展示“查询接口整体健康度”
-- 也能反映资产类查询相对更重，但仍处于健康范围
+- 本轮压测流量来自单一压测源，Nginx `ip_hash` 会把连接集中打到同一实例。
+- 因此这个结果更接近“单实例可稳定承载 500 同源连接”，而不是双实例平均分摊后的集群上限。
 
-### 3. WebSocket 当前可证明能力
+## 为什么这组结论可信
 
-当前较稳妥的结论是：
-
-- `1000` 并发连接可建立
-- STOMP 建连可成功
-- 消息链路可打通并收到推送
-
-说明：
-
-- HTTP 混合链路能力已经有较完整的容量结论
-- WebSocket 高并发推送时延样本仍在持续补测，所以 README 只展示已被当前报告稳定支持的能力，不夸大未闭环结论
-
-## 为什么这个项目的性能结论可信
-
-- 压测不是只打单接口，而是同时覆盖混合业务流量与热点查询接口
-- 使用 Docker Compose 完整拓扑，而不是单机假环境
-- 压测入口统一经过 Nginx，再进入双实例应用与真实中间件
-- 报告区分了“请求级吞吐”和“业务级成功”，避免只看 `QPS` 掩盖失败率
-- 同时给出稳定区、冲刺区、风险区，不用极限数字误导系统能力
+- 压测入口统一走 `Nginx -> 双实例应用 -> PostgreSQL/Redis/RabbitMQ`，不是单机假环境。
+- 报告同时给出稳态档与上限探测，不用极限数字误导系统容量。
+- HTTP 结果以 `business_failure_total` / `full_chain_failure_total` 为准，避免 `expectedStatuses` 对 `http_req_failed` 的统计口径干扰。
+- 每个正式场景都配套抓取了 JVM / GC / 线程 / 连接池指标，而不只看 `QPS` 和延迟。
+- WebSocket 结果单独顺序跑，避免和查询场景互相争抢资源。
 
 ## 测试与质量保障
 
@@ -266,27 +252,27 @@ README 中展示的性能口径采用了 **Iteration 17 与 Iteration 18 综合�
 
 ### 3. 启动基础设施
 
-```powershell
+```cmd
 docker compose -f docker-compose.dev.yml up -d
 docker compose -f docker-compose.dev.yml --profile nonprod-app up -d app-1 app-2 nginx
 ```
 
 如果需要观测栈：
 
-```powershell
+```cmd
 docker compose -f docker-compose.dev.yml --profile nonprod-observe up -d
 ```
 
 ### 4. 启动后端
 
-```powershell
-.\mvnw.cmd spring-boot:run
+```cmd
+call .\mvnw.cmd spring-boot:run
 ```
 
 ### 5. 启动前端
 
-```powershell
-cd stock-simulation-web
+```cmd
+cd /d stock-simulation-web
 pnpm install
 pnpm dev
 ```
@@ -305,9 +291,7 @@ pnpm dev
 - 架构设计：[docs/architecture.md](docs/architecture.md)
 - 详细设计：[docs/doc-A-detailed-design.md](docs/doc-A-detailed-design.md)
 - 开发路线图：[docs/doc-D-dev-roadmap.md](docs/doc-D-dev-roadmap.md)
-- Iteration 17 性能交付：[docs/iteration-17-delivery.md](docs/iteration-17-delivery.md)
-- Iteration 18 性能报告：[docs/iteration-18-performance-report.md](docs/iteration-18-performance-report.md)
-- 17/18 整合说明：[docs/iteration-17-18-current-performance-consolidated-2026-04-25.md](docs/iteration-17-18-current-performance-consolidated-2026-04-25.md)
+- 最新性能报告：[docs/performance-report-2026-04-26.md](docs/performance-report-2026-04-26.md)
 
 ## 项目总结
 
