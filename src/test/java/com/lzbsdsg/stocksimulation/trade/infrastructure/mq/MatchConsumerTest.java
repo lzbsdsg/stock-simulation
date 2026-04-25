@@ -29,7 +29,8 @@ class MatchConsumerTest {
 
   @Test
   void should_match_success_without_retry() {
-    when(tradeApplicationService.matchOrder(1001L)).thenReturn(TradeApplicationService.MatchResult.MATCHED);
+    when(tradeApplicationService.matchOrder(1001L))
+        .thenReturn(TradeApplicationService.MatchResult.MATCHED);
 
     matchConsumer.onMatchMessage(1001L);
 
@@ -52,13 +53,15 @@ class MatchConsumerTest {
     when(tradeApplicationService.matchOrder(1003L))
         .thenThrow(new BizException(ErrorCode.TRADE_OPTIMISTIC_LOCK_CONFLICT));
 
-    assertThrows(AmqpRejectAndDontRequeueException.class, () -> matchConsumer.onMatchMessage(1003L));
+    assertThrows(
+        AmqpRejectAndDontRequeueException.class, () -> matchConsumer.onMatchMessage(1003L));
     verify(tradeApplicationService, times(3)).matchOrder(1003L);
   }
 
   @Test
   void should_not_retry_when_business_error_is_not_optimistic_conflict() {
-    when(tradeApplicationService.matchOrder(1004L)).thenThrow(new BizException(ErrorCode.MARKET_DATA_UNAVAILABLE));
+    when(tradeApplicationService.matchOrder(1004L))
+        .thenThrow(new BizException(ErrorCode.MARKET_DATA_UNAVAILABLE));
 
     assertThrows(BizException.class, () -> matchConsumer.onMatchMessage(1004L));
     verify(tradeApplicationService, times(1)).matchOrder(1004L);

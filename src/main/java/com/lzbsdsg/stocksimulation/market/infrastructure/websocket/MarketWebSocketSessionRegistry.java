@@ -31,7 +31,8 @@ public class MarketWebSocketSessionRegistry {
     this.maxConnections = maxConnections;
     this.highConnectionWarningThreshold = Math.max(1000, (int) (maxConnections * 0.8d));
     this.highConnectionWarningStep = Math.max(1000, maxConnections / 10);
-    Gauge.builder("ws_active_connections", activeConnections, AtomicInteger::get).register(meterRegistry);
+    Gauge.builder("ws_active_connections", activeConnections, AtomicInteger::get)
+        .register(meterRegistry);
   }
 
   public boolean hasCapacity() {

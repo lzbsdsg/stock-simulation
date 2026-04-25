@@ -64,7 +64,8 @@ public class AssetSnapshotService {
     int failed = 0;
     for (Long userId : userIds) {
       SnapshotCreateStatus status =
-          createDailySnapshot(snapshotDate, userId, positionsByUser.getOrDefault(userId, List.of()), quoteMap);
+          createDailySnapshot(
+              snapshotDate, userId, positionsByUser.getOrDefault(userId, List.of()), quoteMap);
       switch (status) {
         case CREATED -> created++;
         case SKIPPED -> skipped++;
@@ -80,7 +81,10 @@ public class AssetSnapshotService {
   }
 
   private SnapshotCreateStatus createDailySnapshot(
-      LocalDate snapshotDate, Long userId, List<Position> positions, Map<String, QuoteSnapshot> quoteMap) {
+      LocalDate snapshotDate,
+      Long userId,
+      List<Position> positions,
+      Map<String, QuoteSnapshot> quoteMap) {
     if (assetSnapshotRepository.findByUserIdAndDate(userId, snapshotDate).isPresent()) {
       return SnapshotCreateStatus.SKIPPED;
     }
@@ -96,9 +100,11 @@ public class AssetSnapshotService {
     BigDecimal available = defaultMoney(account.getAvailableBalance());
     BigDecimal frozen = defaultMoney(account.getFrozenBalance());
     BigDecimal initial = defaultMoney(account.getInitialBalance());
-    BigDecimal totalAssets = available.add(frozen).add(marketValue).setScale(2, RoundingMode.HALF_UP);
+    BigDecimal totalAssets =
+        available.add(frozen).add(marketValue).setScale(2, RoundingMode.HALF_UP);
 
-    Optional<AssetSnapshot> prevSnapshot = assetSnapshotRepository.findLatestBefore(userId, snapshotDate);
+    Optional<AssetSnapshot> prevSnapshot =
+        assetSnapshotRepository.findLatestBefore(userId, snapshotDate);
     BigDecimal dailyProfit =
         prevSnapshot
             .map(snapshot -> totalAssets.subtract(defaultMoney(snapshot.getTotalAssets())))
@@ -160,7 +166,8 @@ public class AssetSnapshotService {
     }
   }
 
-  private BigDecimal calcMarketValue(List<Position> positions, Map<String, QuoteSnapshot> quoteMap) {
+  private BigDecimal calcMarketValue(
+      List<Position> positions, Map<String, QuoteSnapshot> quoteMap) {
     BigDecimal marketValue = BigDecimal.ZERO;
     for (Position position : positions) {
       int quantity = position.getTotalQuantity() == null ? 0 : position.getTotalQuantity();

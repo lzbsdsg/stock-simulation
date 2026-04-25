@@ -17,9 +17,9 @@ public interface PositionMapper extends BaseMapper<PositionDO> {
   PositionDO selectByUserIdAndStockCodeForUpdate(
       @Param("userId") Long userId, @Param("stockCode") String stockCode);
 
-    @Select(
+  @Select(
       "SELECT COALESCE(SUM(COALESCE(cost_price, 0) * COALESCE(total_quantity, 0)), 0) FROM t_portfolio_position WHERE user_id = #{userId}")
-    BigDecimal sumCostMarketValueByUserId(@Param("userId") Long userId);
+  BigDecimal sumCostMarketValueByUserId(@Param("userId") Long userId);
 
   @Update(
       """

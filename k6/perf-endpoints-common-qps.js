@@ -1,5 +1,6 @@
 import http from 'k6/http';
 import { check } from 'k6';
+import { Counter, Rate } from 'k6/metrics';
 
 const BASE_URL = __ENV.BASE_URL || 'http://nginx';
 const DURATION = __ENV.DURATION || '60s';
@@ -34,6 +35,10 @@ const endpointDefs = [
   { key: 'notifications_unread_count', env: 'RPS_NOTIFICATIONS_UNREAD_COUNT', path: () => '/api/v1/notifications/unread-count', defaultRate: 60 },
   { key: 'user_me', env: 'RPS_USER_ME', path: () => '/api/v1/user/me', defaultRate: 60 },
 ];
+
+const endpointSuccessTotal = new Counter('endpoint_success_total');
+const endpointFailureTotal = new Counter('endpoint_failure_total');
+const endpointBusinessSuccessRate = new Rate('endpoint_business_success_rate');
 
 function effectiveUserId() {
   return K6_USER_ID_BASE + ((__VU - 1) % K6_USER_ID_SPAN);
@@ -72,6 +77,7 @@ function buildOptions() {
   const thresholds = {
     http_req_failed: ['rate<0.05'],
     http_req_duration: ['p(95)<500', 'p(99)<1200'],
+    endpoint_business_success_rate: ['rate>0.95'],
     checks: ['rate>0.95'],
   };
 
@@ -82,15 +88,22 @@ function buildOptions() {
     }
 
     const scenarioName = `ep_${def.key}`;
+    const preAllocatedVUs = Math.max(20, Math.ceil(rate * 0.5));
+    const maxVUs = Math.max(100, rate * 3);
     scenarios[scenarioName] = {
       executor: 'constant-arrival-rate',
       exec: def.key,
       rate,
       timeUnit: '1s',
       duration: DURATION,
-      preAllocatedVUs: Math.max(20, Math.ceil(rate * 0.5)),
-      maxVUs: Math.max(100, rate * 3),
-      tags: { endpoint_case: def.key },
+      preAllocatedVUs,
+      maxVUs,
+      tags: {
+        endpoint_case: def.key,
+        configured_rate: String(rate),
+        pre_allocated_vus: String(preAllocatedVUs),
+        max_vus: String(maxVUs),
+      },
     };
 
     thresholds[`http_reqs{scenario:${scenarioName}}`] = ['count>0'];
@@ -100,6 +113,7 @@ function buildOptions() {
 
   return {
     discardResponseBodies: true,
+    summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'p(99)'],
     scenarios,
     thresholds,
   };
@@ -113,9 +127,16 @@ function hit(path, endpointTag) {
     tags: { endpoint: endpointTag },
   });
 
-  check(res, {
+  const ok = check(res, {
     [`${endpointTag} status ok`]: (r) => expectedStatus(r.status),
   });
+
+  endpointBusinessSuccessRate.add(ok);
+  if (ok) {
+    endpointSuccessTotal.add(1);
+  } else {
+    endpointFailureTotal.add(1);
+  }
 
   return res;
 }
@@ -189,7 +210,28 @@ export function user_me() {
 }
 
 function readMetric(data, key, field) {
-  return data.metrics[key] && data.metrics[key][field] !== undefined ? data.metrics[key][field] : null;
+  const metric = data.metrics[key];
+  if (!metric) {
+    return null;
+  }
+  if (metric[field] !== undefined) {
+    return metric[field];
+  }
+  if (metric.values && metric.values[field] !== undefined) {
+    return metric.values[field];
+  }
+  return null;
+}
+
+function durationSeconds(data) {
+  const requestCount = readMetric(data, 'http_reqs', 'count') || 0;
+  const requestRate = readMetric(data, 'http_reqs', 'rate') || 0;
+  if (requestCount > 0 && requestRate > 0) {
+    return Math.max(requestCount / requestRate, 1);
+  }
+  const fallback = 1;
+  const maxDuration = readMetric(data, 'http_req_duration', 'max') || 0;
+  return Math.max(maxDuration / 1000, fallback);
 }
 
 export function handleSummary(data) {
@@ -198,6 +240,9 @@ export function handleSummary(data) {
   const totalFailedRate = readMetric(data, 'http_req_failed', 'value') || 0;
   const p95 = readMetric(data, 'http_req_duration', 'p(95)') || 0;
   const p99 = readMetric(data, 'http_req_duration', 'p(99)') || 0;
+  const successTotal = readMetric(data, 'endpoint_success_total', 'count') || 0;
+  const failureTotal = readMetric(data, 'endpoint_failure_total', 'count') || 0;
+  const seconds = durationSeconds(data);
 
   const lines = [];
   lines.push('# Endpoint Performance Summary (Common QPS Method)');
@@ -207,27 +252,38 @@ export function handleSummary(data) {
   lines.push(`- total_failed_rate: ${(totalFailedRate * 100).toFixed(2)}%`);
   lines.push(`- total_p95_ms: ${p95.toFixed(2)}`);
   lines.push(`- total_p99_ms: ${p99.toFixed(2)}`);
+  lines.push(`- endpoint_success_total: ${successTotal}`);
+  lines.push(`- endpoint_failure_total: ${failureTotal}`);
+  lines.push(`- endpoint_success_per_second: ${(successTotal / seconds).toFixed(2)}`);
   lines.push('');
   lines.push('## Per-Scenario QPS');
   lines.push('');
-  lines.push('| scenario | qps(http_reqs.rate) | p95(ms) | failed_rate |');
-  lines.push('|---|---:|---:|---:|');
+  lines.push('| scenario | configured_rate | qps | success_per_second | preAllocatedVUs | maxVUs | p95(ms) | p99(ms) | failed_rate |');
+  lines.push('|---|---:|---:|---:|---:|---:|---:|---:|---:|');
+
+  const rateMap = Object.fromEntries(endpointDefs.map((def) => [`ep_${def.key}`, endpointRate(def)]));
 
   Object.keys(data.metrics)
-      .filter((k) => k.startsWith('http_reqs{scenario:ep_'))
-      .sort()
-      .forEach((k) => {
-        const scenario = k.replace('http_reqs{scenario:', '').replace('}', '');
-        const scenarioQps = readMetric(data, k, 'rate') || 0;
-        const durationKey = `http_req_duration{scenario:${scenario}}`;
-        const failedKey = `http_req_failed{scenario:${scenario}}`;
-        const scenarioP95 = readMetric(data, durationKey, 'p(95)') || 0;
-        const scenarioFailed = readMetric(data, failedKey, 'rate') || 0;
-        lines.push(`| ${scenario} | ${scenarioQps.toFixed(2)} | ${scenarioP95.toFixed(2)} | ${(scenarioFailed * 100).toFixed(2)}% |`);
-      });
+    .filter((k) => k.startsWith('http_reqs{scenario:ep_'))
+    .sort()
+    .forEach((k) => {
+      const scenario = k.replace('http_reqs{scenario:', '').replace('}', '');
+      const scenarioQps = readMetric(data, k, 'rate') || 0;
+      const durationKey = `http_req_duration{scenario:${scenario}}`;
+      const failedKey = `http_req_failed{scenario:${scenario}}`;
+      const scenarioP95 = readMetric(data, durationKey, 'p(95)') || 0;
+      const scenarioP99 = readMetric(data, durationKey, 'p(99)') || 0;
+      const scenarioFailed = readMetric(data, failedKey, 'value') || 0;
+      const configuredRate = rateMap[scenario] || 0;
+      const preAllocatedVUs = Math.max(20, Math.ceil(configuredRate * 0.5));
+      const maxVUs = Math.max(100, configuredRate * 3);
+      const successPerSecond = scenarioQps * (1 - scenarioFailed);
+      lines.push(`| ${scenario} | ${configuredRate} | ${scenarioQps.toFixed(2)} | ${successPerSecond.toFixed(2)} | ${preAllocatedVUs} | ${maxVUs} | ${scenarioP95.toFixed(2)} | ${scenarioP99.toFixed(2)} | ${(scenarioFailed * 100).toFixed(2)}% |`);
+    });
 
   lines.push('');
   lines.push('QPS definition: completed requests / test duration (k6 http_reqs.rate).');
+  lines.push('success_per_second definition: qps × (1 - failed_rate).');
 
   return {
     stdout: `${lines.join('\n')}\n`,

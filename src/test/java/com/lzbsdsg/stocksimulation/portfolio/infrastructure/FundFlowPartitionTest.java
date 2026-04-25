@@ -53,9 +53,7 @@ class FundFlowPartitionTest {
 
     List<FundFlow> records =
         fundFlowRepository.findByUserIdAndCreatedAtBetween(
-            1001L,
-            LocalDateTime.of(2026, 1, 31, 0, 0),
-            LocalDateTime.of(2026, 2, 1, 23, 59, 59));
+            1001L, LocalDateTime.of(2026, 1, 31, 0, 0), LocalDateTime.of(2026, 2, 1, 23, 59, 59));
 
     assertEquals(2, records.size());
     assertEquals(FundFlow.FundFlowType.TRADE_BUY, records.get(0).getFlowType());
@@ -83,4 +81,3 @@ class FundFlowPartitionTest {
     assertTrue(records.get(0).getAmount().compareTo(BigDecimal.ZERO) < 0);
   }
 }
-

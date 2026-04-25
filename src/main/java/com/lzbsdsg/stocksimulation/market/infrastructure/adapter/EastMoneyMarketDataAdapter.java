@@ -65,13 +65,13 @@ public class EastMoneyMarketDataAdapter implements MarketDataProvider {
     }
 
     JsonNode root =
-      requestJson(
-        Map.of(
-          "ut", OFFICIAL_UT,
-          "fltt", "2",
-          "invt", "2",
-          "fields", QUOTE_FIELDS,
-          "secids", secId));
+        requestJson(
+            Map.of(
+                "ut", OFFICIAL_UT,
+                "fltt", "2",
+                "invt", "2",
+                "fields", QUOTE_FIELDS,
+                "secids", secId));
     for (JsonNode item : readDiffArray(root)) {
       QuoteSnapshot parsed = parseQuote(item);
       if (parsed != null) {
@@ -82,7 +82,8 @@ public class EastMoneyMarketDataAdapter implements MarketDataProvider {
   }
 
   @Override
-  public List<KLinePoint> getKLine(String stockCode, KLinePeriod period, LocalDate from, LocalDate to) {
+  public List<KLinePoint> getKLine(
+      String stockCode, KLinePeriod period, LocalDate from, LocalDate to) {
     if (from == null || to == null || from.isAfter(to)) {
       return List.of();
     }
@@ -101,13 +102,18 @@ public class EastMoneyMarketDataAdapter implements MarketDataProvider {
     }
 
     JsonNode root =
-      requestJson(
-        Map.of(
-          "ut", OFFICIAL_UT,
-          "fltt", "2",
-          "invt", "2",
-          "fields", QUOTE_FIELDS,
-          "secids", String.join(",", secIds)));
+        requestJson(
+            Map.of(
+                "ut",
+                OFFICIAL_UT,
+                "fltt",
+                "2",
+                "invt",
+                "2",
+                "fields",
+                QUOTE_FIELDS,
+                "secids",
+                String.join(",", secIds)));
     List<QuoteSnapshot> result = new ArrayList<>();
     for (JsonNode item : readDiffArray(root)) {
       QuoteSnapshot parsed = parseQuote(item);
@@ -158,9 +164,15 @@ public class EastMoneyMarketDataAdapter implements MarketDataProvider {
     }
     if (snapshot.getClosePrice() != null) {
       snapshot.setUpperLimitPrice(
-          snapshot.getClosePrice().multiply(BigDecimal.valueOf(1.10)).setScale(2, RoundingMode.HALF_UP));
+          snapshot
+              .getClosePrice()
+              .multiply(BigDecimal.valueOf(1.10))
+              .setScale(2, RoundingMode.HALF_UP));
       snapshot.setLowerLimitPrice(
-          snapshot.getClosePrice().multiply(BigDecimal.valueOf(0.90)).setScale(2, RoundingMode.HALF_UP));
+          snapshot
+              .getClosePrice()
+              .multiply(BigDecimal.valueOf(0.90))
+              .setScale(2, RoundingMode.HALF_UP));
     }
 
     LocalDateTime sourceTs = LocalDateTime.now();
@@ -209,7 +221,8 @@ public class EastMoneyMarketDataAdapter implements MarketDataProvider {
       long volume =
           Math.max(
               10000L,
-              Math.round(baseVolume * (0.55d + Math.abs(closeDrift) * 17d + random.nextDouble() * 0.85d)));
+              Math.round(
+                  baseVolume * (0.55d + Math.abs(closeDrift) * 17d + random.nextDouble() * 0.85d)));
 
       KLinePoint point = new KLinePoint();
       point.setDate(cursor);
@@ -219,7 +232,8 @@ public class EastMoneyMarketDataAdapter implements MarketDataProvider {
       point.setLow(low.setScale(2, RoundingMode.HALF_UP));
       point.setVolume(volume);
       BigDecimal avgPrice = open.add(close).divide(BigDecimal.valueOf(2), 4, RoundingMode.HALF_UP);
-      point.setAmount(avgPrice.multiply(BigDecimal.valueOf(volume)).setScale(2, RoundingMode.HALF_UP));
+      point.setAmount(
+          avgPrice.multiply(BigDecimal.valueOf(volume)).setScale(2, RoundingMode.HALF_UP));
       points.add(point);
 
       previousClose = close.max(new BigDecimal("0.01"));

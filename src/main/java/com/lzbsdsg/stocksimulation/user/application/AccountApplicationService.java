@@ -94,7 +94,8 @@ public class AccountApplicationService {
 
   /** 成交扣款并返回最新账户快照。 */
   @Transactional
-  public Account deductFrozenAndGetAccount(Long userId, BigDecimal frozenAmount, BigDecimal actualCost) {
+  public Account deductFrozenAndGetAccount(
+      Long userId, BigDecimal frozenAmount, BigDecimal actualCost) {
     validatePositiveAmount(frozenAmount);
     validatePositiveAmount(actualCost);
     return executeWithOptimisticRetry(

@@ -120,12 +120,18 @@ class MarketDataFacadeTest {
     p.setDate(LocalDate.now());
     p.setClose(new BigDecimal("10.00"));
     when(historicalKLineService.getKLine(
-            "sh600519", KLinePeriod.DAILY, LocalDate.parse("2026-03-01"), LocalDate.parse("2026-03-02")))
+            "sh600519",
+            KLinePeriod.DAILY,
+            LocalDate.parse("2026-03-01"),
+            LocalDate.parse("2026-03-02")))
         .thenReturn(List.of(p));
 
     List<KLinePoint> result =
         marketDataFacade.getKLine(
-            "sh600519", KLinePeriod.DAILY, LocalDate.parse("2026-03-01"), LocalDate.parse("2026-03-02"));
+            "sh600519",
+            KLinePeriod.DAILY,
+            LocalDate.parse("2026-03-01"),
+            LocalDate.parse("2026-03-02"));
 
     assertEquals(1, result.size());
     verify(marketCacheGateway).releaseLoadLock("kline:" + klineCacheKey);

@@ -20,31 +20,29 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
 /**
  * 行情拉取主节点服务（分布式锁选主）。
  *
- * <p>
- * 核心机制： - Redis 分布式锁 key: market:ingest:leader, TTL=10s + 定时续期 -
- * 仅持锁实例定时拉取行情（3s/次, @Scheduled） -
- * 拉取结果： 1. 写入 Redis L2 缓存 (TTL=5s+random) 2. 发布 Redis Pub/Sub channel:
- * market:quote:broadcast -
+ * <p>核心机制： - Redis 分布式锁 key: market:ingest:leader, TTL=10s + 定时续期 - 仅持锁实例定时拉取行情（3s/次, @Scheduled） -
+ * 拉取结果： 1. 写入 Redis L2 缓存 (TTL=5s+random) 2. 发布 Redis Pub/Sub channel: market:quote:broadcast -
  * 其他实例通过 MarketPubSubListener 订阅广播
  *
- * <p>
- * 扩展： - 多实例部署时仅一个实例拉取，减少上游 API 调用量 - 持锁实例宕机后，锁 TTL 过期，其他实例自动抢锁接管
+ * <p>扩展： - 多实例部署时仅一个实例拉取，减少上游 API 调用量 - 持锁实例宕机后，锁 TTL 过期，其他实例自动抢锁接管
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class MarketIngestService {
 
   static final String INGEST_LEADER_KEY = "market:ingest:leader";
@@ -67,6 +65,7 @@ public class MarketIngestService {
   private final MarketActiveQuoteRegistry marketActiveQuoteRegistry;
   private final MarketWebSocketHandler marketWebSocketHandler;
   private final MeterRegistry meterRegistry;
+  private final Executor marketIngestExecutor;
 
   @Value("${market.ingest.latency-sample-enabled:false}")
   private boolean latencySampleEnabled;
@@ -99,11 +98,61 @@ public class MarketIngestService {
   private volatile int lastPublishedQuoteCount;
   private Timer ingestCycleTimer;
 
+  @Autowired
+  public MarketIngestService(
+      List<MarketDataProvider> providers,
+      StockInfoRepository stockInfoRepository,
+      MarketCacheGateway marketCacheGateway,
+      RedisTemplate<String, Object> redisTemplate,
+      MarketActiveQuoteRegistry marketActiveQuoteRegistry,
+      MarketWebSocketHandler marketWebSocketHandler,
+      MeterRegistry meterRegistry,
+      @Qualifier("marketIngestExecutor") ThreadPoolTaskExecutor marketIngestExecutor) {
+    this.providers = providers;
+    this.stockInfoRepository = stockInfoRepository;
+    this.marketCacheGateway = marketCacheGateway;
+    this.redisTemplate = redisTemplate;
+    this.marketActiveQuoteRegistry = marketActiveQuoteRegistry;
+    this.marketWebSocketHandler = marketWebSocketHandler;
+    this.meterRegistry = meterRegistry;
+    this.marketIngestExecutor = marketIngestExecutor;
+  }
+
+  MarketIngestService(
+      List<MarketDataProvider> providers,
+      StockInfoRepository stockInfoRepository,
+      MarketCacheGateway marketCacheGateway,
+      RedisTemplate<String, Object> redisTemplate,
+      MarketActiveQuoteRegistry marketActiveQuoteRegistry,
+      MarketWebSocketHandler marketWebSocketHandler,
+      MeterRegistry meterRegistry) {
+    this(
+        providers,
+        stockInfoRepository,
+        marketCacheGateway,
+        redisTemplate,
+        marketActiveQuoteRegistry,
+        marketWebSocketHandler,
+        meterRegistry,
+        directExecutor());
+  }
+
+  private static ThreadPoolTaskExecutor directExecutor() {
+    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    executor.setCorePoolSize(1);
+    executor.setMaxPoolSize(1);
+    executor.setQueueCapacity(100);
+    executor.setThreadNamePrefix("market-ingest-test-");
+    executor.initialize();
+    return executor;
+  }
+
   @PostConstruct
   void initMetrics() {
-    ingestCycleTimer = Timer.builder(INGEST_CYCLE_TIMER_METRIC)
-        .description("Market ingest cycle duration")
-        .register(meterRegistry);
+    ingestCycleTimer =
+        Timer.builder(INGEST_CYCLE_TIMER_METRIC)
+            .description("Market ingest cycle duration")
+            .register(meterRegistry);
   }
 
   @Scheduled(fixedRateString = "${market.ingest.pull-interval-ms:1000}")
@@ -190,13 +239,11 @@ public class MarketIngestService {
     }
 
     String nextToken = UUID.randomUUID().toString();
-    Boolean acquired = redisTemplate
-        .opsForValue()
-        .setIfAbsent(
-            INGEST_LEADER_KEY,
-            nextToken,
-            LEADER_LOCK_TTL.getSeconds(),
-            TimeUnit.SECONDS);
+    Boolean acquired =
+        redisTemplate
+            .opsForValue()
+            .setIfAbsent(
+                INGEST_LEADER_KEY, nextToken, LEADER_LOCK_TTL.getSeconds(), TimeUnit.SECONDS);
     if (Boolean.TRUE.equals(acquired)) {
       leaderToken = nextToken;
       return true;
@@ -209,16 +256,16 @@ public class MarketIngestService {
     int safeRoundRobinBatchSize = Math.max(roundRobinBatchSize, 0);
     Duration activeWindow = Duration.ofMillis(Math.max(activeWindowMs, DEFAULT_ACTIVE_WINDOW_MS));
 
-    List<String> activeCodes = marketActiveQuoteRegistry.listActiveCodes(
-        activeWindow,
-        safeActiveBatchSize > 0 ? safeActiveBatchSize : DEFAULT_ACTIVE_BATCH_SIZE);
+    List<String> activeCodes =
+        marketActiveQuoteRegistry.listActiveCodes(
+            activeWindow,
+            safeActiveBatchSize > 0 ? safeActiveBatchSize : DEFAULT_ACTIVE_BATCH_SIZE);
     Set<String> activeSet = new HashSet<>(activeCodes);
 
-    List<String> fallbackCodes = pickRoundRobinCodes(
-        activeSet,
-        safeRoundRobinBatchSize > 0
-            ? safeRoundRobinBatchSize
-            : DEFAULT_ROUND_ROBIN_BATCH_SIZE);
+    List<String> fallbackCodes =
+        pickRoundRobinCodes(
+            activeSet,
+            safeRoundRobinBatchSize > 0 ? safeRoundRobinBatchSize : DEFAULT_ROUND_ROBIN_BATCH_SIZE);
 
     List<String> ingestCodes = new ArrayList<>(activeCodes.size() + fallbackCodes.size());
     ingestCodes.addAll(activeCodes);
@@ -246,15 +293,17 @@ public class MarketIngestService {
 
   private List<String> getOrLoadStockUniverse() {
     long now = System.currentTimeMillis();
-    if (!stockUniverse.isEmpty() && now - stockUniverseLoadedAtMs < Math.max(stockUniverseRefreshMs, 1L)) {
+    if (!stockUniverse.isEmpty()
+        && now - stockUniverseLoadedAtMs < Math.max(stockUniverseRefreshMs, 1L)) {
       return stockUniverse;
     }
 
-    List<String> loaded = stockInfoRepository.findAllListed().stream()
-        .map(StockInfo::getStockCode)
-        .filter(code -> code != null && !code.isBlank())
-        .map(code -> code.trim().toLowerCase(Locale.ROOT))
-        .toList();
+    List<String> loaded =
+        stockInfoRepository.findAllListed().stream()
+            .map(StockInfo::getStockCode)
+            .filter(code -> code != null && !code.isBlank())
+            .map(code -> code.trim().toLowerCase(Locale.ROOT))
+            .toList();
     stockUniverse = loaded;
     stockUniverseLoadedAtMs = now;
     return stockUniverse;
@@ -264,8 +313,8 @@ public class MarketIngestService {
     List<CompletableFuture<List<QuoteSnapshot>>> futures = new ArrayList<>();
     for (MarketDataProvider provider : activeProviders()) {
       futures.add(
-          CompletableFuture
-              .supplyAsync(() -> fetchProviderBatch(provider, stockCodes))
+          CompletableFuture.supplyAsync(
+                  () -> fetchProviderBatch(provider, stockCodes), marketIngestExecutor)
               .completeOnTimeout(List.of(), PROVIDER_BATCH_TIMEOUT_MS, TimeUnit.MILLISECONDS)
               .exceptionally(_ex -> List.of()));
     }
@@ -299,7 +348,8 @@ public class MarketIngestService {
     return ordered;
   }
 
-  private List<QuoteSnapshot> fetchProviderBatch(MarketDataProvider provider, List<String> stockCodes) {
+  private List<QuoteSnapshot> fetchProviderBatch(
+      MarketDataProvider provider, List<String> stockCodes) {
     try {
       List<QuoteSnapshot> quotes = provider.batchGetQuotes(stockCodes);
       return quotes == null ? List.of() : quotes;

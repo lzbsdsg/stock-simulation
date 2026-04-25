@@ -1,0 +1,1225 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: /work/k6/perf-endpoints-common-qps.js
+        output: -
+
+     scenarios: (100.00%) 17 scenarios, 3260 max VUs, 1m30s max duration (incl. graceful stop):
+              * ep_market_indexes: 60.00 iterations/s for 1m0s (maxVUs: 30-180, exec: market_indexes, gracefulStop: 30s)
+              * ep_market_kline: 40.00 iterations/s for 1m0s (maxVUs: 20-120, exec: market_kline, gracefulStop: 30s)
+              * ep_market_listed: 70.00 iterations/s for 1m0s (maxVUs: 35-210, exec: market_listed, gracefulStop: 30s)
+              * ep_market_quote: 120.00 iterations/s for 1m0s (maxVUs: 60-360, exec: market_quote, gracefulStop: 30s)
+              * ep_market_quotes_batch: 80.00 iterations/s for 1m0s (maxVUs: 40-240, exec: market_quotes_batch, gracefulStop: 30s)
+              * ep_market_realtime_metrics: 30.00 iterations/s for 1m0s (maxVUs: 20-100, exec: market_realtime_metrics, gracefulStop: 30s)
+              * ep_market_search: 60.00 iterations/s for 1m0s (maxVUs: 30-180, exec: market_search, gracefulStop: 30s)
+              * ep_notifications_get: 70.00 iterations/s for 1m0s (maxVUs: 35-210, exec: notifications_get, gracefulStop: 30s)
+              * ep_notifications_unread_count: 60.00 iterations/s for 1m0s (maxVUs: 30-180, exec: notifications_unread_count, gracefulStop: 30s)
+              * ep_portfolio_equity_curve: 60.00 iterations/s for 1m0s (maxVUs: 30-180, exec: portfolio_equity_curve, gracefulStop: 30s)
+              * ep_portfolio_fund_flows: 70.00 iterations/s for 1m0s (maxVUs: 35-210, exec: portfolio_fund_flows, gracefulStop: 30s)
+              * ep_portfolio_overview: 40.00 iterations/s for 1m0s (maxVUs: 20-120, exec: portfolio_overview, gracefulStop: 30s)
+              * ep_portfolio_positions: 90.00 iterations/s for 1m0s (maxVUs: 45-270, exec: portfolio_positions, gracefulStop: 30s)
+              * ep_trade_orders: 40.00 iterations/s for 1m0s (maxVUs: 20-120, exec: trade_orders, gracefulStop: 30s)
+              * ep_trade_trades: 80.00 iterations/s for 1m0s (maxVUs: 40-240, exec: trade_trades, gracefulStop: 30s)
+              * ep_user_me: 20.00 iterations/s for 1m0s (maxVUs: 20-100, exec: user_me, gracefulStop: 30s)
+              * ep_watchlist_get: 80.00 iterations/s for 1m0s (maxVUs: 40-240, exec: watchlist_get, gracefulStop: 30s)
+
+
+running (0m00.7s), 0102/0550 VUs, 663 complete and 0 interrupted iterations
+ep_market_indexes               [   1% ] 001/030 VUs  0m00.7s/1m0s  60.00 iters/s
+ep_market_kline                 [   1% ] 002/020 VUs  0m00.7s/1m0s  40.00 iters/s
+ep_market_listed                [   1% ] 004/035 VUs  0m00.7s/1m0s  70.00 iters/s
+ep_market_quote                 [   1% ] 009/060 VUs  0m00.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [   1% ] 006/040 VUs  0m00.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [   1% ] 004/020 VUs  0m00.7s/1m0s  30.00 iters/s
+ep_market_search                [   1% ] 001/030 VUs  0m00.7s/1m0s  60.00 iters/s
+ep_notifications_get            [   1% ] 007/035 VUs  0m00.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [   1% ] 003/030 VUs  0m00.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [   1% ] 003/030 VUs  0m00.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [   1% ] 005/035 VUs  0m00.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [   1% ] 011/020 VUs  0m00.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [   1% ] 025/045 VUs  0m00.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [   1% ] 002/020 VUs  0m00.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [   1% ] 008/040 VUs  0m00.7s/1m0s  80.00 iters/s
+ep_user_me                      [   1% ] 003/020 VUs  0m00.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [   1% ] 008/040 VUs  0m00.7s/1m0s  80.00 iters/s
+
+running (0m01.7s), 0003/0550 VUs, 1832 complete and 0 interrupted iterations
+ep_market_indexes               [   3% ] 000/030 VUs  0m01.7s/1m0s  60.00 iters/s
+ep_market_kline                 [   3% ] 000/020 VUs  0m01.7s/1m0s  40.00 iters/s
+ep_market_listed                [   3% ] 000/035 VUs  0m01.7s/1m0s  70.00 iters/s
+ep_market_quote                 [   3% ] 000/060 VUs  0m01.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [   3% ] 000/040 VUs  0m01.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [   3% ] 000/020 VUs  0m01.7s/1m0s  30.00 iters/s
+ep_market_search                [   3% ] 000/030 VUs  0m01.7s/1m0s  60.00 iters/s
+ep_notifications_get            [   3% ] 000/035 VUs  0m01.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [   3% ] 000/030 VUs  0m01.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [   3% ] 000/030 VUs  0m01.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [   3% ] 001/035 VUs  0m01.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [   3% ] 001/020 VUs  0m01.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [   3% ] 001/045 VUs  0m01.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [   3% ] 000/020 VUs  0m01.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [   3% ] 000/040 VUs  0m01.7s/1m0s  80.00 iters/s
+ep_user_me                      [   3% ] 000/020 VUs  0m01.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [   3% ] 000/040 VUs  0m01.7s/1m0s  80.00 iters/s
+
+running (0m02.7s), 0005/0550 VUs, 2900 complete and 0 interrupted iterations
+ep_market_indexes               [   5% ] 000/030 VUs  0m02.7s/1m0s  60.00 iters/s
+ep_market_kline                 [   5% ] 000/020 VUs  0m02.7s/1m0s  40.00 iters/s
+ep_market_listed                [   5% ] 000/035 VUs  0m02.7s/1m0s  70.00 iters/s
+ep_market_quote                 [   5% ] 000/060 VUs  0m02.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [   5% ] 000/040 VUs  0m02.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [   5% ] 000/020 VUs  0m02.7s/1m0s  30.00 iters/s
+ep_market_search                [   4% ] 000/030 VUs  0m02.7s/1m0s  60.00 iters/s
+ep_notifications_get            [   5% ] 000/035 VUs  0m02.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [   5% ] 000/030 VUs  0m02.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [   5% ] 000/030 VUs  0m02.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [   5% ] 001/035 VUs  0m02.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [   5% ] 001/020 VUs  0m02.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [   5% ] 001/045 VUs  0m02.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [   5% ] 001/020 VUs  0m02.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [   5% ] 001/040 VUs  0m02.7s/1m0s  80.00 iters/s
+ep_user_me                      [   5% ] 000/020 VUs  0m02.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [   5% ] 000/040 VUs  0m02.7s/1m0s  80.00 iters/s
+
+running (0m03.7s), 0021/0550 VUs, 3954 complete and 0 interrupted iterations
+ep_market_indexes               [   6% ] 001/030 VUs  0m03.7s/1m0s  60.00 iters/s
+ep_market_kline                 [   6% ] 001/020 VUs  0m03.7s/1m0s  40.00 iters/s
+ep_market_listed                [   6% ] 001/035 VUs  0m03.7s/1m0s  70.00 iters/s
+ep_market_quote                 [   6% ] 001/060 VUs  0m03.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [   6% ] 002/040 VUs  0m03.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [   6% ] 001/020 VUs  0m03.7s/1m0s  30.00 iters/s
+ep_market_search                [   6% ] 001/030 VUs  0m03.7s/1m0s  60.00 iters/s
+ep_notifications_get            [   6% ] 001/035 VUs  0m03.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [   6% ] 001/030 VUs  0m03.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [   6% ] 001/030 VUs  0m03.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [   6% ] 003/035 VUs  0m03.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [   6% ] 001/020 VUs  0m03.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [   6% ] 003/045 VUs  0m03.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [   6% ] 001/020 VUs  0m03.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [   6% ] 002/040 VUs  0m03.7s/1m0s  80.00 iters/s
+ep_user_me                      [   6% ] 001/020 VUs  0m03.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [   6% ] 001/040 VUs  0m03.7s/1m0s  80.00 iters/s
+
+running (0m04.7s), 0018/0550 VUs, 5027 complete and 0 interrupted iterations
+ep_market_indexes               [   8% ] 000/030 VUs  0m04.7s/1m0s  60.00 iters/s
+ep_market_kline                 [   8% ] 001/020 VUs  0m04.7s/1m0s  40.00 iters/s
+ep_market_listed                [   8% ] 000/035 VUs  0m04.7s/1m0s  70.00 iters/s
+ep_market_quote                 [   8% ] 000/060 VUs  0m04.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [   8% ] 000/040 VUs  0m04.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [   8% ] 000/020 VUs  0m04.7s/1m0s  30.00 iters/s
+ep_market_search                [   8% ] 001/030 VUs  0m04.7s/1m0s  60.00 iters/s
+ep_notifications_get            [   8% ] 002/035 VUs  0m04.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [   8% ] 000/030 VUs  0m04.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [   8% ] 001/030 VUs  0m04.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [   8% ] 002/035 VUs  0m04.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [   8% ] 002/020 VUs  0m04.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [   8% ] 005/045 VUs  0m04.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [   8% ] 001/020 VUs  0m04.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [   8% ] 002/040 VUs  0m04.7s/1m0s  80.00 iters/s
+ep_user_me                      [   8% ] 001/020 VUs  0m04.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [   8% ] 000/040 VUs  0m04.7s/1m0s  80.00 iters/s
+
+running (0m05.7s), 0005/0550 VUs, 6110 complete and 0 interrupted iterations
+ep_market_indexes               [  10% ] 000/030 VUs  0m05.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  10% ] 000/020 VUs  0m05.7s/1m0s  40.00 iters/s
+ep_market_listed                [  10% ] 000/035 VUs  0m05.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  10% ] 000/060 VUs  0m05.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  10% ] 000/040 VUs  0m05.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  10% ] 000/020 VUs  0m05.7s/1m0s  30.00 iters/s
+ep_market_search                [   9% ] 000/030 VUs  0m05.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  10% ] 000/035 VUs  0m05.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  10% ] 000/030 VUs  0m05.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  10% ] 000/030 VUs  0m05.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  10% ] 001/035 VUs  0m05.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  10% ] 001/020 VUs  0m05.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  10% ] 001/045 VUs  0m05.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  10% ] 001/020 VUs  0m05.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  10% ] 001/040 VUs  0m05.7s/1m0s  80.00 iters/s
+ep_user_me                      [  10% ] 000/020 VUs  0m05.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  10% ] 000/040 VUs  0m05.7s/1m0s  80.00 iters/s
+
+running (0m06.7s), 0003/0550 VUs, 7182 complete and 0 interrupted iterations
+ep_market_indexes               [  11% ] 000/030 VUs  0m06.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  11% ] 000/020 VUs  0m06.7s/1m0s  40.00 iters/s
+ep_market_listed                [  11% ] 000/035 VUs  0m06.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  11% ] 000/060 VUs  0m06.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  11% ] 000/040 VUs  0m06.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  11% ] 000/020 VUs  0m06.7s/1m0s  30.00 iters/s
+ep_market_search                [  11% ] 000/030 VUs  0m06.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  11% ] 000/035 VUs  0m06.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  11% ] 000/030 VUs  0m06.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  11% ] 000/030 VUs  0m06.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  11% ] 001/035 VUs  0m06.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  11% ] 001/020 VUs  0m06.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  11% ] 001/045 VUs  0m06.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  11% ] 000/020 VUs  0m06.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  11% ] 000/040 VUs  0m06.7s/1m0s  80.00 iters/s
+ep_user_me                      [  11% ] 000/020 VUs  0m06.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  11% ] 000/040 VUs  0m06.7s/1m0s  80.00 iters/s
+
+running (0m07.7s), 0002/0550 VUs, 8252 complete and 0 interrupted iterations
+ep_market_indexes               [  13% ] 000/030 VUs  0m07.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  13% ] 000/020 VUs  0m07.7s/1m0s  40.00 iters/s
+ep_market_listed                [  13% ] 000/035 VUs  0m07.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  13% ] 000/060 VUs  0m07.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  13% ] 000/040 VUs  0m07.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  13% ] 000/020 VUs  0m07.7s/1m0s  30.00 iters/s
+ep_market_search                [  13% ] 000/030 VUs  0m07.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  13% ] 000/035 VUs  0m07.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  13% ] 000/030 VUs  0m07.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  13% ] 000/030 VUs  0m07.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  13% ] 001/035 VUs  0m07.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  13% ] 000/020 VUs  0m07.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  13% ] 001/045 VUs  0m07.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  13% ] 000/020 VUs  0m07.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  13% ] 000/040 VUs  0m07.7s/1m0s  80.00 iters/s
+ep_user_me                      [  13% ] 000/020 VUs  0m07.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  13% ] 000/040 VUs  0m07.7s/1m0s  80.00 iters/s
+
+running (0m08.7s), 0003/0550 VUs, 9322 complete and 0 interrupted iterations
+ep_market_indexes               [  15% ] 000/030 VUs  0m08.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  15% ] 000/020 VUs  0m08.7s/1m0s  40.00 iters/s
+ep_market_listed                [  15% ] 000/035 VUs  0m08.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  15% ] 000/060 VUs  0m08.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  15% ] 000/040 VUs  0m08.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  15% ] 000/020 VUs  0m08.7s/1m0s  30.00 iters/s
+ep_market_search                [  14% ] 000/030 VUs  0m08.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  15% ] 000/035 VUs  0m08.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  15% ] 000/030 VUs  0m08.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  15% ] 000/030 VUs  0m08.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  15% ] 001/035 VUs  0m08.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  15% ] 001/020 VUs  0m08.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  15% ] 001/045 VUs  0m08.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  15% ] 000/020 VUs  0m08.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  15% ] 000/040 VUs  0m08.7s/1m0s  80.00 iters/s
+ep_user_me                      [  15% ] 000/020 VUs  0m08.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  15% ] 000/040 VUs  0m08.7s/1m0s  80.00 iters/s
+
+running (0m09.7s), 0003/0550 VUs, 10392 complete and 0 interrupted iterations
+ep_market_indexes               [  16% ] 000/030 VUs  0m09.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  16% ] 000/020 VUs  0m09.7s/1m0s  40.00 iters/s
+ep_market_listed                [  16% ] 000/035 VUs  0m09.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  16% ] 000/060 VUs  0m09.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  16% ] 000/040 VUs  0m09.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  16% ] 000/020 VUs  0m09.7s/1m0s  30.00 iters/s
+ep_market_search                [  16% ] 000/030 VUs  0m09.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  16% ] 000/035 VUs  0m09.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  16% ] 000/030 VUs  0m09.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  16% ] 000/030 VUs  0m09.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  16% ] 001/035 VUs  0m09.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  16% ] 001/020 VUs  0m09.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  16% ] 001/045 VUs  0m09.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  16% ] 000/020 VUs  0m09.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  16% ] 000/040 VUs  0m09.7s/1m0s  80.00 iters/s
+ep_user_me                      [  16% ] 000/020 VUs  0m09.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  16% ] 000/040 VUs  0m09.7s/1m0s  80.00 iters/s
+
+running (0m10.7s), 0004/0550 VUs, 11461 complete and 0 interrupted iterations
+ep_market_indexes               [  18% ] 000/030 VUs  0m10.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  18% ] 000/020 VUs  0m10.7s/1m0s  40.00 iters/s
+ep_market_listed                [  18% ] 000/035 VUs  0m10.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  18% ] 000/060 VUs  0m10.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  18% ] 000/040 VUs  0m10.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  18% ] 000/020 VUs  0m10.7s/1m0s  30.00 iters/s
+ep_market_search                [  18% ] 000/030 VUs  0m10.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  18% ] 000/035 VUs  0m10.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  18% ] 000/030 VUs  0m10.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  18% ] 000/030 VUs  0m10.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  18% ] 001/035 VUs  0m10.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  18% ] 001/020 VUs  0m10.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  18% ] 001/045 VUs  0m10.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  18% ] 000/020 VUs  0m10.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  18% ] 001/040 VUs  0m10.7s/1m0s  80.00 iters/s
+ep_user_me                      [  18% ] 000/020 VUs  0m10.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  18% ] 000/040 VUs  0m10.7s/1m0s  80.00 iters/s
+
+running (0m11.7s), 0003/0550 VUs, 12532 complete and 0 interrupted iterations
+ep_market_indexes               [  20% ] 000/030 VUs  0m11.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  20% ] 000/020 VUs  0m11.7s/1m0s  40.00 iters/s
+ep_market_listed                [  20% ] 000/035 VUs  0m11.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  20% ] 000/060 VUs  0m11.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  20% ] 000/040 VUs  0m11.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  20% ] 000/020 VUs  0m11.7s/1m0s  30.00 iters/s
+ep_market_search                [  19% ] 000/030 VUs  0m11.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  20% ] 000/035 VUs  0m11.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  20% ] 000/030 VUs  0m11.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  20% ] 000/030 VUs  0m11.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  20% ] 000/035 VUs  0m11.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  20% ] 001/020 VUs  0m11.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  20% ] 001/045 VUs  0m11.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  20% ] 000/020 VUs  0m11.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  20% ] 000/040 VUs  0m11.7s/1m0s  80.00 iters/s
+ep_user_me                      [  20% ] 000/020 VUs  0m11.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  20% ] 000/040 VUs  0m11.7s/1m0s  80.00 iters/s
+
+running (0m12.7s), 0003/0550 VUs, 13602 complete and 0 interrupted iterations
+ep_market_indexes               [  21% ] 000/030 VUs  0m12.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  21% ] 000/020 VUs  0m12.7s/1m0s  40.00 iters/s
+ep_market_listed                [  21% ] 000/035 VUs  0m12.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  21% ] 000/060 VUs  0m12.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  21% ] 000/040 VUs  0m12.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  21% ] 000/020 VUs  0m12.7s/1m0s  30.00 iters/s
+ep_market_search                [  21% ] 000/030 VUs  0m12.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  21% ] 000/035 VUs  0m12.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  21% ] 000/030 VUs  0m12.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  21% ] 000/030 VUs  0m12.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  21% ] 001/035 VUs  0m12.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  21% ] 001/020 VUs  0m12.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  21% ] 001/045 VUs  0m12.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  21% ] 000/020 VUs  0m12.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  21% ] 000/040 VUs  0m12.7s/1m0s  80.00 iters/s
+ep_user_me                      [  21% ] 000/020 VUs  0m12.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  21% ] 000/040 VUs  0m12.7s/1m0s  80.00 iters/s
+
+running (0m13.7s), 0002/0550 VUs, 14673 complete and 0 interrupted iterations
+ep_market_indexes               [  23% ] 000/030 VUs  0m13.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  23% ] 000/020 VUs  0m13.7s/1m0s  40.00 iters/s
+ep_market_listed                [  23% ] 000/035 VUs  0m13.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  23% ] 000/060 VUs  0m13.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  23% ] 000/040 VUs  0m13.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  23% ] 000/020 VUs  0m13.7s/1m0s  30.00 iters/s
+ep_market_search                [  23% ] 000/030 VUs  0m13.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  23% ] 000/035 VUs  0m13.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  23% ] 000/030 VUs  0m13.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  23% ] 000/030 VUs  0m13.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  23% ] 000/035 VUs  0m13.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  23% ] 001/020 VUs  0m13.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  23% ] 001/045 VUs  0m13.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  23% ] 000/020 VUs  0m13.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  23% ] 000/040 VUs  0m13.7s/1m0s  80.00 iters/s
+ep_user_me                      [  23% ] 000/020 VUs  0m13.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  23% ] 000/040 VUs  0m13.7s/1m0s  80.00 iters/s
+
+running (0m14.7s), 0009/0550 VUs, 15736 complete and 0 interrupted iterations
+ep_market_indexes               [  25% ] 000/030 VUs  0m14.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  25% ] 001/020 VUs  0m14.7s/1m0s  40.00 iters/s
+ep_market_listed                [  25% ] 001/035 VUs  0m14.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  25% ] 000/060 VUs  0m14.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  25% ] 000/040 VUs  0m14.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  25% ] 000/020 VUs  0m14.7s/1m0s  30.00 iters/s
+ep_market_search                [  24% ] 000/030 VUs  0m14.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  25% ] 000/035 VUs  0m14.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  25% ] 000/030 VUs  0m14.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  25% ] 001/030 VUs  0m14.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  25% ] 001/035 VUs  0m14.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  25% ] 001/020 VUs  0m14.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  25% ] 001/045 VUs  0m14.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  25% ] 001/020 VUs  0m14.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  25% ] 001/040 VUs  0m14.7s/1m0s  80.00 iters/s
+ep_user_me                      [  25% ] 001/020 VUs  0m14.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  25% ] 000/040 VUs  0m14.7s/1m0s  80.00 iters/s
+
+running (0m15.7s), 0002/0550 VUs, 16813 complete and 0 interrupted iterations
+ep_market_indexes               [  26% ] 000/030 VUs  0m15.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  26% ] 000/020 VUs  0m15.7s/1m0s  40.00 iters/s
+ep_market_listed                [  26% ] 000/035 VUs  0m15.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  26% ] 000/060 VUs  0m15.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  26% ] 000/040 VUs  0m15.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  26% ] 000/020 VUs  0m15.7s/1m0s  30.00 iters/s
+ep_market_search                [  26% ] 000/030 VUs  0m15.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  26% ] 000/035 VUs  0m15.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  26% ] 000/030 VUs  0m15.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  26% ] 000/030 VUs  0m15.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  26% ] 000/035 VUs  0m15.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  26% ] 001/020 VUs  0m15.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  26% ] 001/045 VUs  0m15.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  26% ] 000/020 VUs  0m15.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  26% ] 000/040 VUs  0m15.7s/1m0s  80.00 iters/s
+ep_user_me                      [  26% ] 000/020 VUs  0m15.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  26% ] 000/040 VUs  0m15.7s/1m0s  80.00 iters/s
+
+running (0m16.7s), 0003/0550 VUs, 17882 complete and 0 interrupted iterations
+ep_market_indexes               [  28% ] 000/030 VUs  0m16.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  28% ] 000/020 VUs  0m16.7s/1m0s  40.00 iters/s
+ep_market_listed                [  28% ] 000/035 VUs  0m16.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  28% ] 000/060 VUs  0m16.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  28% ] 000/040 VUs  0m16.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  28% ] 000/020 VUs  0m16.7s/1m0s  30.00 iters/s
+ep_market_search                [  28% ] 000/030 VUs  0m16.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  28% ] 000/035 VUs  0m16.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  28% ] 000/030 VUs  0m16.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  28% ] 000/030 VUs  0m16.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  28% ] 001/035 VUs  0m16.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  28% ] 001/020 VUs  0m16.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  28% ] 001/045 VUs  0m16.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  28% ] 000/020 VUs  0m16.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  28% ] 000/040 VUs  0m16.7s/1m0s  80.00 iters/s
+ep_user_me                      [  28% ] 000/020 VUs  0m16.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  28% ] 000/040 VUs  0m16.7s/1m0s  80.00 iters/s
+
+running (0m17.7s), 0003/0550 VUs, 18952 complete and 0 interrupted iterations
+ep_market_indexes               [  30% ] 000/030 VUs  0m17.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  30% ] 000/020 VUs  0m17.7s/1m0s  40.00 iters/s
+ep_market_listed                [  30% ] 000/035 VUs  0m17.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  30% ] 000/060 VUs  0m17.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  30% ] 000/040 VUs  0m17.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  30% ] 000/020 VUs  0m17.7s/1m0s  30.00 iters/s
+ep_market_search                [  29% ] 000/030 VUs  0m17.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  30% ] 000/035 VUs  0m17.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  30% ] 000/030 VUs  0m17.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  30% ] 000/030 VUs  0m17.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  30% ] 001/035 VUs  0m17.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  30% ] 001/020 VUs  0m17.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  30% ] 001/045 VUs  0m17.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  30% ] 000/020 VUs  0m17.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  30% ] 000/040 VUs  0m17.7s/1m0s  80.00 iters/s
+ep_user_me                      [  30% ] 000/020 VUs  0m17.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  30% ] 000/040 VUs  0m17.7s/1m0s  80.00 iters/s
+
+running (0m18.7s), 0004/0550 VUs, 20021 complete and 0 interrupted iterations
+ep_market_indexes               [  31% ] 000/030 VUs  0m18.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  31% ] 000/020 VUs  0m18.7s/1m0s  40.00 iters/s
+ep_market_listed                [  31% ] 000/035 VUs  0m18.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  31% ] 000/060 VUs  0m18.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  31% ] 000/040 VUs  0m18.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  31% ] 000/020 VUs  0m18.7s/1m0s  30.00 iters/s
+ep_market_search                [  31% ] 000/030 VUs  0m18.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  31% ] 000/035 VUs  0m18.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  31% ] 000/030 VUs  0m18.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  31% ] 000/030 VUs  0m18.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  31% ] 000/035 VUs  0m18.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  31% ] 002/020 VUs  0m18.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  31% ] 001/045 VUs  0m18.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  31% ] 000/020 VUs  0m18.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  31% ] 000/040 VUs  0m18.7s/1m0s  80.00 iters/s
+ep_user_me                      [  31% ] 000/020 VUs  0m18.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  31% ] 000/040 VUs  0m18.7s/1m0s  80.00 iters/s
+
+running (0m19.7s), 0003/0550 VUs, 21092 complete and 0 interrupted iterations
+ep_market_indexes               [  33% ] 000/030 VUs  0m19.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  33% ] 000/020 VUs  0m19.7s/1m0s  40.00 iters/s
+ep_market_listed                [  33% ] 000/035 VUs  0m19.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  33% ] 000/060 VUs  0m19.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  33% ] 000/040 VUs  0m19.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  33% ] 000/020 VUs  0m19.7s/1m0s  30.00 iters/s
+ep_market_search                [  33% ] 000/030 VUs  0m19.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  33% ] 000/035 VUs  0m19.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  33% ] 000/030 VUs  0m19.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  33% ] 000/030 VUs  0m19.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  33% ] 001/035 VUs  0m19.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  33% ] 001/020 VUs  0m19.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  33% ] 001/045 VUs  0m19.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  33% ] 000/020 VUs  0m19.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  33% ] 000/040 VUs  0m19.7s/1m0s  80.00 iters/s
+ep_user_me                      [  33% ] 000/020 VUs  0m19.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  33% ] 000/040 VUs  0m19.7s/1m0s  80.00 iters/s
+
+running (0m20.7s), 0004/0550 VUs, 22161 complete and 0 interrupted iterations
+ep_market_indexes               [  35% ] 000/030 VUs  0m20.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  35% ] 000/020 VUs  0m20.7s/1m0s  40.00 iters/s
+ep_market_listed                [  35% ] 000/035 VUs  0m20.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  35% ] 000/060 VUs  0m20.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  35% ] 000/040 VUs  0m20.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  35% ] 000/020 VUs  0m20.7s/1m0s  30.00 iters/s
+ep_market_search                [  34% ] 000/030 VUs  0m20.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  35% ] 000/035 VUs  0m20.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  35% ] 000/030 VUs  0m20.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  35% ] 000/030 VUs  0m20.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  35% ] 001/035 VUs  0m20.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  35% ] 001/020 VUs  0m20.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  35% ] 002/045 VUs  0m20.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  35% ] 000/020 VUs  0m20.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  35% ] 000/040 VUs  0m20.7s/1m0s  80.00 iters/s
+ep_user_me                      [  35% ] 000/020 VUs  0m20.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  35% ] 000/040 VUs  0m20.7s/1m0s  80.00 iters/s
+
+running (0m21.7s), 0003/0550 VUs, 23232 complete and 0 interrupted iterations
+ep_market_indexes               [  36% ] 000/030 VUs  0m21.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  36% ] 000/020 VUs  0m21.7s/1m0s  40.00 iters/s
+ep_market_listed                [  36% ] 000/035 VUs  0m21.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  36% ] 000/060 VUs  0m21.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  36% ] 000/040 VUs  0m21.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  36% ] 000/020 VUs  0m21.7s/1m0s  30.00 iters/s
+ep_market_search                [  36% ] 000/030 VUs  0m21.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  36% ] 000/035 VUs  0m21.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  36% ] 000/030 VUs  0m21.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  36% ] 000/030 VUs  0m21.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  36% ] 001/035 VUs  0m21.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  36% ] 001/020 VUs  0m21.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  36% ] 001/045 VUs  0m21.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  36% ] 000/020 VUs  0m21.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  36% ] 000/040 VUs  0m21.7s/1m0s  80.00 iters/s
+ep_user_me                      [  36% ] 000/020 VUs  0m21.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  36% ] 000/040 VUs  0m21.7s/1m0s  80.00 iters/s
+
+running (0m22.7s), 0002/0550 VUs, 24303 complete and 0 interrupted iterations
+ep_market_indexes               [  38% ] 000/030 VUs  0m22.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  38% ] 000/020 VUs  0m22.7s/1m0s  40.00 iters/s
+ep_market_listed                [  38% ] 000/035 VUs  0m22.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  38% ] 000/060 VUs  0m22.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  38% ] 000/040 VUs  0m22.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  38% ] 000/020 VUs  0m22.7s/1m0s  30.00 iters/s
+ep_market_search                [  38% ] 000/030 VUs  0m22.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  38% ] 000/035 VUs  0m22.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  38% ] 000/030 VUs  0m22.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  38% ] 000/030 VUs  0m22.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  38% ] 000/035 VUs  0m22.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  38% ] 001/020 VUs  0m22.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  38% ] 001/045 VUs  0m22.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  38% ] 000/020 VUs  0m22.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  38% ] 000/040 VUs  0m22.7s/1m0s  80.00 iters/s
+ep_user_me                      [  38% ] 000/020 VUs  0m22.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  38% ] 000/040 VUs  0m22.7s/1m0s  80.00 iters/s
+
+running (0m23.7s), 0003/0550 VUs, 25372 complete and 0 interrupted iterations
+ep_market_indexes               [  40% ] 000/030 VUs  0m23.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  40% ] 000/020 VUs  0m23.7s/1m0s  40.00 iters/s
+ep_market_listed                [  40% ] 000/035 VUs  0m23.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  40% ] 000/060 VUs  0m23.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  40% ] 000/040 VUs  0m23.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  40% ] 000/020 VUs  0m23.7s/1m0s  30.00 iters/s
+ep_market_search                [  39% ] 000/030 VUs  0m23.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  40% ] 000/035 VUs  0m23.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  40% ] 000/030 VUs  0m23.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  40% ] 000/030 VUs  0m23.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  40% ] 001/035 VUs  0m23.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  40% ] 001/020 VUs  0m23.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  40% ] 001/045 VUs  0m23.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  40% ] 000/020 VUs  0m23.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  40% ] 000/040 VUs  0m23.7s/1m0s  80.00 iters/s
+ep_user_me                      [  40% ] 000/020 VUs  0m23.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  40% ] 000/040 VUs  0m23.7s/1m0s  80.00 iters/s
+
+running (0m24.7s), 0017/0550 VUs, 26428 complete and 0 interrupted iterations
+ep_market_indexes               [  41% ] 000/030 VUs  0m24.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  41% ] 001/020 VUs  0m24.7s/1m0s  40.00 iters/s
+ep_market_listed                [  41% ] 001/035 VUs  0m24.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  41% ] 001/060 VUs  0m24.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  41% ] 000/040 VUs  0m24.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  41% ] 001/020 VUs  0m24.7s/1m0s  30.00 iters/s
+ep_market_search                [  41% ] 000/030 VUs  0m24.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  41% ] 001/035 VUs  0m24.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  41% ] 001/030 VUs  0m24.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  41% ] 001/030 VUs  0m24.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  41% ] 001/035 VUs  0m24.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  41% ] 002/020 VUs  0m24.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  41% ] 003/045 VUs  0m24.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  41% ] 001/020 VUs  0m24.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  41% ] 001/040 VUs  0m24.7s/1m0s  80.00 iters/s
+ep_user_me                      [  41% ] 001/020 VUs  0m24.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  41% ] 001/040 VUs  0m24.7s/1m0s  80.00 iters/s
+
+running (0m25.7s), 0002/0550 VUs, 27513 complete and 0 interrupted iterations
+ep_market_indexes               [  43% ] 000/030 VUs  0m25.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  43% ] 000/020 VUs  0m25.7s/1m0s  40.00 iters/s
+ep_market_listed                [  43% ] 000/035 VUs  0m25.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  43% ] 000/060 VUs  0m25.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  43% ] 000/040 VUs  0m25.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  43% ] 000/020 VUs  0m25.7s/1m0s  30.00 iters/s
+ep_market_search                [  43% ] 000/030 VUs  0m25.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  43% ] 000/035 VUs  0m25.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  43% ] 000/030 VUs  0m25.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  43% ] 000/030 VUs  0m25.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  43% ] 000/035 VUs  0m25.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  43% ] 001/020 VUs  0m25.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  43% ] 001/045 VUs  0m25.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  43% ] 000/020 VUs  0m25.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  43% ] 000/040 VUs  0m25.7s/1m0s  80.00 iters/s
+ep_user_me                      [  43% ] 000/020 VUs  0m25.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  43% ] 000/040 VUs  0m25.7s/1m0s  80.00 iters/s
+
+running (0m26.7s), 0002/0550 VUs, 28583 complete and 0 interrupted iterations
+ep_market_indexes               [  45% ] 000/030 VUs  0m26.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  45% ] 000/020 VUs  0m26.7s/1m0s  40.00 iters/s
+ep_market_listed                [  45% ] 000/035 VUs  0m26.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  45% ] 000/060 VUs  0m26.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  45% ] 000/040 VUs  0m26.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  45% ] 000/020 VUs  0m26.7s/1m0s  30.00 iters/s
+ep_market_search                [  44% ] 000/030 VUs  0m26.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  45% ] 000/035 VUs  0m26.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  45% ] 000/030 VUs  0m26.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  45% ] 000/030 VUs  0m26.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  45% ] 000/035 VUs  0m26.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  45% ] 001/020 VUs  0m26.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  45% ] 001/045 VUs  0m26.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  45% ] 000/020 VUs  0m26.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  45% ] 000/040 VUs  0m26.7s/1m0s  80.00 iters/s
+ep_user_me                      [  45% ] 000/020 VUs  0m26.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  45% ] 000/040 VUs  0m26.7s/1m0s  80.00 iters/s
+
+running (0m27.7s), 0003/0550 VUs, 29652 complete and 0 interrupted iterations
+ep_market_indexes               [  46% ] 000/030 VUs  0m27.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  46% ] 000/020 VUs  0m27.7s/1m0s  40.00 iters/s
+ep_market_listed                [  46% ] 000/035 VUs  0m27.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  46% ] 000/060 VUs  0m27.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  46% ] 000/040 VUs  0m27.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  46% ] 000/020 VUs  0m27.7s/1m0s  30.00 iters/s
+ep_market_search                [  46% ] 000/030 VUs  0m27.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  46% ] 000/035 VUs  0m27.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  46% ] 000/030 VUs  0m27.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  46% ] 000/030 VUs  0m27.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  46% ] 001/035 VUs  0m27.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  46% ] 001/020 VUs  0m27.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  46% ] 001/045 VUs  0m27.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  46% ] 000/020 VUs  0m27.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  46% ] 000/040 VUs  0m27.7s/1m0s  80.00 iters/s
+ep_user_me                      [  46% ] 000/020 VUs  0m27.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  46% ] 000/040 VUs  0m27.7s/1m0s  80.00 iters/s
+
+running (0m28.7s), 0002/0550 VUs, 30723 complete and 0 interrupted iterations
+ep_market_indexes               [  48% ] 000/030 VUs  0m28.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  48% ] 000/020 VUs  0m28.7s/1m0s  40.00 iters/s
+ep_market_listed                [  48% ] 000/035 VUs  0m28.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  48% ] 000/060 VUs  0m28.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  48% ] 000/040 VUs  0m28.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  48% ] 000/020 VUs  0m28.7s/1m0s  30.00 iters/s
+ep_market_search                [  48% ] 000/030 VUs  0m28.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  48% ] 000/035 VUs  0m28.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  48% ] 000/030 VUs  0m28.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  48% ] 000/030 VUs  0m28.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  48% ] 000/035 VUs  0m28.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  48% ] 001/020 VUs  0m28.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  48% ] 000/045 VUs  0m28.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  48% ] 000/020 VUs  0m28.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  48% ] 000/040 VUs  0m28.7s/1m0s  80.00 iters/s
+ep_user_me                      [  48% ] 000/020 VUs  0m28.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  48% ] 000/040 VUs  0m28.7s/1m0s  80.00 iters/s
+
+running (0m29.7s), 0004/0550 VUs, 31791 complete and 0 interrupted iterations
+ep_market_indexes               [  50% ] 000/030 VUs  0m29.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  50% ] 000/020 VUs  0m29.7s/1m0s  40.00 iters/s
+ep_market_listed                [  50% ] 000/035 VUs  0m29.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  50% ] 000/060 VUs  0m29.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  50% ] 000/040 VUs  0m29.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  50% ] 000/020 VUs  0m29.7s/1m0s  30.00 iters/s
+ep_market_search                [  49% ] 000/030 VUs  0m29.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  50% ] 000/035 VUs  0m29.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  50% ] 000/030 VUs  0m29.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  50% ] 000/030 VUs  0m29.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  50% ] 001/035 VUs  0m29.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  50% ] 001/020 VUs  0m29.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  50% ] 002/045 VUs  0m29.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  50% ] 000/020 VUs  0m29.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  50% ] 000/040 VUs  0m29.7s/1m0s  80.00 iters/s
+ep_user_me                      [  50% ] 000/020 VUs  0m29.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  50% ] 000/040 VUs  0m29.7s/1m0s  80.00 iters/s
+
+running (0m30.7s), 0002/0550 VUs, 32863 complete and 0 interrupted iterations
+ep_market_indexes               [  51% ] 000/030 VUs  0m30.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  51% ] 000/020 VUs  0m30.7s/1m0s  40.00 iters/s
+ep_market_listed                [  51% ] 000/035 VUs  0m30.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  51% ] 000/060 VUs  0m30.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  51% ] 000/040 VUs  0m30.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  51% ] 000/020 VUs  0m30.7s/1m0s  30.00 iters/s
+ep_market_search                [  51% ] 000/030 VUs  0m30.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  51% ] 000/035 VUs  0m30.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  51% ] 000/030 VUs  0m30.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  51% ] 000/030 VUs  0m30.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  51% ] 000/035 VUs  0m30.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  51% ] 001/020 VUs  0m30.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  51% ] 001/045 VUs  0m30.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  51% ] 000/020 VUs  0m30.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  51% ] 000/040 VUs  0m30.7s/1m0s  80.00 iters/s
+ep_user_me                      [  51% ] 000/020 VUs  0m30.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  51% ] 000/040 VUs  0m30.7s/1m0s  80.00 iters/s
+
+running (0m31.7s), 0003/0550 VUs, 33932 complete and 0 interrupted iterations
+ep_market_indexes               [  53% ] 000/030 VUs  0m31.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  53% ] 000/020 VUs  0m31.7s/1m0s  40.00 iters/s
+ep_market_listed                [  53% ] 000/035 VUs  0m31.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  53% ] 000/060 VUs  0m31.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  53% ] 000/040 VUs  0m31.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  53% ] 000/020 VUs  0m31.7s/1m0s  30.00 iters/s
+ep_market_search                [  53% ] 000/030 VUs  0m31.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  53% ] 000/035 VUs  0m31.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  53% ] 000/030 VUs  0m31.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  53% ] 000/030 VUs  0m31.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  53% ] 001/035 VUs  0m31.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  53% ] 001/020 VUs  0m31.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  53% ] 001/045 VUs  0m31.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  53% ] 000/020 VUs  0m31.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  53% ] 000/040 VUs  0m31.7s/1m0s  80.00 iters/s
+ep_user_me                      [  53% ] 000/020 VUs  0m31.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  53% ] 000/040 VUs  0m31.7s/1m0s  80.00 iters/s
+
+running (0m32.7s), 0003/0550 VUs, 35002 complete and 0 interrupted iterations
+ep_market_indexes               [  55% ] 000/030 VUs  0m32.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  55% ] 000/020 VUs  0m32.7s/1m0s  40.00 iters/s
+ep_market_listed                [  55% ] 000/035 VUs  0m32.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  55% ] 000/060 VUs  0m32.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  55% ] 000/040 VUs  0m32.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  55% ] 000/020 VUs  0m32.7s/1m0s  30.00 iters/s
+ep_market_search                [  54% ] 000/030 VUs  0m32.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  55% ] 000/035 VUs  0m32.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  55% ] 000/030 VUs  0m32.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  55% ] 000/030 VUs  0m32.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  55% ] 001/035 VUs  0m32.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  55% ] 001/020 VUs  0m32.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  55% ] 001/045 VUs  0m32.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  55% ] 000/020 VUs  0m32.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  55% ] 000/040 VUs  0m32.7s/1m0s  80.00 iters/s
+ep_user_me                      [  55% ] 000/020 VUs  0m32.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  55% ] 000/040 VUs  0m32.7s/1m0s  80.00 iters/s
+
+running (0m33.7s), 0003/0550 VUs, 36072 complete and 0 interrupted iterations
+ep_market_indexes               [  56% ] 000/030 VUs  0m33.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  56% ] 000/020 VUs  0m33.7s/1m0s  40.00 iters/s
+ep_market_listed                [  56% ] 000/035 VUs  0m33.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  56% ] 000/060 VUs  0m33.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  56% ] 000/040 VUs  0m33.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  56% ] 000/020 VUs  0m33.7s/1m0s  30.00 iters/s
+ep_market_search                [  56% ] 000/030 VUs  0m33.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  56% ] 000/035 VUs  0m33.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  56% ] 000/030 VUs  0m33.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  56% ] 000/030 VUs  0m33.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  56% ] 001/035 VUs  0m33.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  56% ] 001/020 VUs  0m33.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  56% ] 001/045 VUs  0m33.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  56% ] 000/020 VUs  0m33.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  56% ] 000/040 VUs  0m33.7s/1m0s  80.00 iters/s
+ep_user_me                      [  56% ] 000/020 VUs  0m33.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  56% ] 000/040 VUs  0m33.7s/1m0s  80.00 iters/s
+
+running (0m34.7s), 0005/0550 VUs, 37140 complete and 0 interrupted iterations
+ep_market_indexes               [  58% ] 000/030 VUs  0m34.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  58% ] 000/020 VUs  0m34.7s/1m0s  40.00 iters/s
+ep_market_listed                [  58% ] 000/035 VUs  0m34.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  58% ] 000/060 VUs  0m34.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  58% ] 000/040 VUs  0m34.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  58% ] 000/020 VUs  0m34.7s/1m0s  30.00 iters/s
+ep_market_search                [  58% ] 000/030 VUs  0m34.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  58% ] 000/035 VUs  0m34.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  58% ] 000/030 VUs  0m34.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  58% ] 000/030 VUs  0m34.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  58% ] 001/035 VUs  0m34.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  58% ] 001/020 VUs  0m34.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  58% ] 001/045 VUs  0m34.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  58% ] 001/020 VUs  0m34.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  58% ] 001/040 VUs  0m34.7s/1m0s  80.00 iters/s
+ep_user_me                      [  58% ] 000/020 VUs  0m34.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  58% ] 000/040 VUs  0m34.7s/1m0s  80.00 iters/s
+
+running (0m35.7s), 0003/0550 VUs, 38212 complete and 0 interrupted iterations
+ep_market_indexes               [  60% ] 000/030 VUs  0m35.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  60% ] 000/020 VUs  0m35.7s/1m0s  40.00 iters/s
+ep_market_listed                [  60% ] 000/035 VUs  0m35.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  60% ] 000/060 VUs  0m35.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  60% ] 000/040 VUs  0m35.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  60% ] 000/020 VUs  0m35.7s/1m0s  30.00 iters/s
+ep_market_search                [  59% ] 000/030 VUs  0m35.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  60% ] 000/035 VUs  0m35.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  60% ] 000/030 VUs  0m35.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  60% ] 000/030 VUs  0m35.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  60% ] 001/035 VUs  0m35.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  60% ] 001/020 VUs  0m35.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  60% ] 001/045 VUs  0m35.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  60% ] 000/020 VUs  0m35.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  60% ] 000/040 VUs  0m35.7s/1m0s  80.00 iters/s
+ep_user_me                      [  60% ] 000/020 VUs  0m35.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  60% ] 000/040 VUs  0m35.7s/1m0s  80.00 iters/s
+
+running (0m36.8s), 0003/0550 VUs, 39282 complete and 0 interrupted iterations
+ep_market_indexes               [  61% ] 000/030 VUs  0m36.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  61% ] 000/020 VUs  0m36.7s/1m0s  40.00 iters/s
+ep_market_listed                [  61% ] 000/035 VUs  0m36.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  61% ] 000/060 VUs  0m36.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  61% ] 000/040 VUs  0m36.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  61% ] 000/020 VUs  0m36.7s/1m0s  30.00 iters/s
+ep_market_search                [  61% ] 000/030 VUs  0m36.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  61% ] 000/035 VUs  0m36.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  61% ] 000/030 VUs  0m36.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  61% ] 000/030 VUs  0m36.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  61% ] 001/035 VUs  0m36.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  61% ] 001/020 VUs  0m36.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  61% ] 001/045 VUs  0m36.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  61% ] 000/020 VUs  0m36.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  61% ] 000/040 VUs  0m36.7s/1m0s  80.00 iters/s
+ep_user_me                      [  61% ] 000/020 VUs  0m36.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  61% ] 000/040 VUs  0m36.7s/1m0s  80.00 iters/s
+
+running (0m37.8s), 0003/0550 VUs, 40352 complete and 0 interrupted iterations
+ep_market_indexes               [  63% ] 000/030 VUs  0m37.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  63% ] 000/020 VUs  0m37.7s/1m0s  40.00 iters/s
+ep_market_listed                [  63% ] 000/035 VUs  0m37.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  63% ] 000/060 VUs  0m37.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  63% ] 000/040 VUs  0m37.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  63% ] 000/020 VUs  0m37.7s/1m0s  30.00 iters/s
+ep_market_search                [  63% ] 000/030 VUs  0m37.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  63% ] 000/035 VUs  0m37.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  63% ] 000/030 VUs  0m37.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  63% ] 000/030 VUs  0m37.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  63% ] 001/035 VUs  0m37.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  63% ] 001/020 VUs  0m37.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  63% ] 001/045 VUs  0m37.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  63% ] 000/020 VUs  0m37.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  63% ] 000/040 VUs  0m37.7s/1m0s  80.00 iters/s
+ep_user_me                      [  63% ] 000/020 VUs  0m37.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  63% ] 000/040 VUs  0m37.7s/1m0s  80.00 iters/s
+
+running (0m38.8s), 0002/0550 VUs, 41423 complete and 0 interrupted iterations
+ep_market_indexes               [  65% ] 000/030 VUs  0m38.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  65% ] 000/020 VUs  0m38.7s/1m0s  40.00 iters/s
+ep_market_listed                [  65% ] 000/035 VUs  0m38.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  65% ] 000/060 VUs  0m38.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  65% ] 000/040 VUs  0m38.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  65% ] 000/020 VUs  0m38.7s/1m0s  30.00 iters/s
+ep_market_search                [  64% ] 000/030 VUs  0m38.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  65% ] 000/035 VUs  0m38.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  65% ] 000/030 VUs  0m38.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  65% ] 000/030 VUs  0m38.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  65% ] 000/035 VUs  0m38.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  65% ] 001/020 VUs  0m38.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  65% ] 001/045 VUs  0m38.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  65% ] 000/020 VUs  0m38.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  65% ] 000/040 VUs  0m38.7s/1m0s  80.00 iters/s
+ep_user_me                      [  65% ] 000/020 VUs  0m38.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  65% ] 000/040 VUs  0m38.7s/1m0s  80.00 iters/s
+
+running (0m39.8s), 0003/0550 VUs, 42492 complete and 0 interrupted iterations
+ep_market_indexes               [  66% ] 000/030 VUs  0m39.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  66% ] 000/020 VUs  0m39.7s/1m0s  40.00 iters/s
+ep_market_listed                [  66% ] 000/035 VUs  0m39.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  66% ] 000/060 VUs  0m39.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  66% ] 000/040 VUs  0m39.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  66% ] 000/020 VUs  0m39.7s/1m0s  30.00 iters/s
+ep_market_search                [  66% ] 000/030 VUs  0m39.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  66% ] 000/035 VUs  0m39.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  66% ] 000/030 VUs  0m39.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  66% ] 000/030 VUs  0m39.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  66% ] 001/035 VUs  0m39.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  66% ] 001/020 VUs  0m39.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  66% ] 001/045 VUs  0m39.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  66% ] 000/020 VUs  0m39.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  66% ] 000/040 VUs  0m39.7s/1m0s  80.00 iters/s
+ep_user_me                      [  66% ] 000/020 VUs  0m39.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  66% ] 000/040 VUs  0m39.7s/1m0s  80.00 iters/s
+
+running (0m40.8s), 0003/0550 VUs, 43562 complete and 0 interrupted iterations
+ep_market_indexes               [  68% ] 000/030 VUs  0m40.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  68% ] 000/020 VUs  0m40.7s/1m0s  40.00 iters/s
+ep_market_listed                [  68% ] 000/035 VUs  0m40.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  68% ] 000/060 VUs  0m40.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  68% ] 000/040 VUs  0m40.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  68% ] 000/020 VUs  0m40.7s/1m0s  30.00 iters/s
+ep_market_search                [  68% ] 000/030 VUs  0m40.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  68% ] 000/035 VUs  0m40.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  68% ] 000/030 VUs  0m40.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  68% ] 000/030 VUs  0m40.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  68% ] 001/035 VUs  0m40.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  68% ] 001/020 VUs  0m40.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  68% ] 001/045 VUs  0m40.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  68% ] 000/020 VUs  0m40.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  68% ] 000/040 VUs  0m40.7s/1m0s  80.00 iters/s
+ep_user_me                      [  68% ] 000/020 VUs  0m40.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  68% ] 000/040 VUs  0m40.7s/1m0s  80.00 iters/s
+
+running (0m41.8s), 0002/0550 VUs, 44633 complete and 0 interrupted iterations
+ep_market_indexes               [  70% ] 000/030 VUs  0m41.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  70% ] 000/020 VUs  0m41.7s/1m0s  40.00 iters/s
+ep_market_listed                [  70% ] 000/035 VUs  0m41.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  70% ] 000/060 VUs  0m41.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  70% ] 000/040 VUs  0m41.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  70% ] 000/020 VUs  0m41.7s/1m0s  30.00 iters/s
+ep_market_search                [  69% ] 000/030 VUs  0m41.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  70% ] 000/035 VUs  0m41.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  70% ] 000/030 VUs  0m41.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  70% ] 000/030 VUs  0m41.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  70% ] 000/035 VUs  0m41.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  70% ] 001/020 VUs  0m41.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  70% ] 001/045 VUs  0m41.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  70% ] 000/020 VUs  0m41.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  70% ] 000/040 VUs  0m41.7s/1m0s  80.00 iters/s
+ep_user_me                      [  70% ] 000/020 VUs  0m41.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  70% ] 000/040 VUs  0m41.7s/1m0s  80.00 iters/s
+
+running (0m42.8s), 0003/0550 VUs, 45702 complete and 0 interrupted iterations
+ep_market_indexes               [  71% ] 000/030 VUs  0m42.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  71% ] 000/020 VUs  0m42.7s/1m0s  40.00 iters/s
+ep_market_listed                [  71% ] 000/035 VUs  0m42.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  71% ] 000/060 VUs  0m42.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  71% ] 000/040 VUs  0m42.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  71% ] 000/020 VUs  0m42.7s/1m0s  30.00 iters/s
+ep_market_search                [  71% ] 000/030 VUs  0m42.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  71% ] 000/035 VUs  0m42.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  71% ] 000/030 VUs  0m42.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  71% ] 000/030 VUs  0m42.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  71% ] 001/035 VUs  0m42.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  71% ] 001/020 VUs  0m42.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  71% ] 001/045 VUs  0m42.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  71% ] 000/020 VUs  0m42.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  71% ] 000/040 VUs  0m42.7s/1m0s  80.00 iters/s
+ep_user_me                      [  71% ] 000/020 VUs  0m42.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  71% ] 000/040 VUs  0m42.7s/1m0s  80.00 iters/s
+
+running (0m43.8s), 0003/0550 VUs, 46772 complete and 0 interrupted iterations
+ep_market_indexes               [  73% ] 000/030 VUs  0m43.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  73% ] 000/020 VUs  0m43.7s/1m0s  40.00 iters/s
+ep_market_listed                [  73% ] 000/035 VUs  0m43.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  73% ] 000/060 VUs  0m43.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  73% ] 000/040 VUs  0m43.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  73% ] 000/020 VUs  0m43.7s/1m0s  30.00 iters/s
+ep_market_search                [  73% ] 000/030 VUs  0m43.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  73% ] 000/035 VUs  0m43.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  73% ] 000/030 VUs  0m43.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  73% ] 000/030 VUs  0m43.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  73% ] 001/035 VUs  0m43.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  73% ] 001/020 VUs  0m43.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  73% ] 001/045 VUs  0m43.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  73% ] 000/020 VUs  0m43.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  73% ] 000/040 VUs  0m43.7s/1m0s  80.00 iters/s
+ep_user_me                      [  73% ] 000/020 VUs  0m43.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  73% ] 000/040 VUs  0m43.7s/1m0s  80.00 iters/s
+
+running (0m44.8s), 0003/0550 VUs, 47842 complete and 0 interrupted iterations
+ep_market_indexes               [  75% ] 000/030 VUs  0m44.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  75% ] 000/020 VUs  0m44.7s/1m0s  40.00 iters/s
+ep_market_listed                [  75% ] 000/035 VUs  0m44.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  75% ] 000/060 VUs  0m44.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  75% ] 000/040 VUs  0m44.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  75% ] 000/020 VUs  0m44.7s/1m0s  30.00 iters/s
+ep_market_search                [  74% ] 000/030 VUs  0m44.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  75% ] 000/035 VUs  0m44.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  75% ] 000/030 VUs  0m44.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  75% ] 000/030 VUs  0m44.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  75% ] 001/035 VUs  0m44.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  75% ] 001/020 VUs  0m44.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  75% ] 001/045 VUs  0m44.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  75% ] 000/020 VUs  0m44.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  75% ] 000/040 VUs  0m44.7s/1m0s  80.00 iters/s
+ep_user_me                      [  75% ] 000/020 VUs  0m44.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  75% ] 000/040 VUs  0m44.7s/1m0s  80.00 iters/s
+
+running (0m45.8s), 0004/0550 VUs, 48911 complete and 0 interrupted iterations
+ep_market_indexes               [  76% ] 000/030 VUs  0m45.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  76% ] 000/020 VUs  0m45.7s/1m0s  40.00 iters/s
+ep_market_listed                [  76% ] 000/035 VUs  0m45.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  76% ] 000/060 VUs  0m45.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  76% ] 000/040 VUs  0m45.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  76% ] 000/020 VUs  0m45.7s/1m0s  30.00 iters/s
+ep_market_search                [  76% ] 000/030 VUs  0m45.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  76% ] 000/035 VUs  0m45.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  76% ] 000/030 VUs  0m45.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  76% ] 000/030 VUs  0m45.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  76% ] 001/035 VUs  0m45.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  76% ] 001/020 VUs  0m45.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  76% ] 002/045 VUs  0m45.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  76% ] 000/020 VUs  0m45.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  76% ] 000/040 VUs  0m45.7s/1m0s  80.00 iters/s
+ep_user_me                      [  76% ] 000/020 VUs  0m45.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  76% ] 000/040 VUs  0m45.7s/1m0s  80.00 iters/s
+
+running (0m46.8s), 0002/0550 VUs, 49983 complete and 0 interrupted iterations
+ep_market_indexes               [  78% ] 000/030 VUs  0m46.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  78% ] 000/020 VUs  0m46.7s/1m0s  40.00 iters/s
+ep_market_listed                [  78% ] 000/035 VUs  0m46.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  78% ] 000/060 VUs  0m46.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  78% ] 000/040 VUs  0m46.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  78% ] 000/020 VUs  0m46.7s/1m0s  30.00 iters/s
+ep_market_search                [  78% ] 000/030 VUs  0m46.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  78% ] 000/035 VUs  0m46.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  78% ] 000/030 VUs  0m46.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  78% ] 000/030 VUs  0m46.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  78% ] 000/035 VUs  0m46.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  78% ] 001/020 VUs  0m46.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  78% ] 001/045 VUs  0m46.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  78% ] 000/020 VUs  0m46.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  78% ] 000/040 VUs  0m46.7s/1m0s  80.00 iters/s
+ep_user_me                      [  78% ] 000/020 VUs  0m46.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  78% ] 000/040 VUs  0m46.7s/1m0s  80.00 iters/s
+
+running (0m47.8s), 0003/0550 VUs, 51052 complete and 0 interrupted iterations
+ep_market_indexes               [  80% ] 000/030 VUs  0m47.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  80% ] 000/020 VUs  0m47.7s/1m0s  40.00 iters/s
+ep_market_listed                [  80% ] 000/035 VUs  0m47.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  80% ] 000/060 VUs  0m47.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  80% ] 000/040 VUs  0m47.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  80% ] 000/020 VUs  0m47.7s/1m0s  30.00 iters/s
+ep_market_search                [  79% ] 000/030 VUs  0m47.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  80% ] 000/035 VUs  0m47.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  80% ] 000/030 VUs  0m47.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  80% ] 000/030 VUs  0m47.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  80% ] 001/035 VUs  0m47.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  80% ] 001/020 VUs  0m47.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  80% ] 001/045 VUs  0m47.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  80% ] 000/020 VUs  0m47.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  80% ] 000/040 VUs  0m47.7s/1m0s  80.00 iters/s
+ep_user_me                      [  80% ] 000/020 VUs  0m47.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  80% ] 000/040 VUs  0m47.7s/1m0s  80.00 iters/s
+
+running (0m48.8s), 0002/0550 VUs, 52123 complete and 0 interrupted iterations
+ep_market_indexes               [  81% ] 000/030 VUs  0m48.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  81% ] 000/020 VUs  0m48.7s/1m0s  40.00 iters/s
+ep_market_listed                [  81% ] 000/035 VUs  0m48.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  81% ] 000/060 VUs  0m48.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  81% ] 000/040 VUs  0m48.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  81% ] 000/020 VUs  0m48.7s/1m0s  30.00 iters/s
+ep_market_search                [  81% ] 000/030 VUs  0m48.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  81% ] 000/035 VUs  0m48.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  81% ] 000/030 VUs  0m48.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  81% ] 000/030 VUs  0m48.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  81% ] 000/035 VUs  0m48.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  81% ] 001/020 VUs  0m48.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  81% ] 001/045 VUs  0m48.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  81% ] 000/020 VUs  0m48.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  81% ] 000/040 VUs  0m48.7s/1m0s  80.00 iters/s
+ep_user_me                      [  81% ] 000/020 VUs  0m48.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  81% ] 000/040 VUs  0m48.7s/1m0s  80.00 iters/s
+
+running (0m49.8s), 0003/0550 VUs, 53192 complete and 0 interrupted iterations
+ep_market_indexes               [  83% ] 000/030 VUs  0m49.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  83% ] 000/020 VUs  0m49.7s/1m0s  40.00 iters/s
+ep_market_listed                [  83% ] 000/035 VUs  0m49.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  83% ] 000/060 VUs  0m49.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  83% ] 000/040 VUs  0m49.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  83% ] 000/020 VUs  0m49.7s/1m0s  30.00 iters/s
+ep_market_search                [  83% ] 000/030 VUs  0m49.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  83% ] 000/035 VUs  0m49.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  83% ] 000/030 VUs  0m49.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  83% ] 000/030 VUs  0m49.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  83% ] 001/035 VUs  0m49.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  83% ] 001/020 VUs  0m49.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  83% ] 001/045 VUs  0m49.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  83% ] 000/020 VUs  0m49.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  83% ] 000/040 VUs  0m49.7s/1m0s  80.00 iters/s
+ep_user_me                      [  83% ] 000/020 VUs  0m49.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  83% ] 000/040 VUs  0m49.7s/1m0s  80.00 iters/s
+
+running (0m50.8s), 0002/0550 VUs, 54263 complete and 0 interrupted iterations
+ep_market_indexes               [  85% ] 000/030 VUs  0m50.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  85% ] 000/020 VUs  0m50.7s/1m0s  40.00 iters/s
+ep_market_listed                [  85% ] 000/035 VUs  0m50.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  85% ] 000/060 VUs  0m50.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  85% ] 000/040 VUs  0m50.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  85% ] 000/020 VUs  0m50.7s/1m0s  30.00 iters/s
+ep_market_search                [  84% ] 000/030 VUs  0m50.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  85% ] 000/035 VUs  0m50.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  85% ] 000/030 VUs  0m50.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  85% ] 000/030 VUs  0m50.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  85% ] 000/035 VUs  0m50.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  85% ] 001/020 VUs  0m50.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  85% ] 001/045 VUs  0m50.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  85% ] 000/020 VUs  0m50.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  85% ] 000/040 VUs  0m50.7s/1m0s  80.00 iters/s
+ep_user_me                      [  85% ] 000/020 VUs  0m50.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  85% ] 000/040 VUs  0m50.7s/1m0s  80.00 iters/s
+
+running (0m51.8s), 0003/0550 VUs, 55332 complete and 0 interrupted iterations
+ep_market_indexes               [  86% ] 000/030 VUs  0m51.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  86% ] 000/020 VUs  0m51.7s/1m0s  40.00 iters/s
+ep_market_listed                [  86% ] 000/035 VUs  0m51.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  86% ] 000/060 VUs  0m51.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  86% ] 000/040 VUs  0m51.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  86% ] 000/020 VUs  0m51.7s/1m0s  30.00 iters/s
+ep_market_search                [  86% ] 000/030 VUs  0m51.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  86% ] 000/035 VUs  0m51.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  86% ] 000/030 VUs  0m51.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  86% ] 000/030 VUs  0m51.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  86% ] 001/035 VUs  0m51.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  86% ] 001/020 VUs  0m51.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  86% ] 001/045 VUs  0m51.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  86% ] 000/020 VUs  0m51.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  86% ] 000/040 VUs  0m51.7s/1m0s  80.00 iters/s
+ep_user_me                      [  86% ] 000/020 VUs  0m51.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  86% ] 000/040 VUs  0m51.7s/1m0s  80.00 iters/s
+
+running (0m52.8s), 0002/0550 VUs, 56403 complete and 0 interrupted iterations
+ep_market_indexes               [  88% ] 000/030 VUs  0m52.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  88% ] 000/020 VUs  0m52.7s/1m0s  40.00 iters/s
+ep_market_listed                [  88% ] 000/035 VUs  0m52.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  88% ] 000/060 VUs  0m52.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  88% ] 000/040 VUs  0m52.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  88% ] 000/020 VUs  0m52.7s/1m0s  30.00 iters/s
+ep_market_search                [  88% ] 000/030 VUs  0m52.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  88% ] 000/035 VUs  0m52.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  88% ] 000/030 VUs  0m52.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  88% ] 000/030 VUs  0m52.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  88% ] 000/035 VUs  0m52.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  88% ] 001/020 VUs  0m52.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  88% ] 001/045 VUs  0m52.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  88% ] 000/020 VUs  0m52.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  88% ] 000/040 VUs  0m52.7s/1m0s  80.00 iters/s
+ep_user_me                      [  88% ] 000/020 VUs  0m52.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  88% ] 000/040 VUs  0m52.7s/1m0s  80.00 iters/s
+
+running (0m53.8s), 0002/0550 VUs, 57473 complete and 0 interrupted iterations
+ep_market_indexes               [  90% ] 000/030 VUs  0m53.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  90% ] 000/020 VUs  0m53.7s/1m0s  40.00 iters/s
+ep_market_listed                [  90% ] 000/035 VUs  0m53.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  90% ] 000/060 VUs  0m53.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  90% ] 000/040 VUs  0m53.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  90% ] 000/020 VUs  0m53.7s/1m0s  30.00 iters/s
+ep_market_search                [  89% ] 000/030 VUs  0m53.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  90% ] 000/035 VUs  0m53.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  90% ] 000/030 VUs  0m53.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  90% ] 000/030 VUs  0m53.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  90% ] 000/035 VUs  0m53.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  90% ] 001/020 VUs  0m53.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  90% ] 001/045 VUs  0m53.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  90% ] 000/020 VUs  0m53.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  90% ] 000/040 VUs  0m53.7s/1m0s  80.00 iters/s
+ep_user_me                      [  90% ] 000/020 VUs  0m53.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  90% ] 000/040 VUs  0m53.7s/1m0s  80.00 iters/s
+
+running (0m54.8s), 0003/0550 VUs, 58541 complete and 0 interrupted iterations
+ep_market_indexes               [  91% ] 000/030 VUs  0m54.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  91% ] 000/020 VUs  0m54.7s/1m0s  40.00 iters/s
+ep_market_listed                [  91% ] 000/035 VUs  0m54.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  91% ] 000/060 VUs  0m54.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  91% ] 000/040 VUs  0m54.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  91% ] 000/020 VUs  0m54.7s/1m0s  30.00 iters/s
+ep_market_search                [  91% ] 000/030 VUs  0m54.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  91% ] 000/035 VUs  0m54.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  91% ] 000/030 VUs  0m54.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  91% ] 000/030 VUs  0m54.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  91% ] 001/035 VUs  0m54.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  91% ] 001/020 VUs  0m54.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  91% ] 002/045 VUs  0m54.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  91% ] 000/020 VUs  0m54.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  91% ] 000/040 VUs  0m54.7s/1m0s  80.00 iters/s
+ep_user_me                      [  91% ] 000/020 VUs  0m54.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  91% ] 000/040 VUs  0m54.7s/1m0s  80.00 iters/s
+
+running (0m55.8s), 0018/0550 VUs, 59597 complete and 0 interrupted iterations
+ep_market_indexes               [  93% ] 001/030 VUs  0m55.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  93% ] 001/020 VUs  0m55.7s/1m0s  40.00 iters/s
+ep_market_listed                [  93% ] 001/035 VUs  0m55.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  93% ] 002/060 VUs  0m55.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  93% ] 001/040 VUs  0m55.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  93% ] 001/020 VUs  0m55.7s/1m0s  30.00 iters/s
+ep_market_search                [  93% ] 001/030 VUs  0m55.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  93% ] 001/035 VUs  0m55.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  93% ] 001/030 VUs  0m55.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  93% ] 001/030 VUs  0m55.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  93% ] 001/035 VUs  0m55.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  93% ] 001/020 VUs  0m55.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  93% ] 003/045 VUs  0m55.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  93% ] 000/020 VUs  0m55.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  93% ] 001/040 VUs  0m55.7s/1m0s  80.00 iters/s
+ep_user_me                      [  93% ] 001/020 VUs  0m55.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  93% ] 000/040 VUs  0m55.7s/1m0s  80.00 iters/s
+
+running (0m56.8s), 0015/0550 VUs, 60670 complete and 0 interrupted iterations
+ep_market_indexes               [  95% ] 001/030 VUs  0m56.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  95% ] 001/020 VUs  0m56.7s/1m0s  40.00 iters/s
+ep_market_listed                [  95% ] 001/035 VUs  0m56.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  95% ] 001/060 VUs  0m56.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  95% ] 001/040 VUs  0m56.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  95% ] 000/020 VUs  0m56.7s/1m0s  30.00 iters/s
+ep_market_search                [  94% ] 001/030 VUs  0m56.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  95% ] 001/035 VUs  0m56.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  95% ] 000/030 VUs  0m56.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  95% ] 001/030 VUs  0m56.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  95% ] 002/035 VUs  0m56.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  95% ] 001/020 VUs  0m56.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  95% ] 001/045 VUs  0m56.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  95% ] 001/020 VUs  0m56.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  95% ] 001/040 VUs  0m56.7s/1m0s  80.00 iters/s
+ep_user_me                      [  95% ] 001/020 VUs  0m56.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  95% ] 000/040 VUs  0m56.7s/1m0s  80.00 iters/s
+
+running (0m57.8s), 0004/0550 VUs, 61751 complete and 0 interrupted iterations
+ep_market_indexes               [  96% ] 000/030 VUs  0m57.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  96% ] 000/020 VUs  0m57.7s/1m0s  40.00 iters/s
+ep_market_listed                [  96% ] 000/035 VUs  0m57.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  96% ] 000/060 VUs  0m57.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  96% ] 000/040 VUs  0m57.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  96% ] 000/020 VUs  0m57.7s/1m0s  30.00 iters/s
+ep_market_search                [  96% ] 000/030 VUs  0m57.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  96% ] 000/035 VUs  0m57.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  96% ] 000/030 VUs  0m57.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  96% ] 000/030 VUs  0m57.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  96% ] 001/035 VUs  0m57.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  96% ] 001/020 VUs  0m57.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  96% ] 002/045 VUs  0m57.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  96% ] 000/020 VUs  0m57.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  96% ] 000/040 VUs  0m57.7s/1m0s  80.00 iters/s
+ep_user_me                      [  96% ] 000/020 VUs  0m57.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  96% ] 000/040 VUs  0m57.7s/1m0s  80.00 iters/s
+
+running (0m58.8s), 0002/0550 VUs, 62823 complete and 0 interrupted iterations
+ep_market_indexes               [  98% ] 000/030 VUs  0m58.7s/1m0s  60.00 iters/s
+ep_market_kline                 [  98% ] 000/020 VUs  0m58.7s/1m0s  40.00 iters/s
+ep_market_listed                [  98% ] 000/035 VUs  0m58.7s/1m0s  70.00 iters/s
+ep_market_quote                 [  98% ] 000/060 VUs  0m58.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [  98% ] 000/040 VUs  0m58.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [  98% ] 000/020 VUs  0m58.7s/1m0s  30.00 iters/s
+ep_market_search                [  98% ] 000/030 VUs  0m58.7s/1m0s  60.00 iters/s
+ep_notifications_get            [  98% ] 000/035 VUs  0m58.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [  98% ] 000/030 VUs  0m58.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [  98% ] 000/030 VUs  0m58.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [  98% ] 000/035 VUs  0m58.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [  98% ] 001/020 VUs  0m58.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [  98% ] 001/045 VUs  0m58.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [  98% ] 000/020 VUs  0m58.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [  98% ] 000/040 VUs  0m58.7s/1m0s  80.00 iters/s
+ep_user_me                      [  98% ] 000/020 VUs  0m58.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [  98% ] 000/040 VUs  0m58.7s/1m0s  80.00 iters/s
+
+running (0m59.8s), 0003/0550 VUs, 63892 complete and 0 interrupted iterations
+ep_market_indexes               [ 100% ] 000/030 VUs  0m59.7s/1m0s  60.00 iters/s
+ep_market_kline                 [ 100% ] 000/020 VUs  0m59.7s/1m0s  40.00 iters/s
+ep_market_listed                [ 100% ] 000/035 VUs  0m59.7s/1m0s  70.00 iters/s
+ep_market_quote                 [ 100% ] 000/060 VUs  0m59.7s/1m0s  120.00 iters/s
+ep_market_quotes_batch          [ 100% ] 000/040 VUs  0m59.7s/1m0s  80.00 iters/s
+ep_market_realtime_metrics      [ 100% ] 000/020 VUs  0m59.7s/1m0s  30.00 iters/s
+ep_market_search                [  99% ] 000/030 VUs  0m59.7s/1m0s  60.00 iters/s
+ep_notifications_get            [ 100% ] 000/035 VUs  0m59.7s/1m0s  70.00 iters/s
+ep_notifications_unread_count   [ 100% ] 000/030 VUs  0m59.7s/1m0s  60.00 iters/s
+ep_portfolio_equity_curve       [ 100% ] 000/030 VUs  0m59.7s/1m0s  60.00 iters/s
+ep_portfolio_fund_flows         [ 100% ] 000/035 VUs  0m59.7s/1m0s  70.00 iters/s
+ep_portfolio_overview           [ 100% ] 001/020 VUs  0m59.7s/1m0s  40.00 iters/s
+ep_portfolio_positions          [ 100% ] 001/045 VUs  0m59.7s/1m0s  90.00 iters/s
+ep_trade_orders                 [ 100% ] 000/020 VUs  0m59.7s/1m0s  40.00 iters/s
+ep_trade_trades                 [ 100% ] 000/040 VUs  0m59.7s/1m0s  80.00 iters/s
+ep_user_me                      [ 100% ] 000/020 VUs  0m59.7s/1m0s  20.00 iters/s
+ep_watchlist_get                [ 100% ] 000/040 VUs  0m59.7s/1m0s  80.00 iters/s
+# Endpoint Performance Summary (Common QPS Method)
+
+- total_requests: 64211
+- total_qps: 1068.69
+- total_failed_rate: 0.00%
+- total_p95_ms: 10.42
+- total_p99_ms: 65.56
+- endpoint_success_total: 64211
+- endpoint_failure_total: 0
+- endpoint_success_per_second: 1068.69
+
+## Per-Scenario QPS
+
+| scenario | configured_rate | qps | success_per_second | preAllocatedVUs | maxVUs | p95(ms) | p99(ms) | failed_rate |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| ep_market_indexes | 60 | 59.92 | 59.92 | 30 | 180 | 4.10 | 45.85 | 0.00% |
+| ep_market_kline | 40 | 39.94 | 39.94 | 20 | 120 | 4.40 | 51.09 | 0.00% |
+| ep_market_listed | 70 | 69.90 | 69.90 | 35 | 210 | 6.22 | 53.36 | 0.00% |
+| ep_market_quotes_batch | 80 | 79.89 | 79.89 | 40 | 240 | 3.75 | 46.79 | 0.00% |
+| ep_market_quote | 120 | 119.83 | 119.83 | 60 | 360 | 3.72 | 51.46 | 0.00% |
+| ep_market_realtime_metrics | 30 | 29.97 | 29.97 | 20 | 100 | 6.62 | 66.07 | 0.00% |
+| ep_market_search | 60 | 59.93 | 59.93 | 30 | 180 | 5.77 | 55.19 | 0.00% |
+| ep_notifications_get | 70 | 69.92 | 69.92 | 35 | 210 | 7.58 | 71.31 | 0.00% |
+| ep_notifications_unread_count | 60 | 59.93 | 59.93 | 30 | 180 | 5.07 | 49.99 | 0.00% |
+| ep_portfolio_equity_curve | 60 | 59.93 | 59.93 | 30 | 180 | 7.59 | 67.49 | 0.00% |
+| ep_portfolio_fund_flows | 70 | 69.92 | 69.92 | 35 | 210 | 8.85 | 82.55 | 0.00% |
+| ep_portfolio_overview | 40 | 39.96 | 39.96 | 20 | 120 | 27.33 | 148.35 | 0.00% |
+| ep_portfolio_positions | 90 | 89.89 | 89.89 | 45 | 270 | 28.01 | 173.68 | 0.00% |
+| ep_trade_orders | 40 | 39.94 | 39.94 | 20 | 120 | 8.18 | 54.02 | 0.00% |
+| ep_trade_trades | 80 | 79.91 | 79.91 | 40 | 240 | 8.29 | 66.73 | 0.00% |
+| ep_user_me | 20 | 19.99 | 19.99 | 20 | 100 | 6.44 | 50.18 | 0.00% |
+| ep_watchlist_get | 80 | 79.91 | 79.91 | 40 | 240 | 4.53 | 57.34 | 0.00% |
+
+QPS definition: completed requests / test duration (k6 http_reqs.rate).
+success_per_second definition: qps × (1 - failed_rate).
+
+running (1m00.1s), 0000/0550 VUs, 64211 complete and 0 interrupted iterations
+ep_market_indexes             ✓ [ 100% ] 000/030 VUs  1m0s  60.00 iters/s
+ep_market_kline               ✓ [ 100% ] 000/020 VUs  1m0s  40.00 iters/s
+ep_market_listed              ✓ [ 100% ] 000/035 VUs  1m0s  70.00 iters/s
+ep_market_quote               ✓ [ 100% ] 000/060 VUs  1m0s  120.00 iters/s
+ep_market_quotes_batch        ✓ [ 100% ] 000/040 VUs  1m0s  80.00 iters/s
+ep_market_realtime_metrics    ✓ [ 100% ] 000/020 VUs  1m0s  30.00 iters/s
+ep_market_search              ✓ [ 100% ] 000/030 VUs  1m0s  60.00 iters/s
+ep_notifications_get          ✓ [ 100% ] 000/035 VUs  1m0s  70.00 iters/s
+ep_notifications_unread_count ✓ [ 100% ] 000/030 VUs  1m0s  60.00 iters/s
+ep_portfolio_equity_curve     ✓ [ 100% ] 000/030 VUs  1m0s  60.00 iters/s
+ep_portfolio_fund_flows       ✓ [ 100% ] 000/035 VUs  1m0s  70.00 iters/s
+ep_portfolio_overview         ✓ [ 100% ] 000/020 VUs  1m0s  40.00 iters/s
+ep_portfolio_positions        ✓ [ 100% ] 000/045 VUs  1m0s  90.00 iters/s
+ep_trade_orders               ✓ [ 100% ] 000/020 VUs  1m0s  40.00 iters/s
+ep_trade_trades               ✓ [ 100% ] 000/040 VUs  1m0s  80.00 iters/s
+ep_user_me                    ✓ [ 100% ] 000/020 VUs  1m0s  20.00 iters/s
+ep_watchlist_get              ✓ [ 100% ] 000/040 VUs  1m0s  80.00 iters/s

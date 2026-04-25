@@ -67,7 +67,10 @@ public class MarketCacheGateway {
       try {
         return CacheResult.hit(toQuoteSnapshot(l1), HIT_L1);
       } catch (Exception ex) {
-        log.warn("Invalid quote L1 cache format for code={}, fallback to L2: {}", normalizedCode, ex.getMessage());
+        log.warn(
+            "Invalid quote L1 cache format for code={}, fallback to L2: {}",
+            normalizedCode,
+            ex.getMessage());
         quoteCache.evict(normalizedCode);
       }
     }
@@ -83,7 +86,10 @@ public class MarketCacheGateway {
         quoteCache.put(normalizedCode, converted);
         return CacheResult.hit(converted, HIT_L2);
       } catch (Exception ex) {
-        log.warn("Invalid quote L2 cache format for code={}, fallback to miss: {}", normalizedCode, ex.getMessage());
+        log.warn(
+            "Invalid quote L2 cache format for code={}, fallback to miss: {}",
+            normalizedCode,
+            ex.getMessage());
         redisTemplate.delete(QUOTE_KEY_PREFIX + normalizedCode);
       }
     }
@@ -148,7 +154,8 @@ public class MarketCacheGateway {
   }
 
   public QuoteSnapshot getStaleQuote(String stockCode) {
-    Object stale = redisTemplate.opsForValue().get(QUOTE_STALE_KEY_PREFIX + normalizeStockCode(stockCode));
+    Object stale =
+        redisTemplate.opsForValue().get(QUOTE_STALE_KEY_PREFIX + normalizeStockCode(stockCode));
     return castQuote(stale);
   }
 
@@ -184,6 +191,22 @@ public class MarketCacheGateway {
         .set(KLINE_KEY_PREFIX + key, cachedValue, KLINE_TTL_SECONDS, TimeUnit.SECONDS);
   }
 
+  public List<KLinePoint> getCachedKLineL1Only(String key) {
+    Cache kLineCache = getKLineCache();
+    Object l1 = kLineCache.get(key, Object.class);
+    if (l1 == null) {
+      return null;
+    }
+    try {
+      return toKLinePointList(l1);
+    } catch (Exception ex) {
+      log.warn(
+          "Invalid kline L1 cache format for key={}, fallback to miss: {}", key, ex.getMessage());
+      kLineCache.evict(key);
+      return null;
+    }
+  }
+
   @SuppressWarnings("unchecked")
   public List<KLinePoint> getCachedKLine(String key) {
     Cache kLineCache = getKLineCache();
@@ -192,7 +215,8 @@ public class MarketCacheGateway {
       try {
         return toKLinePointList(l1);
       } catch (Exception ex) {
-        log.warn("Invalid kline L1 cache format for key={}, fallback to L2: {}", key, ex.getMessage());
+        log.warn(
+            "Invalid kline L1 cache format for key={}, fallback to L2: {}", key, ex.getMessage());
         kLineCache.evict(key);
       }
     }
@@ -207,8 +231,8 @@ public class MarketCacheGateway {
       kLineCache.put(key, converted);
       return converted;
     } catch (Exception ex) {
-      // 兼容历史缓存结构（例如 LinkedHashMap 列表）导致的反序列化问题，降级为 miss 并清理脏缓存。
-      log.warn("Invalid kline cache format for key={}, fallback to miss: {}", redisKey, ex.getMessage());
+      log.warn(
+          "Invalid kline cache format for key={}, fallback to miss: {}", redisKey, ex.getMessage());
       kLineCache.evict(key);
       redisTemplate.delete(redisKey);
       return null;

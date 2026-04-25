@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
@@ -18,8 +19,7 @@ import org.springframework.stereotype.Component;
 /**
  * 行情 WebSocket 推送处理器
  *
- * <p>
- * 通过 STOMP 将实时行情推送给前端订阅者。 频道示例: /topic/market/quote/sh600519
+ * <p>通过 STOMP 将实时行情推送给前端订阅者。 频道示例: /topic/market/quote/sh600519
  */
 @Slf4j
 @Component
@@ -41,7 +41,8 @@ public class MarketWebSocketHandler {
   private final boolean payloadSizeCheckEnabled;
   private final boolean attachPushTimestamp;
 
-  // Maintain insertion order and coalesce by stock code to keep only the latest pending quote per symbol.
+  // Maintain insertion order and coalesce by stock code to keep only the latest pending quote per
+  // symbol.
   private final LinkedHashMap<String, PushTask> pushQueue = new LinkedHashMap<>();
   private final Object queueLock = new Object();
 
@@ -52,6 +53,7 @@ public class MarketWebSocketHandler {
   private volatile long lastPushAtMs;
   private volatile long degradedUntilMs;
 
+  @Autowired
   public MarketWebSocketHandler(
       SimpMessagingTemplate messagingTemplate,
       ObjectMapper objectMapper,
@@ -66,7 +68,8 @@ public class MarketWebSocketHandler {
       @Value("${market.websocket.degrade-lag-threshold-ms:5000}") int degradeLagThresholdMs,
       @Value("${market.websocket.drain-batch-size:32}") int normalDrainBatchSize,
       @Value("${market.websocket.degraded-drain-batch-size:128}") int degradedDrainBatchSize,
-      @Value("${market.websocket.payload-size-check-enabled:false}") boolean payloadSizeCheckEnabled,
+      @Value("${market.websocket.payload-size-check-enabled:false}")
+          boolean payloadSizeCheckEnabled,
       @Value("${market.websocket.attach-push-timestamp:false}") boolean attachPushTimestamp) {
     this.messagingTemplate = messagingTemplate;
     this.objectMapper = objectMapper;
@@ -85,10 +88,41 @@ public class MarketWebSocketHandler {
     this.payloadSizeCheckEnabled = payloadSizeCheckEnabled;
     this.attachPushTimestamp = attachPushTimestamp;
     this.wsPushDroppedCounter = meterRegistry.counter("ws_push_dropped_total");
-    this.wsQueueDelayTimer = Timer.builder(WS_QUEUE_DELAY_TIMER_METRIC)
-        .description("Queue waiting delay before websocket send")
-        .register(meterRegistry);
+    this.wsQueueDelayTimer =
+        Timer.builder(WS_QUEUE_DELAY_TIMER_METRIC)
+            .description("Queue waiting delay before websocket send")
+            .register(meterRegistry);
     this.wsPushDurationTimer = meterRegistry.timer("ws_push_duration_seconds");
+  }
+
+  MarketWebSocketHandler(
+      SimpMessagingTemplate messagingTemplate,
+      ObjectMapper objectMapper,
+      MarketWebSocketSessionRegistry sessionRegistry,
+      MeterRegistry meterRegistry,
+      String quoteDestinationPrefix,
+      int queueDepthLimit,
+      int payloadBytesLimit,
+      int normalPushIntervalMs,
+      int degradedPushIntervalMs,
+      int degradeLagThresholdMs,
+      int normalDrainBatchSize,
+      int degradedDrainBatchSize) {
+    this(
+        messagingTemplate,
+        objectMapper,
+        sessionRegistry,
+        meterRegistry,
+        quoteDestinationPrefix,
+        queueDepthLimit,
+        payloadBytesLimit,
+        normalPushIntervalMs,
+        degradedPushIntervalMs,
+        degradeLagThresholdMs,
+        normalDrainBatchSize,
+        degradedDrainBatchSize,
+        true,
+        true);
   }
 
   public boolean hasCapacity() {
@@ -113,7 +147,10 @@ public class MarketWebSocketHandler {
 
     if (payloadExceedsLimit(payload)) {
       wsPushDroppedCounter.increment();
-      log.debug("Dropped quote push due to payload limit stockCode={} limit={}B", stockCode, payloadBytesLimit);
+      log.debug(
+          "Dropped quote push due to payload limit stockCode={} limit={}B",
+          stockCode,
+          payloadBytesLimit);
       return;
     }
 
@@ -138,7 +175,8 @@ public class MarketWebSocketHandler {
 
     if (droppedTask != null) {
       wsPushDroppedCounter.increment();
-      log.debug("Dropped oldest ws push task stockCode={} due to backpressure", droppedTask.stockCode());
+      log.debug(
+          "Dropped oldest ws push task stockCode={} due to backpressure", droppedTask.stockCode());
     }
   }
 
@@ -177,10 +215,14 @@ public class MarketWebSocketHandler {
 
     for (PushTask taskToSend : tasksToSend) {
       String destination = quoteDestinationPrefix + taskToSend.stockCode();
-      Object payloadToSend = attachPushTimestamp ? enrichPayloadWithLatency(taskToSend.payload()) : taskToSend.payload();
+      Object payloadToSend =
+          attachPushTimestamp
+              ? enrichPayloadWithLatency(taskToSend.payload())
+              : taskToSend.payload();
       long queueDelayMs = Math.max(now - taskToSend.enqueuedAtMs(), 0L);
       wsQueueDelayTimer.record(queueDelayMs, java.util.concurrent.TimeUnit.MILLISECONDS);
-      wsPushDurationTimer.record(() -> messagingTemplate.convertAndSend(destination, payloadToSend));
+      wsPushDurationTimer.record(
+          () -> messagingTemplate.convertAndSend(destination, payloadToSend));
       log.debug("Pushed quote for {} to {}", taskToSend.stockCode(), destination);
     }
     return tasksToSend.size();
@@ -243,6 +285,5 @@ public class MarketWebSocketHandler {
     return sessionRegistry.snapshotUserSessions();
   }
 
-  private record PushTask(String stockCode, Object payload, long enqueuedAtMs) {
-  }
+  private record PushTask(String stockCode, Object payload, long enqueuedAtMs) {}
 }

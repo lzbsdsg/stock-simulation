@@ -59,7 +59,7 @@ class UserControllerApiTest {
   @Test
   void should_get_current_user() throws Exception {
     when(userApplicationService.getCurrentUser(1L))
-                .thenReturn(new UserProfileDTO(1L, "u@test.com", "nick", "USER", "ACTIVE"));
+        .thenReturn(new UserProfileDTO(1L, "u@test.com", "nick", "USER", "ACTIVE"));
 
     mockMvc
         .perform(get("/api/v1/user/me"))

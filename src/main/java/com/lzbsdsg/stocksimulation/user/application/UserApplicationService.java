@@ -20,9 +20,7 @@ public class UserApplicationService {
   private final PasswordEncoder passwordEncoder;
   private final PasswordDomainService passwordDomainService;
 
-  public UserApplicationService(
-      UserRepository userRepository,
-      PasswordEncoder passwordEncoder) {
+  public UserApplicationService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
     this.userRepository = userRepository;
     this.passwordEncoder = passwordEncoder;
     this.passwordDomainService = new PasswordDomainService();
@@ -65,10 +63,6 @@ public class UserApplicationService {
 
   private UserProfileDTO toProfileDTO(User user) {
     return new UserProfileDTO(
-        user.getId(),
-        user.getEmail(),
-        user.getNickname(),
-        user.getRole(),
-        user.getStatus());
+        user.getId(), user.getEmail(), user.getNickname(), user.getRole(), user.getStatus());
   }
 }

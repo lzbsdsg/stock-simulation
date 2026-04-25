@@ -24,6 +24,7 @@ public class TradeSettlementScheduler {
 
   private final TradeApplicationService tradeApplicationService;
   private final StringRedisTemplate stringRedisTemplate;
+
   @Value("${trade.settlement.archive-batch-size:500}")
   private int archiveBatchSize;
 
@@ -35,7 +36,8 @@ public class TradeSettlementScheduler {
   public void closeSettlement() {
     LocalDate today = LocalDate.now(ZONE_SHANGHAI);
     String lockKey = CLOSE_LOCK_PREFIX + today;
-    Boolean locked = stringRedisTemplate.opsForValue().setIfAbsent(lockKey, "1", Duration.ofMinutes(10));
+    Boolean locked =
+        stringRedisTemplate.opsForValue().setIfAbsent(lockKey, "1", Duration.ofMinutes(10));
     if (!Boolean.TRUE.equals(locked)) {
       log.info("trade.close.skip_duplicate date={}", today);
       return;
@@ -50,7 +52,11 @@ public class TradeSettlementScheduler {
       }
     }
     int marked = tradeApplicationService.markTodayBuyPositionsFrozenUntil();
-    log.info("trade.close.done date={} expiredOrders={} markedPositions={}", today, totalExpired, marked);
+    log.info(
+        "trade.close.done date={} expiredOrders={} markedPositions={}",
+        today,
+        totalExpired,
+        marked);
   }
 
   /** 每日归档已完结历史订单（默认保留主表近 7 天数据）。 */
@@ -58,7 +64,8 @@ public class TradeSettlementScheduler {
   public void archiveOrders() {
     LocalDate today = LocalDate.now(ZONE_SHANGHAI);
     String lockKey = ARCHIVE_LOCK_PREFIX + today;
-    Boolean locked = stringRedisTemplate.opsForValue().setIfAbsent(lockKey, "1", Duration.ofMinutes(30));
+    Boolean locked =
+        stringRedisTemplate.opsForValue().setIfAbsent(lockKey, "1", Duration.ofMinutes(30));
     if (!Boolean.TRUE.equals(locked)) {
       log.info("trade.archive.skip_duplicate date={}", today);
       return;
@@ -66,7 +73,8 @@ public class TradeSettlementScheduler {
 
     int totalArchived = 0;
     while (true) {
-      int processed = tradeApplicationService.archiveClosedOrders(archiveRetainDays, archiveBatchSize);
+      int processed =
+          tradeApplicationService.archiveClosedOrders(archiveRetainDays, archiveBatchSize);
       totalArchived += processed;
       if (processed < archiveBatchSize) {
         break;

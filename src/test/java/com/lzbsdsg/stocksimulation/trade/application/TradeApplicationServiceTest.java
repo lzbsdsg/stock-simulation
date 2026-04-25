@@ -115,7 +115,8 @@ class TradeApplicationServiceTest {
         .save(any(Order.class));
 
     PlaceOrderCommand command =
-        new PlaceOrderCommand("cid-buy-1", "sh600519", "BUY", "LIMIT", new BigDecimal("10.00"), 100);
+        new PlaceOrderCommand(
+            "cid-buy-1", "sh600519", "BUY", "LIMIT", new BigDecimal("10.00"), 100);
     OrderVO result = tradeApplicationService.placeOrder(command);
 
     assertNotNull(result);
@@ -145,7 +146,8 @@ class TradeApplicationServiceTest {
         .save(any(Order.class));
 
     PlaceOrderCommand command =
-        new PlaceOrderCommand("cid-sell-1", "sh600519", "SELL", "LIMIT", new BigDecimal("10.00"), 100);
+        new PlaceOrderCommand(
+            "cid-sell-1", "sh600519", "SELL", "LIMIT", new BigDecimal("10.00"), 100);
     OrderVO result = tradeApplicationService.placeOrder(command);
 
     assertEquals(9002L, result.orderId());
@@ -169,7 +171,8 @@ class TradeApplicationServiceTest {
         new PlaceOrderCommand(
             "cid-sell-t1", "sh600519", "SELL", "LIMIT", new BigDecimal("10.00"), 100);
 
-    BizException ex = assertThrows(BizException.class, () -> tradeApplicationService.placeOrder(command));
+    BizException ex =
+        assertThrows(BizException.class, () -> tradeApplicationService.placeOrder(command));
 
     assertEquals(ErrorCode.TRADE_ORDER_T_PLUS_1, ex.getErrorCode());
     verify(positionRepository, never()).updateWithVersion(any(Position.class));
@@ -184,7 +187,8 @@ class TradeApplicationServiceTest {
     PlaceOrderCommand command =
         new PlaceOrderCommand("cid-dup", "sh600519", "BUY", "LIMIT", new BigDecimal("10.00"), 100);
 
-    BizException ex = assertThrows(BizException.class, () -> tradeApplicationService.placeOrder(command));
+    BizException ex =
+        assertThrows(BizException.class, () -> tradeApplicationService.placeOrder(command));
 
     assertEquals(ErrorCode.TRADE_ORDER_DUPLICATE, ex.getErrorCode());
     verify(orderRepository, never()).save(any(Order.class));
@@ -206,7 +210,8 @@ class TradeApplicationServiceTest {
     PlaceOrderCommand command =
         new PlaceOrderCommand("cid-fund", "sh600519", "BUY", "LIMIT", new BigDecimal("10.00"), 100);
 
-    BizException ex = assertThrows(BizException.class, () -> tradeApplicationService.placeOrder(command));
+    BizException ex =
+        assertThrows(BizException.class, () -> tradeApplicationService.placeOrder(command));
 
     assertEquals(ErrorCode.TRADE_ORDER_INSUFFICIENT_FUND, ex.getErrorCode());
     verify(orderRepository, never()).save(any(Order.class));
@@ -248,7 +253,8 @@ class TradeApplicationServiceTest {
 
     BizException ex =
         assertThrows(
-            BizException.class, () -> tradeApplicationService.cancelOrder(new CancelOrderCommand(9101L)));
+            BizException.class,
+            () -> tradeApplicationService.cancelOrder(new CancelOrderCommand(9101L)));
 
     assertEquals(ErrorCode.TRADE_ORDER_CANNOT_CANCEL, ex.getErrorCode());
     verify(orderRepository, never()).updateWithVersion(any(Order.class));
@@ -266,7 +272,8 @@ class TradeApplicationServiceTest {
 
     BizException ex =
         assertThrows(
-            BizException.class, () -> tradeApplicationService.cancelOrder(new CancelOrderCommand(9102L)));
+            BizException.class,
+            () -> tradeApplicationService.cancelOrder(new CancelOrderCommand(9102L)));
 
     assertEquals(ErrorCode.TRADE_ORDER_CANNOT_CANCEL, ex.getErrorCode());
     verify(orderRepository, never()).updateWithVersion(any(Order.class));
@@ -295,14 +302,16 @@ class TradeApplicationServiceTest {
 
     BizException ex =
         assertThrows(
-            BizException.class, () -> tradeApplicationService.cancelOrder(new CancelOrderCommand(9103L)));
+            BizException.class,
+            () -> tradeApplicationService.cancelOrder(new CancelOrderCommand(9103L)));
 
     assertEquals(ErrorCode.TRADE_OPTIMISTIC_LOCK_CONFLICT, ex.getErrorCode());
   }
 
   @Test
   void should_match_buy_order_and_settle_account_position() {
-    Order order = pendingOrder(9201L, OrderSide.BUY, new BigDecimal("10.00"), 100, new BigDecimal("1005.00"));
+    Order order =
+        pendingOrder(9201L, OrderSide.BUY, new BigDecimal("10.00"), 100, new BigDecimal("1005.00"));
     when(orderRepository.findById(9201L)).thenReturn(Optional.of(order));
     when(orderRepository.updateWithVersion(any(Order.class))).thenReturn(true);
     when(marketDataFacade.getQuote("sh600519")).thenReturn(mockQuote("sh600519", "贵州茅台"));
@@ -313,7 +322,8 @@ class TradeApplicationServiceTest {
         .thenReturn(account("8995.00"));
     doAnswer(
             invocation -> {
-              com.lzbsdsg.stocksimulation.trade.domain.entity.Trade trade = invocation.getArgument(0);
+              com.lzbsdsg.stocksimulation.trade.domain.entity.Trade trade =
+                  invocation.getArgument(0);
               trade.setId(7001L);
               return null;
             })
@@ -332,7 +342,8 @@ class TradeApplicationServiceTest {
 
   @Test
   void should_match_sell_order_and_credit_balance() {
-    Order order = pendingOrder(9202L, OrderSide.SELL, new BigDecimal("10.00"), 100, BigDecimal.ZERO);
+    Order order =
+        pendingOrder(9202L, OrderSide.SELL, new BigDecimal("10.00"), 100, BigDecimal.ZERO);
     Position position = position(100, 100);
     position.setId(6001L);
     position.setTotalQuantity(200);
@@ -348,7 +359,8 @@ class TradeApplicationServiceTest {
         .thenReturn(account("10000.00"));
     doAnswer(
             invocation -> {
-              com.lzbsdsg.stocksimulation.trade.domain.entity.Trade trade = invocation.getArgument(0);
+              com.lzbsdsg.stocksimulation.trade.domain.entity.Trade trade =
+                  invocation.getArgument(0);
               trade.setId(7002L);
               return null;
             })
@@ -365,7 +377,8 @@ class TradeApplicationServiceTest {
 
   @Test
   void should_skip_match_when_price_not_reached() {
-    Order order = pendingOrder(9203L, OrderSide.BUY, new BigDecimal("10.00"), 100, new BigDecimal("1005.00"));
+    Order order =
+        pendingOrder(9203L, OrderSide.BUY, new BigDecimal("10.00"), 100, new BigDecimal("1005.00"));
     when(orderRepository.findById(9203L)).thenReturn(Optional.of(order));
     QuoteSnapshot quote = mockQuote("sh600519", "贵州茅台");
     quote.setCurrentPrice(new BigDecimal("10.10"));
@@ -380,12 +393,14 @@ class TradeApplicationServiceTest {
 
   @Test
   void should_throw_when_match_order_update_conflict() {
-    Order order = pendingOrder(9204L, OrderSide.BUY, new BigDecimal("10.00"), 100, new BigDecimal("1005.00"));
+    Order order =
+        pendingOrder(9204L, OrderSide.BUY, new BigDecimal("10.00"), 100, new BigDecimal("1005.00"));
     when(orderRepository.findById(9204L)).thenReturn(Optional.of(order));
     when(orderRepository.updateWithVersion(any(Order.class))).thenReturn(false);
     when(marketDataFacade.getQuote("sh600519")).thenReturn(mockQuote("sh600519", "贵州茅台"));
 
-    BizException ex = assertThrows(BizException.class, () -> tradeApplicationService.matchOrder(9204L));
+    BizException ex =
+        assertThrows(BizException.class, () -> tradeApplicationService.matchOrder(9204L));
 
     assertEquals(ErrorCode.TRADE_OPTIMISTIC_LOCK_CONFLICT, ex.getErrorCode());
     verify(tradeRepository, never()).save(any());

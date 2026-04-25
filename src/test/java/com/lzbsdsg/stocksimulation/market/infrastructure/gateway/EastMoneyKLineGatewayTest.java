@@ -30,7 +30,8 @@ class EastMoneyKLineGatewayTest {
                 + "\"2026-03-24,1668.00,1670.00,1680.00,1648.00,123456,123456789.00\","
                 + "\"2026-03-25,1670.00,1682.00,1688.00,1665.00,113322,112233445.00\""
                 + "]}}");
-    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(response);
+    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+        .thenReturn(response);
 
     EastMoneyKLineGateway gateway = new EastMoneyKLineGateway(httpClient, new ObjectMapper());
     List<KLinePoint> points =

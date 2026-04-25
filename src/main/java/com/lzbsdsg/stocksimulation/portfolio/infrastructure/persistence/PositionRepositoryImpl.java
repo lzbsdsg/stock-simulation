@@ -138,9 +138,13 @@ public class PositionRepositoryImpl implements PositionRepository {
     d.setFrozenUntil(p.getFrozenUntil());
     d.setVersion(p.getVersion());
     d.setCreatedAt(
-        p.getCreatedAt() == null ? null : p.getCreatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
+        p.getCreatedAt() == null
+            ? null
+            : p.getCreatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
     d.setUpdatedAt(
-        p.getUpdatedAt() == null ? null : p.getUpdatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
+        p.getUpdatedAt() == null
+            ? null
+            : p.getUpdatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
     return d;
   }
 }

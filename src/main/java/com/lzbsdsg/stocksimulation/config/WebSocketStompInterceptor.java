@@ -29,7 +29,8 @@ public class WebSocketStompInterceptor implements ChannelInterceptor {
 
   @Override
   public Message<?> preSend(Message<?> message, MessageChannel channel) {
-    StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+    StompHeaderAccessor accessor =
+        MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
     if (accessor == null || accessor.getCommand() == null) {
       return message;
     }
@@ -60,7 +61,9 @@ public class WebSocketStompInterceptor implements ChannelInterceptor {
 
   private String resolveUserId(StompHeaderAccessor accessor) {
     Object fromHandshake =
-        accessor.getSessionAttributes() == null ? null : accessor.getSessionAttributes().get("wsUserId");
+        accessor.getSessionAttributes() == null
+            ? null
+            : accessor.getSessionAttributes().get("wsUserId");
     if (fromHandshake != null) {
       return String.valueOf(fromHandshake);
     }

@@ -33,162 +33,166 @@ import org.springframework.security.core.context.SecurityContextHolder;
 @ExtendWith(MockitoExtension.class)
 class WatchlistApplicationServiceTest {
 
-    @Mock
-    private WatchlistRepository watchlistRepository;
-    @Mock
-    private MarketDataFacade marketDataFacade;
-    @Mock
-    private StockInfoRepository stockInfoRepository;
+  @Mock private WatchlistRepository watchlistRepository;
+  @Mock private MarketDataFacade marketDataFacade;
+  @Mock private StockInfoRepository stockInfoRepository;
 
-    @InjectMocks
-    private WatchlistApplicationService watchlistApplicationService;
+  @InjectMocks private WatchlistApplicationService watchlistApplicationService;
 
-    @BeforeEach
-    void setUp() {
-        SecurityContextHolder.getContext()
-                .setAuthentication(new UsernamePasswordAuthenticationToken("1001", null));
-    }
+  @BeforeEach
+  void setUp() {
+    SecurityContextHolder.getContext()
+        .setAuthentication(new UsernamePasswordAuthenticationToken("1001", null));
+  }
 
-    @AfterEach
-    void tearDown() {
-        SecurityContextHolder.clearContext();
-    }
+  @AfterEach
+  void tearDown() {
+    SecurityContextHolder.clearContext();
+  }
 
-    @Test
-    void should_get_watchlist_with_realtime_quote() {
-        WatchlistItem item = new WatchlistItem();
-        item.setUserId(1001L);
-        item.setStockCode("sh600519");
-        item.setStockName("贵州茅台");
-        item.setSortOrder(1);
+  @Test
+  void should_get_watchlist_with_realtime_quote() {
+    WatchlistItem item = new WatchlistItem();
+    item.setUserId(1001L);
+    item.setStockCode("sh600519");
+    item.setStockName("贵州茅台");
+    item.setSortOrder(1);
 
-        QuoteSnapshot quote = new QuoteSnapshot();
-        quote.setStockCode("sh600519");
-        quote.setStockName("贵州茅台");
-        quote.setCurrentPrice(new BigDecimal("1888.88"));
-        quote.setChangePercent(new BigDecimal("1.2300"));
+    QuoteSnapshot quote = new QuoteSnapshot();
+    quote.setStockCode("sh600519");
+    quote.setStockName("贵州茅台");
+    quote.setCurrentPrice(new BigDecimal("1888.88"));
+    quote.setChangePercent(new BigDecimal("1.2300"));
 
-        when(watchlistRepository.findByUserId(1001L)).thenReturn(List.of(item));
-        when(marketDataFacade.batchGetQuotes(List.of("sh600519"))).thenReturn(List.of(quote));
+    when(watchlistRepository.findByUserId(1001L)).thenReturn(List.of(item));
+    when(marketDataFacade.batchGetQuotes(List.of("sh600519"))).thenReturn(List.of(quote));
 
-        List<WatchlistItemVO> result = watchlistApplicationService.getWatchlist();
+    List<WatchlistItemVO> result = watchlistApplicationService.getWatchlist();
 
-        assertEquals(1, result.size());
-        assertEquals("sh600519", result.get(0).stockCode());
-        assertEquals(new BigDecimal("1888.88"), result.get(0).currentPrice());
-        assertEquals(new BigDecimal("1.2300"), result.get(0).changePercent());
-    }
+    assertEquals(1, result.size());
+    assertEquals("sh600519", result.get(0).stockCode());
+    assertEquals(new BigDecimal("1888.88"), result.get(0).currentPrice());
+    assertEquals(new BigDecimal("1.2300"), result.get(0).changePercent());
+  }
 
-    @Test
-    void should_reject_add_stock_when_already_exists() {
-        WatchlistItem exists = new WatchlistItem();
-        exists.setStockCode("sh600519");
+  @Test
+  void should_reject_add_stock_when_already_exists() {
+    WatchlistItem exists = new WatchlistItem();
+    exists.setStockCode("sh600519");
 
-        when(watchlistRepository.findByUserIdAndStockCode(1001L, "sh600519"))
-                .thenReturn(Optional.of(exists));
+    when(watchlistRepository.findByUserIdAndStockCode(1001L, "sh600519"))
+        .thenReturn(Optional.of(exists));
 
-        BizException ex = assertThrows(BizException.class, () -> watchlistApplicationService.addStock("SH600519"));
+    BizException ex =
+        assertThrows(BizException.class, () -> watchlistApplicationService.addStock("SH600519"));
 
-        assertEquals(ErrorCode.WATCHLIST_ALREADY_EXISTS, ex.getErrorCode());
-        verify(watchlistRepository, never()).save(any());
-    }
+    assertEquals(ErrorCode.WATCHLIST_ALREADY_EXISTS, ex.getErrorCode());
+    verify(watchlistRepository, never()).save(any());
+  }
 
-    @Test
-    void should_reject_add_stock_when_limit_exceeded() {
-        when(watchlistRepository.findByUserIdAndStockCode(1001L, "sh600519")).thenReturn(Optional.empty());
-        when(watchlistRepository.countByUserId(1001L)).thenReturn(50L);
+  @Test
+  void should_reject_add_stock_when_limit_exceeded() {
+    when(watchlistRepository.findByUserIdAndStockCode(1001L, "sh600519"))
+        .thenReturn(Optional.empty());
+    when(watchlistRepository.countByUserId(1001L)).thenReturn(50L);
 
-        BizException ex = assertThrows(BizException.class, () -> watchlistApplicationService.addStock("sh600519"));
+    BizException ex =
+        assertThrows(BizException.class, () -> watchlistApplicationService.addStock("sh600519"));
 
-        assertEquals(ErrorCode.WATCHLIST_LIMIT_EXCEEDED, ex.getErrorCode());
-        verify(watchlistRepository, never()).save(any());
-    }
+    assertEquals(ErrorCode.WATCHLIST_LIMIT_EXCEEDED, ex.getErrorCode());
+    verify(watchlistRepository, never()).save(any());
+  }
 
-    @Test
-    void should_add_stock_successfully() {
-        QuoteSnapshot quote = new QuoteSnapshot();
-        quote.setStockCode("sh600519");
-        quote.setStockName("贵州茅台");
+  @Test
+  void should_add_stock_successfully() {
+    QuoteSnapshot quote = new QuoteSnapshot();
+    quote.setStockCode("sh600519");
+    quote.setStockName("贵州茅台");
 
-        StockInfo stockInfo = new StockInfo();
-        stockInfo.setStockCode("sh600519");
-        stockInfo.setStockName("贵州茅台");
-        stockInfo.setListed(true);
+    StockInfo stockInfo = new StockInfo();
+    stockInfo.setStockCode("sh600519");
+    stockInfo.setStockName("贵州茅台");
+    stockInfo.setListed(true);
 
-        when(watchlistRepository.findByUserIdAndStockCode(1001L, "sh600519")).thenReturn(Optional.empty());
-        when(watchlistRepository.countByUserId(1001L)).thenReturn(3L);
-        when(stockInfoRepository.findByStockCode("sh600519")).thenReturn(Optional.of(stockInfo));
-        when(marketDataFacade.getQuote("sh600519")).thenReturn(quote);
+    when(watchlistRepository.findByUserIdAndStockCode(1001L, "sh600519"))
+        .thenReturn(Optional.empty());
+    when(watchlistRepository.countByUserId(1001L)).thenReturn(3L);
+    when(stockInfoRepository.findByStockCode("sh600519")).thenReturn(Optional.of(stockInfo));
+    when(marketDataFacade.getQuote("sh600519")).thenReturn(quote);
 
-        watchlistApplicationService.addStock("SH600519");
+    watchlistApplicationService.addStock("SH600519");
 
-        ArgumentCaptor<WatchlistItem> captor = ArgumentCaptor.forClass(WatchlistItem.class);
-        verify(watchlistRepository).save(captor.capture());
+    ArgumentCaptor<WatchlistItem> captor = ArgumentCaptor.forClass(WatchlistItem.class);
+    verify(watchlistRepository).save(captor.capture());
 
-        WatchlistItem saved = captor.getValue();
-        assertEquals(1001L, saved.getUserId());
-        assertEquals("sh600519", saved.getStockCode());
-        assertEquals("贵州茅台", saved.getStockName());
-        assertEquals(4, saved.getSortOrder());
-    }
+    WatchlistItem saved = captor.getValue();
+    assertEquals(1001L, saved.getUserId());
+    assertEquals("sh600519", saved.getStockCode());
+    assertEquals("贵州茅台", saved.getStockName());
+    assertEquals(4, saved.getSortOrder());
+  }
 
-    @Test
-    void should_reject_add_stock_when_stock_not_found() {
-        when(watchlistRepository.findByUserIdAndStockCode(1001L, "foo000001")).thenReturn(Optional.empty());
-        when(watchlistRepository.countByUserId(1001L)).thenReturn(1L);
-        when(stockInfoRepository.findByStockCode("foo000001")).thenReturn(Optional.empty());
+  @Test
+  void should_reject_add_stock_when_stock_not_found() {
+    when(watchlistRepository.findByUserIdAndStockCode(1001L, "foo000001"))
+        .thenReturn(Optional.empty());
+    when(watchlistRepository.countByUserId(1001L)).thenReturn(1L);
+    when(stockInfoRepository.findByStockCode("foo000001")).thenReturn(Optional.empty());
 
-        BizException ex = assertThrows(BizException.class, () -> watchlistApplicationService.addStock("foo000001"));
+    BizException ex =
+        assertThrows(BizException.class, () -> watchlistApplicationService.addStock("foo000001"));
 
-        assertEquals(ErrorCode.MARKET_STOCK_NOT_FOUND, ex.getErrorCode());
-        verify(watchlistRepository, never()).save(any());
-        verify(marketDataFacade, never()).getQuote(any());
-    }
+    assertEquals(ErrorCode.MARKET_STOCK_NOT_FOUND, ex.getErrorCode());
+    verify(watchlistRepository, never()).save(any());
+    verify(marketDataFacade, never()).getQuote(any());
+  }
 
-    @Test
-    void should_reject_update_sort_when_codes_mismatch() {
-        WatchlistItem item = new WatchlistItem();
-        item.setId(1L);
-        item.setUserId(1001L);
-        item.setStockCode("sh600519");
-        item.setSortOrder(1);
+  @Test
+  void should_reject_update_sort_when_codes_mismatch() {
+    WatchlistItem item = new WatchlistItem();
+    item.setId(1L);
+    item.setUserId(1001L);
+    item.setStockCode("sh600519");
+    item.setSortOrder(1);
 
-        when(watchlistRepository.findByUserId(1001L)).thenReturn(List.of(item));
+    when(watchlistRepository.findByUserId(1001L)).thenReturn(List.of(item));
 
-        BizException ex = assertThrows(
-                BizException.class,
-                () -> watchlistApplicationService.updateSort(List.of("sh600519", "sz000001")));
+    BizException ex =
+        assertThrows(
+            BizException.class,
+            () -> watchlistApplicationService.updateSort(List.of("sh600519", "sz000001")));
 
-        assertEquals(ErrorCode.BAD_REQUEST, ex.getErrorCode());
-        verify(watchlistRepository, never()).batchUpdateSort(any(), any());
-    }
+    assertEquals(ErrorCode.BAD_REQUEST, ex.getErrorCode());
+    verify(watchlistRepository, never()).batchUpdateSort(any(), any());
+  }
 
-    @Test
-    void should_update_sort_successfully() {
-        WatchlistItem first = new WatchlistItem();
-        first.setId(1L);
-        first.setUserId(1001L);
-        first.setStockCode("sh600519");
-        first.setSortOrder(1);
+  @Test
+  void should_update_sort_successfully() {
+    WatchlistItem first = new WatchlistItem();
+    first.setId(1L);
+    first.setUserId(1001L);
+    first.setStockCode("sh600519");
+    first.setSortOrder(1);
 
-        WatchlistItem second = new WatchlistItem();
-        second.setId(2L);
-        second.setUserId(1001L);
-        second.setStockCode("sz000001");
-        second.setSortOrder(2);
+    WatchlistItem second = new WatchlistItem();
+    second.setId(2L);
+    second.setUserId(1001L);
+    second.setStockCode("sz000001");
+    second.setSortOrder(2);
 
-        when(watchlistRepository.findByUserId(1001L)).thenReturn(List.of(first, second));
+    when(watchlistRepository.findByUserId(1001L)).thenReturn(List.of(first, second));
 
-        watchlistApplicationService.updateSort(List.of("sz000001", "sh600519"));
+    watchlistApplicationService.updateSort(List.of("sz000001", "sh600519"));
 
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<WatchlistItem>> captor = ArgumentCaptor.forClass(List.class);
-        verify(watchlistRepository).batchUpdateSort(org.mockito.ArgumentMatchers.eq(1001L), captor.capture());
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<WatchlistItem>> captor = ArgumentCaptor.forClass(List.class);
+    verify(watchlistRepository)
+        .batchUpdateSort(org.mockito.ArgumentMatchers.eq(1001L), captor.capture());
 
-        List<WatchlistItem> sorted = captor.getValue();
-        assertEquals("sz000001", sorted.get(0).getStockCode());
-        assertEquals(1, sorted.get(0).getSortOrder());
-        assertEquals("sh600519", sorted.get(1).getStockCode());
-        assertEquals(2, sorted.get(1).getSortOrder());
-    }
+    List<WatchlistItem> sorted = captor.getValue();
+    assertEquals("sz000001", sorted.get(0).getStockCode());
+    assertEquals(1, sorted.get(0).getSortOrder());
+    assertEquals("sh600519", sorted.get(1).getStockCode());
+    assertEquals(2, sorted.get(1).getSortOrder());
+  }
 }

@@ -108,7 +108,11 @@ public class AkshareMarketDataAdapter implements MarketDataProvider {
       return List.of();
     }
     List<String> normalizedCodes =
-        stockCodes.stream().map(this::normalizeStockCode).filter(code -> !code.isBlank()).distinct().toList();
+        stockCodes.stream()
+            .map(this::normalizeStockCode)
+            .filter(code -> !code.isBlank())
+            .distinct()
+            .toList();
     String joined = String.join(",", normalizedCodes);
     String url = baseUrl + "/api/quotes?symbols=" + encode(joined);
     JsonNode json = requestJson(url);
@@ -147,7 +151,8 @@ public class AkshareMarketDataAdapter implements MarketDataProvider {
       HttpResponse<String> response =
           httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
       if (response.statusCode() >= 400) {
-        throw new IllegalStateException("AkShare gateway response status is " + response.statusCode());
+        throw new IllegalStateException(
+            "AkShare gateway response status is " + response.statusCode());
       }
       return objectMapper.readTree(response.body());
     } catch (IOException | InterruptedException ex) {

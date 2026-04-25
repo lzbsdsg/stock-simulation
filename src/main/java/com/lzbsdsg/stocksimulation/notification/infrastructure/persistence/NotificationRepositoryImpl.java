@@ -104,7 +104,9 @@ public class NotificationRepositoryImpl implements NotificationRepository {
     d.setContent(m.getContent());
     d.setRead(m.getRead());
     d.setCreatedAt(
-        m.getCreatedAt() == null ? null : m.getCreatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
+        m.getCreatedAt() == null
+            ? null
+            : m.getCreatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
     return d;
   }
 }

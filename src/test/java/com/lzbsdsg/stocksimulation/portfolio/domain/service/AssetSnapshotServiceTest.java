@@ -2,7 +2,6 @@ package com.lzbsdsg.stocksimulation.portfolio.domain.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -52,7 +51,8 @@ class AssetSnapshotServiceTest {
 
     when(positionRepository.findByUserId(1001L)).thenReturn(List.of(position));
     when(marketDataFacade.batchGetQuotes(List.of("sh600519"))).thenReturn(List.of(quote));
-    when(assetSnapshotRepository.findByUserIdAndDate(1001L, snapshotDate)).thenReturn(Optional.empty());
+    when(assetSnapshotRepository.findByUserIdAndDate(1001L, snapshotDate))
+        .thenReturn(Optional.empty());
     when(accountRepository.findByUserId(1001L)).thenReturn(Optional.of(account));
     when(assetSnapshotRepository.findLatestBefore(1001L, snapshotDate))
         .thenReturn(Optional.of(previousSnapshot("99500.00")));
@@ -79,7 +79,8 @@ class AssetSnapshotServiceTest {
     Position position = position(1001L, "sh600519", 100, "10.0000");
 
     when(positionRepository.findByUserId(1001L)).thenReturn(List.of(position));
-    when(marketDataFacade.batchGetQuotes(List.of("sh600519"))).thenReturn(List.of(quote("sh600519", "11.00", null)));
+    when(marketDataFacade.batchGetQuotes(List.of("sh600519")))
+        .thenReturn(List.of(quote("sh600519", "11.00", null)));
     when(assetSnapshotRepository.findByUserIdAndDate(1001L, snapshotDate))
         .thenReturn(Optional.of(new AssetSnapshot()));
 
@@ -99,9 +100,11 @@ class AssetSnapshotServiceTest {
     Account account = account(1001L, "100000.00", "95000.00", "5000.00");
 
     when(positionRepository.findByUserId(1001L)).thenReturn(List.of());
-    when(assetSnapshotRepository.findByUserIdAndDate(1001L, snapshotDate)).thenReturn(Optional.empty());
+    when(assetSnapshotRepository.findByUserIdAndDate(1001L, snapshotDate))
+        .thenReturn(Optional.empty());
     when(accountRepository.findByUserId(1001L)).thenReturn(Optional.of(account));
-    when(assetSnapshotRepository.findLatestBefore(1001L, snapshotDate)).thenReturn(Optional.empty());
+    when(assetSnapshotRepository.findLatestBefore(1001L, snapshotDate))
+        .thenReturn(Optional.empty());
 
     AssetSnapshotService.SnapshotBatchResult result =
         assetSnapshotService.createDailySnapshots(snapshotDate, List.of(1001L));
@@ -151,4 +154,3 @@ class AssetSnapshotServiceTest {
     return snapshot;
   }
 }
-

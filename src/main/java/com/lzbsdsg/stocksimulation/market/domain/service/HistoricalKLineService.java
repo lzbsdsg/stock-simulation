@@ -41,7 +41,8 @@ public class HistoricalKLineService {
   private final SinaMarketDataAdapter sinaMarketDataAdapter;
   private final TencentMarketDataAdapter tencentMarketDataAdapter;
 
-  public List<KLinePoint> getKLine(String stockCode, KLinePeriod period, LocalDate from, LocalDate to) {
+  public List<KLinePoint> getKLine(
+      String stockCode, KLinePeriod period, LocalDate from, LocalDate to) {
     if (from == null || to == null || from.isAfter(to)) {
       return List.of();
     }
@@ -59,7 +60,32 @@ public class HistoricalKLineService {
     repairLegacySyntheticHistoryIfNeeded(normalizedCode, boundedFrom, boundedTo);
     marketKLineDailyRepository.deleteOlderThan(normalizedCode, lowerBound);
     List<KLinePoint> dailyPoints =
-        marketKLineDailyRepository.findByStockCodeAndDateRange(normalizedCode, boundedFrom, boundedTo);
+        marketKLineDailyRepository.findByStockCodeAndDateRange(
+            normalizedCode, boundedFrom, boundedTo);
+    if (period == KLinePeriod.DAILY) {
+      return dailyPoints;
+    }
+    return aggregate(dailyPoints, period);
+  }
+
+  public List<KLinePoint> getCachedKLineOnly(
+      String stockCode, KLinePeriod period, LocalDate from, LocalDate to) {
+    if (from == null || to == null || from.isAfter(to)) {
+      return List.of();
+    }
+
+    String normalizedCode = normalizeStockCode(stockCode);
+    LocalDate today = LocalDate.now(ZONE_SHANGHAI);
+    LocalDate lowerBound = today.minusYears(RETAIN_YEARS);
+    LocalDate boundedFrom = from.isBefore(lowerBound) ? lowerBound : from;
+    LocalDate boundedTo = to.isAfter(today) ? today : to;
+    if (boundedFrom.isAfter(boundedTo)) {
+      return List.of();
+    }
+
+    List<KLinePoint> dailyPoints =
+        marketKLineDailyRepository.findByStockCodeAndDateRange(
+            normalizedCode, boundedFrom, boundedTo);
     if (period == KLinePeriod.DAILY) {
       return dailyPoints;
     }
@@ -127,14 +153,15 @@ public class HistoricalKLineService {
     log.warn("No kline source available stockCode={} from={} to={}", stockCode, from, to);
   }
 
-  private void repairLegacySyntheticHistoryIfNeeded(String stockCode, LocalDate from, LocalDate to) {
-    List<String> sources = marketKLineDailyRepository.findDistinctSourcesInDateRange(stockCode, from, to);
+  private void repairLegacySyntheticHistoryIfNeeded(
+      String stockCode, LocalDate from, LocalDate to) {
+    List<String> sources =
+        marketKLineDailyRepository.findDistinctSourcesInDateRange(stockCode, from, to);
     if (sources == null || sources.isEmpty()) {
       return;
     }
 
-    boolean hasLegacySyntheticSource =
-        sources.stream().anyMatch(this::isLegacySyntheticSource);
+    boolean hasLegacySyntheticSource = sources.stream().anyMatch(this::isLegacySyntheticSource);
     if (!hasLegacySyntheticSource) {
       return;
     }

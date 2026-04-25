@@ -17,7 +17,8 @@ public class MarketKLineDailyRepositoryImpl implements MarketKLineDailyRepositor
   private final MarketKLineDailyMapper marketKLineDailyMapper;
 
   @Override
-  public List<KLinePoint> findByStockCodeAndDateRange(String stockCode, LocalDate from, LocalDate to) {
+  public List<KLinePoint> findByStockCodeAndDateRange(
+      String stockCode, LocalDate from, LocalDate to) {
     return marketKLineDailyMapper.selectByStockCodeAndDateRange(stockCode, from, to).stream()
         .map(this::toDomain)
         .collect(Collectors.toList());
@@ -34,7 +35,8 @@ public class MarketKLineDailyRepositoryImpl implements MarketKLineDailyRepositor
   }
 
   @Override
-  public List<String> findDistinctSourcesInDateRange(String stockCode, LocalDate from, LocalDate to) {
+  public List<String> findDistinctSourcesInDateRange(
+      String stockCode, LocalDate from, LocalDate to) {
     return marketKLineDailyMapper.selectDistinctSourcesInDateRange(stockCode, from, to);
   }
 

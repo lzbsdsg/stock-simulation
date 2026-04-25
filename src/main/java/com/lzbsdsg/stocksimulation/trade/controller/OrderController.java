@@ -41,7 +41,8 @@ public class OrderController {
   @GetMapping("/orders")
   public Result<PageResult<OrderVO>> getOrders(
       @RequestParam(defaultValue = "today") String scope,
-      @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size) {
+      @RequestParam(defaultValue = "1") int page,
+      @RequestParam(defaultValue = "20") int size) {
     return Result.success(tradeApplicationService.getOrders(scope, page, size));
   }
 

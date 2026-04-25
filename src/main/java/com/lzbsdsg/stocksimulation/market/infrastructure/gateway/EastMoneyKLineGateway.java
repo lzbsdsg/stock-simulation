@@ -116,7 +116,8 @@ public class EastMoneyKLineGateway {
       HttpResponse<String> response =
           httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
       if (response.statusCode() >= 400) {
-        throw new IllegalStateException("EastMoney kline response status is " + response.statusCode());
+        throw new IllegalStateException(
+            "EastMoney kline response status is " + response.statusCode());
       }
       String body = extractJsonPayload(response.body());
       return objectMapper.readTree(body);

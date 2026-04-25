@@ -56,9 +56,9 @@ class SinaMarketDataAdapterTest {
     String payload =
         "var hq_str_sh600519=\"贵州茅台,1668.00,1650.00,1670.00,1680.00,1648.00,0,0,123456,123456789.00,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-03-24,10:01:02,00\";"
             + "var hq_str_sz000001=\"平安银行,11.10,11.00,11.23,11.30,10.98,0,0,999999,1234567.00,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-03-24,10:01:03,00\";";
-    when(response.body())
-        .thenReturn(payload.getBytes(StandardCharsets.UTF_8));
-    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(response);
+    when(response.body()).thenReturn(payload.getBytes(StandardCharsets.UTF_8));
+    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+        .thenReturn(response);
 
     SinaMarketDataAdapter adapter = new SinaMarketDataAdapter(httpClient);
     List<QuoteSnapshot> quotes = adapter.batchGetQuotes(List.of("sh600519", "sz000001"));
@@ -91,7 +91,8 @@ class SinaMarketDataAdapterTest {
               {"day":"2026-04-19","open":"1672.00","high":"1695.00","low":"1668.00","close":"1688.00","volume":"2234567"}
             ]
             """);
-    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(response);
+    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+        .thenReturn(response);
 
     SinaMarketDataAdapter adapter = new SinaMarketDataAdapter(httpClient);
     List<KLinePoint> points =

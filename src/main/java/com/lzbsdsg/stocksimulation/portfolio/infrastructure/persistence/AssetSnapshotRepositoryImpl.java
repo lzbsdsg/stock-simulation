@@ -84,7 +84,9 @@ public class AssetSnapshotRepositoryImpl implements AssetSnapshotRepository {
     d.setDailyProfit(s.getDailyProfit());
     d.setCumulativeProfitRate(s.getCumulativeProfitRate());
     d.setCreatedAt(
-        s.getCreatedAt() == null ? null : s.getCreatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
+        s.getCreatedAt() == null
+            ? null
+            : s.getCreatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
     return d;
   }
 }

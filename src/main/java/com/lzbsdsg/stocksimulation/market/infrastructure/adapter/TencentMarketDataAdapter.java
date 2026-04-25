@@ -40,7 +40,8 @@ import org.springframework.stereotype.Component;
 public class TencentMarketDataAdapter implements MarketDataProvider {
 
   private static final String TENCENT_QUOTE_URL = "https://qt.gtimg.cn/q=";
-  private static final String TENCENT_KLINE_URL = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=";
+  private static final String TENCENT_KLINE_URL =
+      "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=";
   private static final Charset GBK = Charset.forName("GBK");
   private final HttpClient httpClient;
   private final ObjectMapper objectMapper;
@@ -131,8 +132,10 @@ public class TencentMarketDataAdapter implements MarketDataProvider {
         point.setHigh(high);
         point.setLow(low);
         point.setVolume(volume);
-        BigDecimal avgPrice = open.add(close).divide(BigDecimal.valueOf(2), 4, RoundingMode.HALF_UP);
-        point.setAmount(avgPrice.multiply(BigDecimal.valueOf(volume)).setScale(2, RoundingMode.HALF_UP));
+        BigDecimal avgPrice =
+            open.add(close).divide(BigDecimal.valueOf(2), 4, RoundingMode.HALF_UP);
+        point.setAmount(
+            avgPrice.multiply(BigDecimal.valueOf(volume)).setScale(2, RoundingMode.HALF_UP));
         points.add(point);
       }
       return points;
@@ -160,7 +163,8 @@ public class TencentMarketDataAdapter implements MarketDataProvider {
       HttpResponse<String> response =
           httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
       if (response.statusCode() >= 400) {
-        throw new IllegalStateException("Tencent kline response status is " + response.statusCode());
+        throw new IllegalStateException(
+            "Tencent kline response status is " + response.statusCode());
       }
       return response.body() == null ? "{}" : response.body();
     } catch (IOException | InterruptedException ex) {
@@ -280,7 +284,8 @@ public class TencentMarketDataAdapter implements MarketDataProvider {
 
   @Override
   public List<QuoteSnapshot> batchGetQuotes(List<String> stockCodes) {
-    List<String> normalizedCodes = stockCodes.stream().map(this::normalizeStockCode).distinct().toList();
+    List<String> normalizedCodes =
+        stockCodes.stream().map(this::normalizeStockCode).distinct().toList();
     String payload = fetchQuotePayload(normalizedCodes);
     List<QuoteSnapshot> result = new ArrayList<>();
     for (String line : payload.split(";")) {
@@ -343,8 +348,10 @@ public class TencentMarketDataAdapter implements MarketDataProvider {
     snapshot.setAmount(amount != null ? amount : BigDecimal.ZERO);
     snapshot.setChangePercent(calcChangePercent(current, close));
     if (close != null) {
-      snapshot.setUpperLimitPrice(close.multiply(BigDecimal.valueOf(1.10)).setScale(2, RoundingMode.HALF_UP));
-      snapshot.setLowerLimitPrice(close.multiply(BigDecimal.valueOf(0.90)).setScale(2, RoundingMode.HALF_UP));
+      snapshot.setUpperLimitPrice(
+          close.multiply(BigDecimal.valueOf(1.10)).setScale(2, RoundingMode.HALF_UP));
+      snapshot.setLowerLimitPrice(
+          close.multiply(BigDecimal.valueOf(0.90)).setScale(2, RoundingMode.HALF_UP));
     }
     LocalDateTime sourceTs = LocalDateTime.now();
     snapshot.setTimestamp(sourceTs);
@@ -403,7 +410,8 @@ public class TencentMarketDataAdapter implements MarketDataProvider {
       point.setLow(low.setScale(2, RoundingMode.HALF_UP));
       point.setVolume(volume);
       BigDecimal avgPrice = open.add(close).divide(BigDecimal.valueOf(2), 4, RoundingMode.HALF_UP);
-      point.setAmount(avgPrice.multiply(BigDecimal.valueOf(volume)).setScale(2, RoundingMode.HALF_UP));
+      point.setAmount(
+          avgPrice.multiply(BigDecimal.valueOf(volume)).setScale(2, RoundingMode.HALF_UP));
       points.add(point);
 
       previousClose = close.max(new BigDecimal("0.01"));
@@ -445,14 +453,15 @@ public class TencentMarketDataAdapter implements MarketDataProvider {
               .uri(URI.create(url))
               .timeout(Duration.ofSeconds(2))
               .header("Accept", "text/plain")
-            .header(
-              "User-Agent",
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
-            .header("Referer", "https://gu.qq.com")
-            .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+              .header(
+                  "User-Agent",
+                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+              .header("Referer", "https://gu.qq.com")
+              .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
               .GET()
               .build();
-      HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+      HttpResponse<byte[]> response =
+          httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
       if (response.statusCode() >= 400) {
         throw new IllegalStateException("Tencent response status is " + response.statusCode());
       }
@@ -486,7 +495,9 @@ public class TencentMarketDataAdapter implements MarketDataProvider {
 
   private Charset resolveCharset(HttpResponse<byte[]> response) {
     Optional<String> contentTypeValue =
-        response.headers() == null ? Optional.empty() : response.headers().firstValue("Content-Type");
+        response.headers() == null
+            ? Optional.empty()
+            : response.headers().firstValue("Content-Type");
     String contentType = contentTypeValue.orElse("");
     if (contentType.isBlank()) {
       return null;

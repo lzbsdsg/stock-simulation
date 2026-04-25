@@ -171,6 +171,7 @@ class MarketWebSocketHandlerTest {
 
     assertEquals(2, drained);
     assertEquals(1, handler.getQueuedTaskCount());
-    verify(messagingTemplate, times(2)).convertAndSend(Mockito.anyString(), Mockito.any(Object.class));
+    verify(messagingTemplate, times(2))
+        .convertAndSend(Mockito.anyString(), Mockito.any(Object.class));
   }
 }

@@ -23,6 +23,5 @@ public interface AccountMapper extends BaseMapper<AccountDO> {
       ORDER BY user_id ASC
       LIMIT #{limit}
       """)
-  List<Long> selectUserIdsAfter(
-      @Param("lastUserId") Long lastUserId, @Param("limit") int limit);
+  List<Long> selectUserIdsAfter(@Param("lastUserId") Long lastUserId, @Param("limit") int limit);
 }

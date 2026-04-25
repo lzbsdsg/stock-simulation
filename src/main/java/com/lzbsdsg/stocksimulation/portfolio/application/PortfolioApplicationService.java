@@ -77,8 +77,7 @@ public class PortfolioApplicationService {
     if (positionCount == 0) {
       marketValue = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
     } else if (positionCount > OVERVIEW_QUOTE_LIMIT) {
-      marketValue =
-          defaultMoney(positionRepository.sumCostMarketValueByUserId(userId));
+      marketValue = defaultMoney(positionRepository.sumCostMarketValueByUserId(userId));
       log.warn(
           "portfolio.overview.aggregate_fallback position_count={} quote_limit={}",
           positionCount,
@@ -92,15 +91,17 @@ public class PortfolioApplicationService {
     BigDecimal available = defaultMoney(account.getAvailableBalance());
     BigDecimal frozen = defaultMoney(account.getFrozenBalance());
     BigDecimal initial = defaultMoney(account.getInitialBalance());
-    BigDecimal totalAssets = available.add(frozen).add(marketValue).setScale(2, RoundingMode.HALF_UP);
+    BigDecimal totalAssets =
+        available.add(frozen).add(marketValue).setScale(2, RoundingMode.HALF_UP);
     BigDecimal totalProfit = totalAssets.subtract(initial).setScale(2, RoundingMode.HALF_UP);
     BigDecimal totalProfitRate = safePercent(totalProfit, initial);
 
     LocalDate today = LocalDate.now(ZONE_SHANGHAI);
-    Optional<AssetSnapshot> previousSnapshot = assetSnapshotRepository.findLatestBefore(userId, today);
-    BigDecimal baseline =
-        previousSnapshot.map(AssetSnapshot::getTotalAssets).orElse(initial);
-    BigDecimal todayProfit = totalAssets.subtract(defaultMoney(baseline)).setScale(2, RoundingMode.HALF_UP);
+    Optional<AssetSnapshot> previousSnapshot =
+        assetSnapshotRepository.findLatestBefore(userId, today);
+    BigDecimal baseline = previousSnapshot.map(AssetSnapshot::getTotalAssets).orElse(initial);
+    BigDecimal todayProfit =
+        totalAssets.subtract(defaultMoney(baseline)).setScale(2, RoundingMode.HALF_UP);
     BigDecimal todayProfitRate = safePercent(todayProfit, defaultMoney(baseline));
 
     return new OverviewVO(
@@ -128,7 +129,8 @@ public class PortfolioApplicationService {
     }
 
     Map<String, QuoteSnapshot> quoteMap = loadQuoteMap(positions);
-    List<PositionVO> records = positions.stream().map(position -> toPositionVO(position, quoteMap)).toList();
+    List<PositionVO> records =
+        positions.stream().map(position -> toPositionVO(position, quoteMap)).toList();
     return new PageResult<>(records, total, safePage, safeSize);
   }
 
@@ -198,8 +200,14 @@ public class PortfolioApplicationService {
         currentPrice
             .multiply(BigDecimal.valueOf(defaultInt(position.getTotalQuantity())))
             .setScale(2, RoundingMode.HALF_UP);
-    BigDecimal profit = positionDomainService.calculateProfit(position, currentPrice).setScale(2, RoundingMode.HALF_UP);
-    BigDecimal profitRate = positionDomainService.calculateProfitRate(position, currentPrice).setScale(4, RoundingMode.HALF_UP);
+    BigDecimal profit =
+        positionDomainService
+            .calculateProfit(position, currentPrice)
+            .setScale(2, RoundingMode.HALF_UP);
+    BigDecimal profitRate =
+        positionDomainService
+            .calculateProfitRate(position, currentPrice)
+            .setScale(4, RoundingMode.HALF_UP);
 
     BigDecimal todayProfit = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
     if (quote != null && quote.getClosePrice() != null && position.getTotalQuantity() != null) {
@@ -246,7 +254,10 @@ public class PortfolioApplicationService {
         continue;
       }
       QuoteSnapshot quote = quoteMap.get(normalizeStockCode(position.getStockCode()));
-      BigDecimal price = preferClosePrice ? resolveClosePrice(position, quote) : resolveCurrentPrice(position, quote);
+      BigDecimal price =
+          preferClosePrice
+              ? resolveClosePrice(position, quote)
+              : resolveCurrentPrice(position, quote);
       marketValue = marketValue.add(price.multiply(BigDecimal.valueOf(quantity)));
     }
     return marketValue.setScale(2, RoundingMode.HALF_UP);

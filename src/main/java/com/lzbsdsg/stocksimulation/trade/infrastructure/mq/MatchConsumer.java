@@ -33,7 +33,7 @@ public class MatchConsumer {
     for (int attempt = 1; attempt <= MAX_RETRY; attempt++) {
       try {
         TradeApplicationService.MatchResult result = tradeApplicationService.matchOrder(orderId);
-        log.info("match consumed: orderId={}, attempt={}, result={}", orderId, attempt, result);
+        log.debug("match consumed: orderId={}, attempt={}, result={}", orderId, attempt, result);
         return;
       } catch (BizException ex) {
         if (ex.getErrorCode() == ErrorCode.TRADE_OPTIMISTIC_LOCK_CONFLICT && attempt < MAX_RETRY) {
@@ -58,7 +58,7 @@ public class MatchConsumer {
 
   private void sleepBackoff(int attempt) {
     long backoffMs = INITIAL_BACKOFF_MS * (1L << Math.max(attempt - 1, 0));
-    log.warn("match retry backoff: attempt={}, sleepMs={}", attempt, backoffMs);
+    log.debug("match retry backoff: attempt={}, sleepMs={}", attempt, backoffMs);
     try {
       Thread.sleep(backoffMs);
     } catch (InterruptedException ex) {

@@ -69,7 +69,9 @@ public class WatchlistApplicationService {
       result.add(
           new WatchlistItemVO(
               normalizeStockCode(item.getStockCode()),
-              quote != null && quote.getStockName() != null ? quote.getStockName() : item.getStockName(),
+              quote != null && quote.getStockName() != null
+                  ? quote.getStockName()
+                  : item.getStockName(),
               quote == null ? null : quote.getCurrentPrice(),
               quote == null ? null : quote.getChangePercent(),
               item.getSortOrder()));
@@ -148,12 +150,14 @@ public class WatchlistApplicationService {
       existingMap.put(normalizeStockCode(item.getStockCode()), item);
     }
 
-    Set<String> uniqueInputCodes = stockCodes.stream()
-        .map(this::normalizeStockCode)
-        .filter(code -> !code.isBlank())
-        .collect(Collectors.toCollection(LinkedHashSet::new));
+    Set<String> uniqueInputCodes =
+        stockCodes.stream()
+            .map(this::normalizeStockCode)
+            .filter(code -> !code.isBlank())
+            .collect(Collectors.toCollection(LinkedHashSet::new));
 
-    if (uniqueInputCodes.size() != existingMap.size() || !existingMap.keySet().containsAll(uniqueInputCodes)) {
+    if (uniqueInputCodes.size() != existingMap.size()
+        || !existingMap.keySet().containsAll(uniqueInputCodes)) {
       throw new BizException(ErrorCode.BAD_REQUEST, "排序股票列表与当前自选股不一致");
     }
 

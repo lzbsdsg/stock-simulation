@@ -26,14 +26,16 @@ class MarketPubSubListenerTest {
   @Test
   void should_update_l1_and_push_ws_when_receive_broadcast() {
     CacheManager cacheManager = new CaffeineConfig().cacheManager();
-    MarketWebSocketHandler websocketHandler = org.mockito.Mockito.mock(MarketWebSocketHandler.class);
+    MarketWebSocketHandler websocketHandler =
+        org.mockito.Mockito.mock(MarketWebSocketHandler.class);
     RedisSerializer<Object> serializer = org.mockito.Mockito.mock(RedisSerializer.class);
     RedisTemplate<String, Object> redisTemplate = org.mockito.Mockito.mock(RedisTemplate.class);
     doReturn(serializer).when(redisTemplate).getValueSerializer();
     ObjectMapper objectMapper = new ObjectMapper();
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
-    MarketPubSubListener listener = new MarketPubSubListener(cacheManager, websocketHandler, redisTemplate,
-        objectMapper, meterRegistry);
+    MarketPubSubListener listener =
+        new MarketPubSubListener(
+            cacheManager, websocketHandler, redisTemplate, objectMapper, meterRegistry);
 
     QuoteSnapshot quote = new QuoteSnapshot();
     quote.setStockCode("sh600519");
@@ -41,8 +43,10 @@ class MarketPubSubListenerTest {
     quote.setCurrentPrice(new BigDecimal("1688.88"));
     quote.setTimestamp(LocalDateTime.now());
 
-    Message message = new DefaultMessage(
-        "market:quote:broadcast".getBytes(StandardCharsets.UTF_8), "payload".getBytes(StandardCharsets.UTF_8));
+    Message message =
+        new DefaultMessage(
+            "market:quote:broadcast".getBytes(StandardCharsets.UTF_8),
+            "payload".getBytes(StandardCharsets.UTF_8));
     when(serializer.deserialize("payload".getBytes(StandardCharsets.UTF_8))).thenReturn(quote);
 
     listener.onMessage(message, null);
@@ -55,22 +59,27 @@ class MarketPubSubListenerTest {
   @Test
   void should_ignore_malformed_message() {
     CacheManager cacheManager = new CaffeineConfig().cacheManager();
-    MarketWebSocketHandler websocketHandler = org.mockito.Mockito.mock(MarketWebSocketHandler.class);
+    MarketWebSocketHandler websocketHandler =
+        org.mockito.Mockito.mock(MarketWebSocketHandler.class);
     RedisSerializer<Object> serializer = org.mockito.Mockito.mock(RedisSerializer.class);
     RedisTemplate<String, Object> redisTemplate = org.mockito.Mockito.mock(RedisTemplate.class);
     doReturn(serializer).when(redisTemplate).getValueSerializer();
     ObjectMapper objectMapper = new ObjectMapper();
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
-    MarketPubSubListener listener = new MarketPubSubListener(cacheManager, websocketHandler, redisTemplate,
-        objectMapper, meterRegistry);
+    MarketPubSubListener listener =
+        new MarketPubSubListener(
+            cacheManager, websocketHandler, redisTemplate, objectMapper, meterRegistry);
 
-    Message message = new DefaultMessage(
-        "market:quote:broadcast".getBytes(StandardCharsets.UTF_8), "bad-json".getBytes(StandardCharsets.UTF_8));
+    Message message =
+        new DefaultMessage(
+            "market:quote:broadcast".getBytes(StandardCharsets.UTF_8),
+            "bad-json".getBytes(StandardCharsets.UTF_8));
     when(serializer.deserialize("bad-json".getBytes(StandardCharsets.UTF_8)))
         .thenThrow(new RuntimeException("bad payload"));
 
     listener.onMessage(message, null);
 
-    verify(websocketHandler, never()).pushQuote(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+    verify(websocketHandler, never())
+        .pushQuote(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
   }
 }

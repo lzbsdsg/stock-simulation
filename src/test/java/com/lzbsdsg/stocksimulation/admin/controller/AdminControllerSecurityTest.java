@@ -13,8 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -49,7 +49,8 @@ class AdminControllerSecurityTest {
   @Test
   @WithMockUser(roles = "ADMIN")
   void should_allow_admin_role() throws Exception {
-    org.mockito.Mockito.when(adminApplicationService.getDashboardStats()).thenReturn(java.util.Map.of());
+    org.mockito.Mockito.when(adminApplicationService.getDashboardStats())
+        .thenReturn(java.util.Map.of());
     mockMvc.perform(get("/api/v1/admin/dashboard/stats")).andExpect(status().isOk());
   }
 }

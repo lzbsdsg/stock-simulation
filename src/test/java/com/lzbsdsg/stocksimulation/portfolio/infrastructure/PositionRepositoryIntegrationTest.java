@@ -111,4 +111,3 @@ class PositionRepositoryIntegrationTest {
     assertFalse(positionRepository.updateWithVersion(position));
   }
 }
-

@@ -154,7 +154,11 @@ class OrderControllerApiTest {
     when(tradeApplicationService.getOrders("today", 1, 20)).thenReturn(pageResult);
 
     mockMvc
-        .perform(get("/api/v1/trade/orders").param("scope", "today").param("page", "1").param("size", "20"))
+        .perform(
+            get("/api/v1/trade/orders")
+                .param("scope", "today")
+                .param("page", "1")
+                .param("size", "20"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.total").value(1))
         .andExpect(jsonPath("$.data.records[0].stockCode").value("sh600519"));

@@ -86,9 +86,7 @@ class PortfolioControllerApiTest {
             1,
             1,
             20);
-    when(portfolioApplicationService.getPositions(1, 20))
-        .thenReturn(
-            pageResult);
+    when(portfolioApplicationService.getPositions(1, 20)).thenReturn(pageResult);
 
     mockMvc
         .perform(get("/api/v1/portfolio/positions").param("page", "1").param("size", "20"))
@@ -131,9 +129,7 @@ class PortfolioControllerApiTest {
             new EquityCurveVO(
                 List.of(
                     new EquityCurvePointVO(
-                        LocalDate.of(2026, 3, 24),
-                        new BigDecimal("500000.00"),
-                        BigDecimal.ZERO),
+                        LocalDate.of(2026, 3, 24), new BigDecimal("500000.00"), BigDecimal.ZERO),
                     new EquityCurvePointVO(
                         LocalDate.of(2026, 3, 25),
                         new BigDecimal("501200.00"),
@@ -149,4 +145,3 @@ class PortfolioControllerApiTest {
         .andExpect(jsonPath("$.data.maxDrawdown").value(1.8));
   }
 }
-

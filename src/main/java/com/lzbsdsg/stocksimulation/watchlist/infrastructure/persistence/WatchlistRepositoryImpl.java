@@ -92,7 +92,9 @@ public class WatchlistRepositoryImpl implements WatchlistRepository {
     d.setStockName(w.getStockName());
     d.setSortOrder(w.getSortOrder());
     d.setCreatedAt(
-        w.getCreatedAt() == null ? null : w.getCreatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
+        w.getCreatedAt() == null
+            ? null
+            : w.getCreatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
     return d;
   }
 }

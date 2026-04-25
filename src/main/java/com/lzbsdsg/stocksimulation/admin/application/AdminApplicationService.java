@@ -7,9 +7,9 @@ import com.lzbsdsg.stocksimulation.auth.infrastructure.persistence.UserMapper;
 import com.lzbsdsg.stocksimulation.common.exception.BizException;
 import com.lzbsdsg.stocksimulation.common.result.ErrorCode;
 import com.lzbsdsg.stocksimulation.common.result.PageResult;
-import com.lzbsdsg.stocksimulation.trade.infrastructure.persistence.OrderMapper;
 import com.lzbsdsg.stocksimulation.portfolio.infrastructure.persistence.PositionDO;
 import com.lzbsdsg.stocksimulation.portfolio.infrastructure.persistence.PositionMapper;
+import com.lzbsdsg.stocksimulation.trade.infrastructure.persistence.OrderMapper;
 import com.lzbsdsg.stocksimulation.trade.infrastructure.persistence.TradeDO;
 import com.lzbsdsg.stocksimulation.trade.infrastructure.persistence.TradeMapper;
 import com.lzbsdsg.stocksimulation.user.infrastructure.persistence.AccountDO;
@@ -71,15 +71,20 @@ public class AdminApplicationService {
 
     List<Long> userIds = users.stream().map(UserDO::getId).toList();
     Map<Long, AccountDO> accountByUserId =
-        accountMapper.selectList(new LambdaQueryWrapper<AccountDO>().in(AccountDO::getUserId, userIds)).stream()
+        accountMapper
+            .selectList(new LambdaQueryWrapper<AccountDO>().in(AccountDO::getUserId, userIds))
+            .stream()
             .collect(Collectors.toMap(AccountDO::getUserId, Function.identity()));
 
     List<Map<String, Object>> records = new ArrayList<>(users.size());
     for (UserDO user : users) {
       AccountDO account = accountByUserId.get(user.getId());
-      BigDecimal initialBalance = account == null ? BigDecimal.ZERO : defaultZero(account.getInitialBalance());
-      BigDecimal availableBalance = account == null ? BigDecimal.ZERO : defaultZero(account.getAvailableBalance());
-      BigDecimal frozenBalance = account == null ? BigDecimal.ZERO : defaultZero(account.getFrozenBalance());
+      BigDecimal initialBalance =
+          account == null ? BigDecimal.ZERO : defaultZero(account.getInitialBalance());
+      BigDecimal availableBalance =
+          account == null ? BigDecimal.ZERO : defaultZero(account.getAvailableBalance());
+      BigDecimal frozenBalance =
+          account == null ? BigDecimal.ZERO : defaultZero(account.getFrozenBalance());
       long positionCount =
           positionMapper.selectCount(
               new LambdaQueryWrapper<PositionDO>()
@@ -135,13 +140,16 @@ public class AdminApplicationService {
 
     var todayStart = LocalDate.now(ZONE_SHANGHAI).atStartOfDay(ZONE_SHANGHAI).toInstant();
     long todayNewUsers =
-        userMapper.selectCount(new LambdaQueryWrapper<UserDO>().ge(UserDO::getCreatedAt, todayStart));
+        userMapper.selectCount(
+            new LambdaQueryWrapper<UserDO>().ge(UserDO::getCreatedAt, todayStart));
 
-    var todayTradeStart = LocalDate.now(ZONE_SHANGHAI).atStartOfDay(ZONE_SHANGHAI).toOffsetDateTime();
+    var todayTradeStart =
+        LocalDate.now(ZONE_SHANGHAI).atStartOfDay(ZONE_SHANGHAI).toOffsetDateTime();
     long totalOrderCount = orderMapper.selectCount(null);
     long totalTradeCount = tradeMapper.selectCount(null);
     long todayTradeCount =
-        tradeMapper.selectCount(new LambdaQueryWrapper<TradeDO>().ge(TradeDO::getTradedAt, todayTradeStart));
+        tradeMapper.selectCount(
+            new LambdaQueryWrapper<TradeDO>().ge(TradeDO::getTradedAt, todayTradeStart));
     BigDecimal totalTradeAmount = sumTradeAmount(null);
     BigDecimal todayTradeAmount = sumTradeAmount(todayTradeStart);
     BigDecimal totalAvailableBalance = sumAvailableBalance();
@@ -157,24 +165,30 @@ public class AdminApplicationService {
     stats.put("totalTradeAmount", totalTradeAmount);
     stats.put("todayTradeAmount", todayTradeAmount);
     stats.put("totalAvailableBalance", totalAvailableBalance);
-    stats.put("tradeOrderCreatedTotal", metricCounterWithFallback("trade_order_created_total", totalOrderCount));
-    stats.put("tradeOrderFilledTotal", metricCounterWithFallback("trade_order_filled_total", totalTradeCount));
-    stats.put("tradeMatchDurationP95Ms", metricTimerPercentileMs("trade_match_duration_seconds", 0.95));
-    stats.put("tradeMatchDurationP99Ms", metricTimerPercentileMs("trade_match_duration_seconds", 0.99));
     stats.put(
-      "marketQuoteCacheHitL1Total",
-      metricCounterWithTag("market_quote_cache_hit_total", "level", "L1"));
+        "tradeOrderCreatedTotal",
+        metricCounterWithFallback("trade_order_created_total", totalOrderCount));
     stats.put(
-      "marketQuoteCacheHitL2Total",
-      metricCounterWithTag("market_quote_cache_hit_total", "level", "L2"));
+        "tradeOrderFilledTotal",
+        metricCounterWithFallback("trade_order_filled_total", totalTradeCount));
+    stats.put(
+        "tradeMatchDurationP95Ms", metricTimerPercentileMs("trade_match_duration_seconds", 0.95));
+    stats.put(
+        "tradeMatchDurationP99Ms", metricTimerPercentileMs("trade_match_duration_seconds", 0.99));
+    stats.put(
+        "marketQuoteCacheHitL1Total",
+        metricCounterWithTag("market_quote_cache_hit_total", "level", "L1"));
+    stats.put(
+        "marketQuoteCacheHitL2Total",
+        metricCounterWithTag("market_quote_cache_hit_total", "level", "L2"));
     stats.put("wsActiveConnections", metricGauge("ws_active_connections"));
     stats.put("wsPushDroppedTotal", metricCounter("ws_push_dropped_total"));
     stats.put(
-      "dbPoolMasterActiveConnections",
-      metricGaugeWithTag("db_pool_active_connections", "source", "master"));
+        "dbPoolMasterActiveConnections",
+        metricGaugeWithTag("db_pool_active_connections", "source", "master"));
     stats.put(
-      "dbPoolSlaveActiveConnections",
-      metricGaugeWithTag("db_pool_active_connections", "source", "slave"));
+        "dbPoolSlaveActiveConnections",
+        metricGaugeWithTag("db_pool_active_connections", "source", "slave"));
     return stats;
   }
 
@@ -209,7 +223,9 @@ public class AdminApplicationService {
                   BigDecimal profitRate =
                       initial.signum() <= 0
                           ? BigDecimal.ZERO
-                          : profit.multiply(BigDecimal.valueOf(100)).divide(initial, 4, java.math.RoundingMode.HALF_UP);
+                          : profit
+                              .multiply(BigDecimal.valueOf(100))
+                              .divide(initial, 4, java.math.RoundingMode.HALF_UP);
                   Map<String, Object> row = new LinkedHashMap<>();
                   row.put("userId", account.getUserId());
                   row.put("email", user == null ? null : user.getEmail());
@@ -222,12 +238,12 @@ public class AdminApplicationService {
                 })
             .sorted(
                 Comparator.comparing(
-                  (Map<String, Object> entry) ->
-                    (BigDecimal) entry.getOrDefault("profitRate", BigDecimal.ZERO),
+                        (Map<String, Object> entry) ->
+                            (BigDecimal) entry.getOrDefault("profitRate", BigDecimal.ZERO),
                         Comparator.reverseOrder())
                     .thenComparing(
-                  (Map<String, Object> entry) ->
-                    (BigDecimal) entry.getOrDefault("totalAssets", BigDecimal.ZERO),
+                        (Map<String, Object> entry) ->
+                            (BigDecimal) entry.getOrDefault("totalAssets", BigDecimal.ZERO),
                         Comparator.reverseOrder()))
             .toList();
 

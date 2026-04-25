@@ -1,12 +1,12 @@
 package com.lzbsdsg.stocksimulation.market.application;
 
 import com.lzbsdsg.stocksimulation.common.exception.BizException;
-import com.lzbsdsg.stocksimulation.common.result.PageResult;
 import com.lzbsdsg.stocksimulation.common.result.ErrorCode;
+import com.lzbsdsg.stocksimulation.common.result.PageResult;
 import com.lzbsdsg.stocksimulation.config.CaffeineConfig;
 import com.lzbsdsg.stocksimulation.market.application.vo.KLineVO;
-import com.lzbsdsg.stocksimulation.market.application.vo.MarketLatencyMetricVO;
 import com.lzbsdsg.stocksimulation.market.application.vo.MarketIndexQuoteVO;
+import com.lzbsdsg.stocksimulation.market.application.vo.MarketLatencyMetricVO;
 import com.lzbsdsg.stocksimulation.market.application.vo.MarketRealtimeMetricsVO;
 import com.lzbsdsg.stocksimulation.market.application.vo.QuoteVO;
 import com.lzbsdsg.stocksimulation.market.application.vo.StockListedItemVO;
@@ -16,9 +16,9 @@ import com.lzbsdsg.stocksimulation.market.domain.entity.QuoteSnapshot;
 import com.lzbsdsg.stocksimulation.market.domain.entity.StockInfo;
 import com.lzbsdsg.stocksimulation.market.domain.repository.StockInfoRepository;
 import com.lzbsdsg.stocksimulation.market.domain.service.MarketDataFacade;
+import com.lzbsdsg.stocksimulation.market.infrastructure.gateway.EastMoneyOfficialBoardGateway;
 import com.lzbsdsg.stocksimulation.market.infrastructure.ingest.MarketActiveQuoteRegistry;
 import com.lzbsdsg.stocksimulation.market.infrastructure.ingest.MarketIngestService;
-import com.lzbsdsg.stocksimulation.market.infrastructure.gateway.EastMoneyOfficialBoardGateway;
 import com.lzbsdsg.stocksimulation.market.infrastructure.websocket.MarketWebSocketHandler;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -167,13 +167,15 @@ public class MarketApplicationService {
     }
 
     List<StockInfo> listedStocks = getOrLoadListedStocks();
-    List<StockInfo> matchedStocks = listedStocks.stream()
-        .filter(this::isListed)
-        .filter(
-            stock -> containsIgnoreCase(stock.getStockCode(), normalizedKeyword)
-                || containsIgnoreCase(stock.getStockName(), normalizedKeyword))
-        .limit(SEARCH_LIMIT)
-        .toList();
+    List<StockInfo> matchedStocks =
+        listedStocks.stream()
+            .filter(this::isListed)
+            .filter(
+                stock ->
+                    containsIgnoreCase(stock.getStockCode(), normalizedKeyword)
+                        || containsIgnoreCase(stock.getStockName(), normalizedKeyword))
+            .limit(SEARCH_LIMIT)
+            .toList();
 
     if (matchedStocks.isEmpty()) {
       return List.of();
@@ -187,16 +189,23 @@ public class MarketApplicationService {
       List<QuoteSnapshot> snapshots = marketDataFacade.batchGetQuotes(matchedCodes);
       for (QuoteSnapshot snapshot : snapshots) {
         if (snapshot != null && snapshot.getStockCode() != null) {
-          quoteMap.put(snapshot.getStockCode().trim().toLowerCase(Locale.ROOT), toQuoteVO(snapshot));
+          quoteMap.put(
+              snapshot.getStockCode().trim().toLowerCase(Locale.ROOT), toQuoteVO(snapshot));
         }
       }
     } catch (Exception ex) {
-      log.debug("searchStock batch quote fallback keyword={} reason={}", normalizedKeyword, ex.getMessage());
+      log.debug(
+          "searchStock batch quote fallback keyword={} reason={}",
+          normalizedKeyword,
+          ex.getMessage());
     }
 
     List<QuoteVO> results = new ArrayList<>(matchedStocks.size());
     for (StockInfo stockInfo : matchedStocks) {
-      String code = stockInfo.getStockCode() == null ? "" : stockInfo.getStockCode().trim().toLowerCase(Locale.ROOT);
+      String code =
+          stockInfo.getStockCode() == null
+              ? ""
+              : stockInfo.getStockCode().trim().toLowerCase(Locale.ROOT);
       results.add(quoteMap.getOrDefault(code, fallbackQuote(stockInfo)));
     }
     return results;
@@ -253,7 +262,8 @@ public class MarketApplicationService {
   @Scheduled(fixedRateString = "${market.visible-codes.cleanup-interval-ms:60000}")
   public void cleanupVisibleCodeReportCache() {
     long now = System.currentTimeMillis();
-    long keepAliveMs = Math.max(visibleCodesReportMinIntervalMs * 20L, DEFAULT_VISIBLE_CODE_RECENT_TTL_MS);
+    long keepAliveMs =
+        Math.max(visibleCodesReportMinIntervalMs * 20L, DEFAULT_VISIBLE_CODE_RECENT_TTL_MS);
     visibleCodeLastReportAt.entrySet().removeIf(entry -> now - entry.getValue() > keepAliveMs);
   }
 
@@ -287,7 +297,8 @@ public class MarketApplicationService {
   }
 
   public MarketRealtimeMetricsVO getRealtimeMetrics() {
-    long activeCodeCount = marketActiveQuoteRegistry.countActiveCodes(Duration.ofMillis(Math.max(activeWindowMs, 1L)));
+    long activeCodeCount =
+        marketActiveQuoteRegistry.countActiveCodes(Duration.ofMillis(Math.max(activeWindowMs, 1L)));
     return new MarketRealtimeMetricsVO(
         LocalDateTime.now(),
         activeCodeCount,
@@ -432,5 +443,4 @@ public class MarketApplicationService {
     }
     return value;
   }
-
 }

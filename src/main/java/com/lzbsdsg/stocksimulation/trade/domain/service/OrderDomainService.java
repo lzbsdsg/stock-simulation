@@ -22,8 +22,7 @@ public class OrderDomainService {
 
   /** 校验是否在交易时间内 */
   public boolean isWithinTradingHours(LocalTime now) {
-    return isWithinTradingHours(
-        now, MORNING_OPEN, MORNING_CLOSE, AFTERNOON_OPEN, AFTERNOON_CLOSE);
+    return isWithinTradingHours(now, MORNING_OPEN, MORNING_CLOSE, AFTERNOON_OPEN, AFTERNOON_CLOSE);
   }
 
   /** 校验是否在交易时间内（自定义时段） */

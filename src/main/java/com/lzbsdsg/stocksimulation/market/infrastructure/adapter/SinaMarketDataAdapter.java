@@ -21,15 +21,14 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
-import java.time.temporal.TemporalAdjusters;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -130,8 +129,12 @@ public class SinaMarketDataAdapter implements MarketDataProvider {
         point.setHigh(high);
         point.setLow(low);
         point.setVolume(normalizedVolume);
-        BigDecimal avgPrice = open.add(close).divide(BigDecimal.valueOf(2), 4, RoundingMode.HALF_UP);
-        point.setAmount(avgPrice.multiply(BigDecimal.valueOf(normalizedVolume)).setScale(2, RoundingMode.HALF_UP));
+        BigDecimal avgPrice =
+            open.add(close).divide(BigDecimal.valueOf(2), 4, RoundingMode.HALF_UP);
+        point.setAmount(
+            avgPrice
+                .multiply(BigDecimal.valueOf(normalizedVolume))
+                .setScale(2, RoundingMode.HALF_UP));
         points.add(point);
       }
       return points;
@@ -272,7 +275,8 @@ public class SinaMarketDataAdapter implements MarketDataProvider {
 
   @Override
   public List<QuoteSnapshot> batchGetQuotes(List<String> stockCodes) {
-    List<String> normalizedCodes = stockCodes.stream().map(this::normalizeStockCode).distinct().toList();
+    List<String> normalizedCodes =
+        stockCodes.stream().map(this::normalizeStockCode).distinct().toList();
     String payload = fetchQuotePayload(normalizedCodes);
     List<QuoteSnapshot> result = new ArrayList<>();
     for (String line : payload.split(";")) {
@@ -325,12 +329,19 @@ public class SinaMarketDataAdapter implements MarketDataProvider {
     snapshot.setLowPrice(parseDecimal(fields, 5));
     snapshot.setVolume(parseLong(fields, 8));
     snapshot.setAmount(parseDecimal(fields, 9));
-    snapshot.setChangePercent(calcChangePercent(snapshot.getCurrentPrice(), snapshot.getClosePrice()));
+    snapshot.setChangePercent(
+        calcChangePercent(snapshot.getCurrentPrice(), snapshot.getClosePrice()));
     if (snapshot.getClosePrice() != null) {
       snapshot.setUpperLimitPrice(
-          snapshot.getClosePrice().multiply(BigDecimal.valueOf(1.10)).setScale(2, RoundingMode.HALF_UP));
+          snapshot
+              .getClosePrice()
+              .multiply(BigDecimal.valueOf(1.10))
+              .setScale(2, RoundingMode.HALF_UP));
       snapshot.setLowerLimitPrice(
-          snapshot.getClosePrice().multiply(BigDecimal.valueOf(0.90)).setScale(2, RoundingMode.HALF_UP));
+          snapshot
+              .getClosePrice()
+              .multiply(BigDecimal.valueOf(0.90))
+              .setScale(2, RoundingMode.HALF_UP));
     }
     LocalDateTime sourceTs = parseTimestamp(fields);
     snapshot.setTimestamp(sourceTs != null ? sourceTs : LocalDateTime.now());
@@ -389,7 +400,8 @@ public class SinaMarketDataAdapter implements MarketDataProvider {
       point.setLow(low.setScale(2, RoundingMode.HALF_UP));
       point.setVolume(volume);
       BigDecimal avgPrice = open.add(close).divide(BigDecimal.valueOf(2), 4, RoundingMode.HALF_UP);
-      point.setAmount(avgPrice.multiply(BigDecimal.valueOf(volume)).setScale(2, RoundingMode.HALF_UP));
+      point.setAmount(
+          avgPrice.multiply(BigDecimal.valueOf(volume)).setScale(2, RoundingMode.HALF_UP));
       points.add(point);
 
       previousClose = close.max(new BigDecimal("0.01"));
@@ -431,14 +443,15 @@ public class SinaMarketDataAdapter implements MarketDataProvider {
               .uri(URI.create(url))
               .timeout(Duration.ofSeconds(2))
               .header("Accept", "text/plain")
-            .header(
-              "User-Agent",
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
-            .header("Referer", "https://finance.sina.com.cn")
-            .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+              .header(
+                  "User-Agent",
+                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+              .header("Referer", "https://finance.sina.com.cn")
+              .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
               .GET()
               .build();
-      HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+      HttpResponse<byte[]> response =
+          httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
       if (response.statusCode() >= 400) {
         throw new IllegalStateException("Sina response status is " + response.statusCode());
       }
@@ -472,7 +485,9 @@ public class SinaMarketDataAdapter implements MarketDataProvider {
 
   private Charset resolveCharset(HttpResponse<byte[]> response) {
     Optional<String> contentTypeValue =
-        response.headers() == null ? Optional.empty() : response.headers().firstValue("Content-Type");
+        response.headers() == null
+            ? Optional.empty()
+            : response.headers().firstValue("Content-Type");
     String contentType = contentTypeValue.orElse("");
     if (contentType.isBlank()) {
       return null;

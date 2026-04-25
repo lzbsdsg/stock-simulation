@@ -1,0 +1,178 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: /work/k6/websocket-load-test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 3 max VUs, 50s max duration (incl. graceful stop):
+              * default: 3 looping VUs for 20s (gracefulStop: 30s)
+
+
+running (01.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+default   [   5% ] 3 VUs  00.9s/20s
+
+running (02.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+default   [  10% ] 3 VUs  01.9s/20s
+
+running (03.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+default   [  15% ] 3 VUs  02.9s/20s
+
+running (04.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+default   [  20% ] 3 VUs  03.9s/20s
+
+running (05.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+default   [  25% ] 3 VUs  04.9s/20s
+
+running (06.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+default   [  30% ] 3 VUs  05.9s/20s
+
+running (07.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+default   [  35% ] 3 VUs  06.9s/20s
+
+running (08.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+default   [  40% ] 3 VUs  07.9s/20s
+
+running (09.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+default   [  45% ] 3 VUs  08.9s/20s
+
+running (10.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+default   [  50% ] 3 VUs  09.9s/20s
+
+running (11.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+default   [  55% ] 3 VUs  10.9s/20s
+
+running (12.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+default   [  60% ] 3 VUs  11.9s/20s
+
+running (13.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+default   [  65% ] 3 VUs  12.9s/20s
+
+running (14.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+default   [  70% ] 3 VUs  13.9s/20s
+
+running (15.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+default   [  75% ] 3 VUs  14.9s/20s
+time="2026-04-24T14:21:19Z" level=info msg="ws.connect status=101 error=" source=console
+time="2026-04-24T14:21:19Z" level=info msg="ws.connect status=101 error=" source=console
+time="2026-04-24T14:21:19Z" level=info msg="ws.connect status=101 error=" source=console
+
+running (16.0s), 3/3 VUs, 0 complete and 0 interrupted iterations
+default   [  80% ] 3 VUs  15.9s/20s
+
+running (17.0s), 3/3 VUs, 3 complete and 0 interrupted iterations
+default   [  85% ] 3 VUs  16.9s/20s
+
+running (18.0s), 3/3 VUs, 3 complete and 0 interrupted iterations
+default   [  90% ] 3 VUs  17.9s/20s
+
+running (19.0s), 3/3 VUs, 3 complete and 0 interrupted iterations
+default   [  95% ] 3 VUs  18.9s/20s
+
+running (20.0s), 3/3 VUs, 3 complete and 0 interrupted iterations
+default   [ 100% ] 3 VUs  19.9s/20s
+
+running (21.0s), 3/3 VUs, 3 complete and 0 interrupted iterations
+default ↓ [ 100% ] 3 VUs  20s
+
+running (22.0s), 3/3 VUs, 3 complete and 0 interrupted iterations
+default ↓ [ 100% ] 3 VUs  20s
+
+running (23.0s), 3/3 VUs, 3 complete and 0 interrupted iterations
+default ↓ [ 100% ] 3 VUs  20s
+
+running (24.0s), 3/3 VUs, 3 complete and 0 interrupted iterations
+default ↓ [ 100% ] 3 VUs  20s
+
+running (25.0s), 3/3 VUs, 3 complete and 0 interrupted iterations
+default ↓ [ 100% ] 3 VUs  20s
+
+running (26.0s), 3/3 VUs, 3 complete and 0 interrupted iterations
+default ↓ [ 100% ] 3 VUs  20s
+
+running (27.0s), 3/3 VUs, 3 complete and 0 interrupted iterations
+default ↓ [ 100% ] 3 VUs  20s
+
+running (28.0s), 3/3 VUs, 3 complete and 0 interrupted iterations
+default ↓ [ 100% ] 3 VUs  20s
+
+running (29.0s), 3/3 VUs, 3 complete and 0 interrupted iterations
+default ↓ [ 100% ] 3 VUs  20s
+
+running (30.0s), 3/3 VUs, 3 complete and 0 interrupted iterations
+default ↓ [ 100% ] 3 VUs  20s
+
+running (31.0s), 3/3 VUs, 3 complete and 0 interrupted iterations
+default ↓ [ 100% ] 3 VUs  20s
+time="2026-04-24T14:21:35Z" level=info msg="ws.connect status=101 error=" source=console
+time="2026-04-24T14:21:35Z" level=info msg="ws.connect status=101 error=" source=console
+time="2026-04-24T14:21:35Z" level=info msg="ws.connect status=101 error=" source=console
+
+running (32.0s), 3/3 VUs, 3 complete and 0 interrupted iterations
+default ↓ [ 100% ] 3 VUs  20s
+
+
+  █ THRESHOLDS 
+
+    ws_connect_success_rate
+    ✓ 'rate>0.95' rate=100.00%
+
+    ws_connecting
+    ✓ 'p(99)<1000' p(99)=2.71ms
+
+    ws_latency_samples_total
+    ✓ 'count>0' count=24
+
+    ws_push_latency_ms
+    ✓ 'p(99)<500' p(99)=6
+
+    ws_stomp_connected_total
+    ✓ 'count>0' count=6
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 1       0.031156/s
+    checks_succeeded...: 100.00% 1 out of 1
+    checks_failed......: 0.00%   0 out of 1
+
+    ✓ ws visible codes status is 200
+
+    HTTP
+    http_req_duration..............: avg=57.67ms  min=57.67ms med=57.67ms max=57.67ms p(90)=57.67ms p(95)=57.67ms
+      { expected_response:true }...: avg=57.67ms  min=57.67ms med=57.67ms max=57.67ms p(90)=57.67ms p(95)=57.67ms
+    http_req_failed................: 0.00%   0 out of 1
+    http_reqs......................: 1       0.031156/s
+
+    EXECUTION
+    iteration_duration.............: avg=16s      min=16s     med=16s     max=16s     p(90)=16s     p(95)=16s    
+    iterations.....................: 6       0.186938/s
+    vus............................: 3       min=3      max=3
+    vus_max........................: 3       min=3      max=3
+
+    NETWORK
+    data_received..................: 18 kB   555 B/s
+    data_sent......................: 2.6 kB  81 B/s
+
+    WEBSOCKET
+    ws_connect_success_rate........: 100.00% 6 out of 6
+    ws_connecting..................: avg=2.41ms   min=2.15ms  med=2.39ms  max=2.71ms  p(90)=2.7ms   p(95)=2.71ms 
+    ws_latency_samples_total.......: 24      0.747751/s
+    ws_msgs_received...............: 30      0.934688/s
+    ws_msgs_sent...................: 26      0.810063/s
+    ws_push_latency_ms.............: avg=1.958333 min=1       med=1       max=6       p(90)=4.8     p(95)=6      
+    ws_received_total..............: 24      0.747751/s
+    ws_session_duration............: avg=15s      min=15s     med=15s     max=15s     p(90)=15s     p(95)=15s    
+    ws_sessions....................: 6       0.186938/s
+    ws_stomp_connected_total.......: 6       0.186938/s
+
+
+
+
+running (32.1s), 0/3 VUs, 6 complete and 0 interrupted iterations
+default ✓ [ 100% ] 3 VUs  20s

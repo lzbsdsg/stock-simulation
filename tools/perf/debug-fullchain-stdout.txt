@@ -1,0 +1,88 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: /work/k6/perf-fullchain-and-endpoints.js
+        output: -
+
+     scenarios: (100.00%) 4 scenarios, 1000 max VUs, 35s max duration (incl. graceful stop):
+              * endpoint_market_quote: 10.00 iterations/s for 5s (maxVUs: 50-200, exec: marketQuoteOnly, gracefulStop: 30s)
+              * endpoint_portfolio_overview: 5.00 iterations/s for 5s (maxVUs: 50-200, exec: portfolioOverviewOnly, gracefulStop: 30s)
+              * endpoint_trade_list: 5.00 iterations/s for 5s (maxVUs: 50-200, exec: tradeListOnly, gracefulStop: 30s)
+              * full_chain_mix: 20.00 iterations/s for 5s (maxVUs: 100-400, exec: fullChainMix, gracefulStop: 30s)
+
+
+running (01.0s), 0000/0250 VUs, 40 complete and 0 interrupted iterations
+endpoint_market_quote         [  19% ] 000/050 VUs  1.0s/5s  10.00 iters/s
+endpoint_portfolio_overview   [  19% ] 000/050 VUs  1.0s/5s  5.00 iters/s
+endpoint_trade_list           [  19% ] 000/050 VUs  1.0s/5s  5.00 iters/s
+full_chain_mix                [  19% ] 000/100 VUs  1.0s/5s  20.00 iters/s
+
+running (02.0s), 0000/0250 VUs, 80 complete and 0 interrupted iterations
+endpoint_market_quote         [  39% ] 000/050 VUs  2.0s/5s  10.00 iters/s
+endpoint_portfolio_overview   [  39% ] 000/050 VUs  2.0s/5s  5.00 iters/s
+endpoint_trade_list           [  39% ] 000/050 VUs  2.0s/5s  5.00 iters/s
+full_chain_mix                [  39% ] 000/100 VUs  2.0s/5s  20.00 iters/s
+
+running (03.0s), 0000/0250 VUs, 120 complete and 0 interrupted iterations
+endpoint_market_quote         [  59% ] 000/050 VUs  3.0s/5s  10.00 iters/s
+endpoint_portfolio_overview   [  59% ] 000/050 VUs  3.0s/5s  5.00 iters/s
+endpoint_trade_list           [  59% ] 000/050 VUs  3.0s/5s  5.00 iters/s
+full_chain_mix                [  59% ] 000/100 VUs  3.0s/5s  20.00 iters/s
+
+running (04.0s), 0000/0250 VUs, 160 complete and 0 interrupted iterations
+endpoint_market_quote         [  79% ] 000/050 VUs  4.0s/5s  10.00 iters/s
+endpoint_portfolio_overview   [  79% ] 000/050 VUs  4.0s/5s  5.00 iters/s
+endpoint_trade_list           [  79% ] 000/050 VUs  4.0s/5s  5.00 iters/s
+full_chain_mix                [  79% ] 000/100 VUs  4.0s/5s  20.00 iters/s
+
+running (05.0s), 0001/0250 VUs, 199 complete and 0 interrupted iterations
+endpoint_market_quote         [  99% ] 000/050 VUs  5.0s/5s  10.00 iters/s
+endpoint_portfolio_overview   [  99% ] 000/050 VUs  5.0s/5s  5.00 iters/s
+endpoint_trade_list           [  99% ] 000/050 VUs  5.0s/5s  5.00 iters/s
+full_chain_mix                [  99% ] 001/100 VUs  5.0s/5s  20.00 iters/s
+# Full-chain and Endpoint Performance Summary
+
+## Overall
+
+- total_requests: 0
+- total_qps: 0.00
+- total_failed_rate: 0.00%
+- total_p95_ms: 0.00
+- total_p99_ms: 0.00
+- business_success_total: 0
+- business_failure_total: 0
+- business_success_per_second: 0.00
+
+## Full-chain mix
+
+- configured_rps: 20
+- market_ratio: 0.65
+- portfolio_ratio: 0.2
+- trade_ratio: 0.15
+- pre_allocated_vus: 100
+- max_vus: 400
+- full_chain_success_total: 0
+- full_chain_failure_total: 0
+- full_chain_success_per_second: 0.00
+- full_chain_p95_ms: 0.00
+- full_chain_p99_ms: 0.00
+
+## Per-scenario QPS
+
+| scenario | configured_rate | qps | success_per_second | p95(ms) | p99(ms) | failed_rate |
+|---|---:|---:|---:|---:|---:|---:|
+
+QPS definition: completed requests / test duration (k6 http_reqs.rate).
+success_per_second definition: qps × (1 - failed_rate).
+
+running (05.0s), 0000/0250 VUs, 204 complete and 0 interrupted iterations
+endpoint_market_quote       ✓ [ 100% ] 000/050 VUs  5s  10.00 iters/s
+endpoint_portfolio_overview ✓ [ 100% ] 000/050 VUs  5s  5.00 iters/s
+endpoint_trade_list         ✓ [ 100% ] 000/050 VUs  5s  5.00 iters/s
+full_chain_mix              ✓ [ 100% ] 000/100 VUs  5s  20.00 iters/s

@@ -86,7 +86,9 @@ public class FundFlowRepositoryImpl implements FundFlowRepository {
     d.setOrderId(f.getOrderId());
     d.setRemark(f.getRemark());
     d.setCreatedAt(
-        f.getCreatedAt() == null ? null : f.getCreatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
+        f.getCreatedAt() == null
+            ? null
+            : f.getCreatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
     return d;
   }
 }

@@ -20,14 +20,14 @@ public class OrderMessageProducer {
 
   /** 发送撮合消息 */
   public void sendMatchMessage(Long orderId) {
-    log.info("Sending match message for orderId={}", orderId);
+    log.debug("Sending match message for orderId={}", orderId);
     rabbitTemplate.convertAndSend(
         RabbitMQConfig.TRADE_EXCHANGE, RabbitMQConfig.MATCH_ROUTING_KEY, orderId);
   }
 
   /** 发送交易通知消息 */
   public void sendNotification(Object notificationPayload) {
-    log.info("Sending trade notification");
+    log.debug("Sending trade notification");
     rabbitTemplate.convertAndSend(
         RabbitMQConfig.TRADE_EXCHANGE,
         RabbitMQConfig.NOTIFICATION_ROUTING_KEY,
@@ -36,7 +36,8 @@ public class OrderMessageProducer {
 
   /** 发送成交事件（fanout）。 */
   public void sendTradeFilledEvent(TradeFilledEvent event) {
-    log.info("Sending trade filled event, orderId={}, tradeId={}", event.orderId(), event.tradeId());
+    log.debug(
+        "Sending trade filled event, orderId={}, tradeId={}", event.orderId(), event.tradeId());
     rabbitTemplate.convertAndSend(RabbitMQConfig.TRADE_FILLED_EXCHANGE, "", event);
   }
 }

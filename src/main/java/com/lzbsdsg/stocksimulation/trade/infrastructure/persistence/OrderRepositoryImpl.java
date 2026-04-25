@@ -1,14 +1,15 @@
 package com.lzbsdsg.stocksimulation.trade.infrastructure.persistence;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.lzbsdsg.stocksimulation.trade.domain.entity.Order;
 import com.lzbsdsg.stocksimulation.trade.domain.entity.OrderSide;
 import com.lzbsdsg.stocksimulation.trade.domain.entity.OrderStatus;
 import com.lzbsdsg.stocksimulation.trade.domain.entity.OrderType;
-import java.time.ZoneId;
 import com.lzbsdsg.stocksimulation.trade.domain.repository.OrderRepository;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -53,6 +54,22 @@ public class OrderRepositoryImpl implements OrderRepository {
   }
 
   @Override
+  public List<Order> findActiveByUserIdAndCreatedAtBetween(
+      Long userId, LocalDateTime from, LocalDateTime to, int page, int size) {
+    OffsetDateTime fromOffset = from.atZone(ZONE_SHANGHAI).toOffsetDateTime();
+    OffsetDateTime toOffset = to.atZone(ZONE_SHANGHAI).toOffsetDateTime();
+    Page<OrderDO> result =
+        orderMapper.selectPage(
+            new Page<>(page, size),
+            new LambdaQueryWrapper<OrderDO>()
+                .eq(OrderDO::getUserId, userId)
+                .between(OrderDO::getCreatedAt, fromOffset, toOffset)
+                .orderByDesc(OrderDO::getCreatedAt)
+                .orderByDesc(OrderDO::getId));
+    return result.getRecords().stream().map(this::toDomain).collect(Collectors.toList());
+  }
+
+  @Override
   public List<Order> findByUserIdAndStatus(Long userId, OrderStatus status) {
     List<OrderDO> list =
         orderMapper.selectList(
@@ -67,6 +84,17 @@ public class OrderRepositoryImpl implements OrderRepository {
     OffsetDateTime fromOffset = from.atZone(ZONE_SHANGHAI).toOffsetDateTime();
     OffsetDateTime toOffset = to.atZone(ZONE_SHANGHAI).toOffsetDateTime();
     return orderArchiveMapper.countHistoryByUserIdAndCreatedAtBetween(userId, fromOffset, toOffset);
+  }
+
+  @Override
+  public long countActiveByUserIdAndCreatedAtBetween(
+      Long userId, LocalDateTime from, LocalDateTime to) {
+    OffsetDateTime fromOffset = from.atZone(ZONE_SHANGHAI).toOffsetDateTime();
+    OffsetDateTime toOffset = to.atZone(ZONE_SHANGHAI).toOffsetDateTime();
+    return orderMapper.selectCount(
+        new LambdaQueryWrapper<OrderDO>()
+            .eq(OrderDO::getUserId, userId)
+            .between(OrderDO::getCreatedAt, fromOffset, toOffset));
   }
 
   @Override
@@ -101,8 +129,6 @@ public class OrderRepositoryImpl implements OrderRepository {
     return rows > 0;
   }
 
-  // ---- Converter ----
-
   private Order toDomain(OrderDO d) {
     Order o = new Order();
     o.setId(d.getId());
@@ -121,9 +147,13 @@ public class OrderRepositoryImpl implements OrderRepository {
     o.setFrozenAmount(d.getFrozenAmount());
     o.setVersion(d.getVersion());
     o.setCreatedAt(
-        d.getCreatedAt() == null ? null : d.getCreatedAt().atZoneSameInstant(ZONE_SHANGHAI).toLocalDateTime());
+        d.getCreatedAt() == null
+            ? null
+            : d.getCreatedAt().atZoneSameInstant(ZONE_SHANGHAI).toLocalDateTime());
     o.setUpdatedAt(
-        d.getUpdatedAt() == null ? null : d.getUpdatedAt().atZoneSameInstant(ZONE_SHANGHAI).toLocalDateTime());
+        d.getUpdatedAt() == null
+            ? null
+            : d.getUpdatedAt().atZoneSameInstant(ZONE_SHANGHAI).toLocalDateTime());
     return o;
   }
 
@@ -144,8 +174,14 @@ public class OrderRepositoryImpl implements OrderRepository {
     d.setCommission(o.getCommission());
     d.setFrozenAmount(o.getFrozenAmount());
     d.setVersion(o.getVersion());
-    d.setCreatedAt(o.getCreatedAt() == null ? null : o.getCreatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
-    d.setUpdatedAt(o.getUpdatedAt() == null ? null : o.getUpdatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
+    d.setCreatedAt(
+        o.getCreatedAt() == null
+            ? null
+            : o.getCreatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
+    d.setUpdatedAt(
+        o.getUpdatedAt() == null
+            ? null
+            : o.getUpdatedAt().atZone(ZONE_SHANGHAI).toOffsetDateTime());
     return d;
   }
 

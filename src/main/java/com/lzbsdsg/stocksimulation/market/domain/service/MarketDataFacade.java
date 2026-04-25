@@ -19,11 +19,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
 /**
@@ -42,45 +45,64 @@ public class MarketDataFacade {
   private final Counter quoteCacheHitL1Counter;
   private final Counter quoteCacheHitL2Counter;
   private final Map<String, ProviderCircuitBreaker> circuitBreakers = new ConcurrentHashMap<>();
+  private final Executor marketProviderExecutor;
   private static final long PROVIDER_READ_TIMEOUT_MS = 1200L;
   private static final int QUOTE_CACHE_WAIT_RETRIES = 2;
   private static final long QUOTE_CACHE_WAIT_MILLIS = 25L;
-  private static final int KLINE_CACHE_WAIT_RETRIES = 12;
-  private static final long KLINE_CACHE_WAIT_MILLIS = 80L;
+  private static final int KLINE_CACHE_WAIT_RETRIES = 4;
+  private static final long KLINE_CACHE_WAIT_MILLIS = 30L;
 
   @Autowired
   public MarketDataFacade(
       List<MarketDataProvider> providers,
       MarketCacheGateway marketCacheGateway,
       HistoricalKLineService historicalKLineService,
-      MeterRegistry meterRegistry) {
+      MeterRegistry meterRegistry,
+      @Qualifier("marketProviderExecutor") ThreadPoolTaskExecutor marketProviderExecutor) {
     this.providers = providers;
     this.marketCacheGateway = marketCacheGateway;
     this.historicalKLineService = historicalKLineService;
+    this.marketProviderExecutor = marketProviderExecutor;
     this.providerFallbackCounter = meterRegistry.counter("market.provider.fallback.total");
     this.quoteCacheHitL1Counter =
-      Counter.builder("market_quote_cache_hit_total")
-        .description("Market quote cache hit counter")
-        .tag("level", "L1")
-        .register(meterRegistry);
+        Counter.builder("market_quote_cache_hit_total")
+            .description("Market quote cache hit counter")
+            .tag("level", "L1")
+            .register(meterRegistry);
     this.quoteCacheHitL2Counter =
-      Counter.builder("market_quote_cache_hit_total")
-        .description("Market quote cache hit counter")
-        .tag("level", "L2")
-        .register(meterRegistry);
+        Counter.builder("market_quote_cache_hit_total")
+            .description("Market quote cache hit counter")
+            .tag("level", "L2")
+            .register(meterRegistry);
   }
 
   MarketDataFacade(
       List<MarketDataProvider> providers,
       MarketCacheGateway marketCacheGateway,
       HistoricalKLineService historicalKLineService) {
-    this(providers, marketCacheGateway, historicalKLineService, new SimpleMeterRegistry());
+    this(
+        providers,
+        marketCacheGateway,
+        historicalKLineService,
+        new SimpleMeterRegistry(),
+        directExecutor());
+  }
+
+  private static ThreadPoolTaskExecutor directExecutor() {
+    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    executor.setCorePoolSize(1);
+    executor.setMaxPoolSize(1);
+    executor.setQueueCapacity(100);
+    executor.setThreadNamePrefix("market-provider-test-");
+    executor.initialize();
+    return executor;
   }
 
   /** 获取单只股票行情（先缓存 → Provider → 降级） */
   public QuoteSnapshot getQuote(String stockCode) {
     String normalizedCode = normalizeStockCode(stockCode);
-    MarketCacheGateway.CacheResult<QuoteSnapshot> cacheResult = marketCacheGateway.getQuote(normalizedCode);
+    MarketCacheGateway.CacheResult<QuoteSnapshot> cacheResult =
+        marketCacheGateway.getQuote(normalizedCode);
     if (cacheResult.hit()) {
       recordQuoteCacheHit(cacheResult.status());
       marketCacheGateway.setCacheStatusHeader(cacheResult.status());
@@ -145,11 +167,14 @@ public class MarketDataFacade {
     throw new BizException(ErrorCode.MARKET_STOCK_NOT_FOUND);
   }
 
-
   /** 批量获取行情 */
   public List<QuoteSnapshot> batchGetQuotes(List<String> stockCodes) {
     List<String> normalizedCodes =
-        stockCodes.stream().map(this::normalizeStockCode).filter(code -> !code.isBlank()).distinct().toList();
+        stockCodes.stream()
+            .map(this::normalizeStockCode)
+            .filter(code -> !code.isBlank())
+            .distinct()
+            .toList();
     if (normalizedCodes.isEmpty()) {
       return List.of();
     }
@@ -207,7 +232,8 @@ public class MarketDataFacade {
     }
 
     if (misses.isEmpty()) {
-      marketCacheGateway.setCacheStatusHeader(hasL2Hit ? MarketCacheGateway.HIT_L2 : MarketCacheGateway.HIT_L1);
+      marketCacheGateway.setCacheStatusHeader(
+          hasL2Hit ? MarketCacheGateway.HIT_L2 : MarketCacheGateway.HIT_L1);
     } else if (hasStale) {
       marketCacheGateway.setCacheStatusHeader(MarketCacheGateway.STALE);
     } else {
@@ -244,6 +270,8 @@ public class MarketDataFacade {
         marketCacheGateway.setCacheStatusHeader(MarketCacheGateway.HIT_L2);
         return lockWaitCached;
       }
+      marketCacheGateway.setCacheStatusHeader(MarketCacheGateway.STALE);
+      return historicalKLineService.getCachedKLineOnly(stockCode, period, from, to);
     }
 
     try {
@@ -329,8 +357,8 @@ public class MarketDataFacade {
     List<CompletableFuture<QuoteSnapshot>> futures = new ArrayList<>();
     for (MarketDataProvider provider : activeProviders) {
       futures.add(
-          CompletableFuture
-              .supplyAsync(() -> fetchProviderQuote(provider, stockCode))
+          CompletableFuture.supplyAsync(
+                  () -> fetchProviderQuote(provider, stockCode), marketProviderExecutor)
               .completeOnTimeout(null, PROVIDER_READ_TIMEOUT_MS, TimeUnit.MILLISECONDS)
               .exceptionally(_ex -> null));
     }
@@ -354,8 +382,8 @@ public class MarketDataFacade {
     List<CompletableFuture<Map<String, QuoteSnapshot>>> futures = new ArrayList<>();
     for (MarketDataProvider provider : activeProviders) {
       futures.add(
-          CompletableFuture
-              .supplyAsync(() -> fetchProviderBatch(provider, stockCodes))
+          CompletableFuture.supplyAsync(
+                  () -> fetchProviderBatch(provider, stockCodes), marketProviderExecutor)
               .completeOnTimeout(Map.of(), PROVIDER_READ_TIMEOUT_MS, TimeUnit.MILLISECONDS)
               .exceptionally(_ex -> Map.of()));
     }

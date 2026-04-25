@@ -96,7 +96,8 @@ public class RedisConfig {
     container.setConnectionFactory(connectionFactory);
     container.addMessageListener(cacheInvalidateListener, new PatternTopic("cache:invalidate:*"));
     if (marketRedisPubSubEnabled) {
-      container.addMessageListener(marketPubSubListener, new PatternTopic("market:quote:broadcast"));
+      container.addMessageListener(
+          marketPubSubListener, new PatternTopic("market:quote:broadcast"));
     }
     return container;
   }

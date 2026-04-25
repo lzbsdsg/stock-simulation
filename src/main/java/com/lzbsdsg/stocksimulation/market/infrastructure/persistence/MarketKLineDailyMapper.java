@@ -2,11 +2,11 @@ package com.lzbsdsg.stocksimulation.market.infrastructure.persistence;
 
 import java.time.LocalDate;
 import java.util.List;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Delete;
 
 /** 历史日K Mapper */
 @Mapper
@@ -35,7 +35,9 @@ public interface MarketKLineDailyMapper {
       </script>
       """)
   List<MarketKLineDailyDO> selectByStockCodeAndDateRange(
-      @Param("stockCode") String stockCode, @Param("from") LocalDate from, @Param("to") LocalDate to);
+      @Param("stockCode") String stockCode,
+      @Param("from") LocalDate from,
+      @Param("to") LocalDate to);
 
   @Select(
       """
@@ -53,15 +55,17 @@ public interface MarketKLineDailyMapper {
       """)
   LocalDate selectEarliestTradeDate(@Param("stockCode") String stockCode);
 
-    @Select(
-            """
+  @Select(
+      """
             SELECT DISTINCT source
             FROM t_market_kline_daily
             WHERE stock_code = #{stockCode}
                 AND trade_date BETWEEN #{from} AND #{to}
             """)
-    List<String> selectDistinctSourcesInDateRange(
-            @Param("stockCode") String stockCode, @Param("from") LocalDate from, @Param("to") LocalDate to);
+  List<String> selectDistinctSourcesInDateRange(
+      @Param("stockCode") String stockCode,
+      @Param("from") LocalDate from,
+      @Param("to") LocalDate to);
 
   @Insert(
       """
@@ -113,5 +117,6 @@ public interface MarketKLineDailyMapper {
         AND trade_date < #{cutoffDateInclusive}
       """)
   int deleteOlderThan(
-      @Param("stockCode") String stockCode, @Param("cutoffDateInclusive") LocalDate cutoffDateInclusive);
+      @Param("stockCode") String stockCode,
+      @Param("cutoffDateInclusive") LocalDate cutoffDateInclusive);
 }

@@ -8,9 +8,9 @@ import static org.mockito.Mockito.when;
 
 import com.lzbsdsg.stocksimulation.auth.infrastructure.gateway.JwtTokenProvider;
 import com.lzbsdsg.stocksimulation.market.infrastructure.websocket.MarketWebSocketSessionRegistry;
+import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
-import java.lang.reflect.Field;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -64,7 +64,8 @@ class WebSocketJwtHandshakeInterceptorTest {
     when(request.getHeaders()).thenReturn(headers);
     when(jwtTokenProvider.validateToken("invalid-token")).thenReturn(false);
 
-    boolean allowed = interceptor.beforeHandshake(request, response, webSocketHandler, new HashMap<>());
+    boolean allowed =
+        interceptor.beforeHandshake(request, response, webSocketHandler, new HashMap<>());
 
     assertFalse(allowed);
     verify(response).setStatusCode(HttpStatus.UNAUTHORIZED);
@@ -88,7 +89,8 @@ class WebSocketJwtHandshakeInterceptorTest {
   void should_reject_when_no_capacity() {
     when(sessionRegistry.hasCapacity()).thenReturn(false);
 
-    boolean allowed = interceptor.beforeHandshake(request, response, webSocketHandler, new HashMap<>());
+    boolean allowed =
+        interceptor.beforeHandshake(request, response, webSocketHandler, new HashMap<>());
 
     assertFalse(allowed);
     verify(response).setStatusCode(HttpStatus.SERVICE_UNAVAILABLE);
@@ -117,5 +119,4 @@ class WebSocketJwtHandshakeInterceptorTest {
     field.setAccessible(true);
     field.set(target, value);
   }
-
 }

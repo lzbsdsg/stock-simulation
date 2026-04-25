@@ -30,13 +30,13 @@ import org.springframework.stereotype.Component;
 public class EastMoneyOfficialBoardGateway {
 
   private static final String EAST_MONEY_BASE_URL = "https://push2.eastmoney.com/api/qt";
-    private static final String SINA_RANK_URL =
+  private static final String SINA_RANK_URL =
       "https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/"
-        + "Market_Center.getHQNodeData";
+          + "Market_Center.getHQNodeData";
   private static final String USER_AGENT =
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
           + " Chrome/124.0.0.0 Safari/537.36";
-    private static final Charset GBK = Charset.forName("GBK");
+  private static final Charset GBK = Charset.forName("GBK");
   private static final String INDEX_FIELDS = "f12,f14,f2,f3,f4,f5,f6";
   private static final String RANK_FIELDS = "f12,f14,f2,f3,f4,f5,f6,f15,f16,f18";
   private static final String INDEX_SEC_IDS = "1.000001,0.399001,1.000300";
@@ -132,7 +132,8 @@ public class EastMoneyOfficialBoardGateway {
       MarketRankBoardVO sinaBoard = fetchSinaRankBoard(safeLimit);
       if (!sinaBoard.gainers().isEmpty() || !sinaBoard.losers().isEmpty()) {
         cachedRankBoard = sinaBoard;
-        log.warn("Fetch EastMoney rank board failed, fallback to Sina rank board: {}", ex.getMessage());
+        log.warn(
+            "Fetch EastMoney rank board failed, fallback to Sina rank board: {}", ex.getMessage());
         return sinaBoard;
       }
       if (!cachedRankBoard.gainers().isEmpty() || !cachedRankBoard.losers().isEmpty()) {
@@ -323,10 +324,7 @@ public class EastMoneyOfficialBoardGateway {
         builder.append('&');
       }
       first = false;
-      builder
-          .append(encode(entry.getKey()))
-          .append('=')
-          .append(encode(entry.getValue()));
+      builder.append(encode(entry.getKey())).append('=').append(encode(entry.getValue()));
     }
   }
 

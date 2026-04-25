@@ -96,7 +96,9 @@ public class RabbitMQConfig {
   public Binding matchDeadLetterBinding(
       @Qualifier("matchDeadLetterQueue") Queue matchDeadLetterQueue,
       @Qualifier("matchDlxExchange") DirectExchange matchDlxExchange) {
-    return BindingBuilder.bind(matchDeadLetterQueue).to(matchDlxExchange).with(MATCH_DLQ_ROUTING_KEY);
+    return BindingBuilder.bind(matchDeadLetterQueue)
+        .to(matchDlxExchange)
+        .with(MATCH_DLQ_ROUTING_KEY);
   }
 
   @Bean

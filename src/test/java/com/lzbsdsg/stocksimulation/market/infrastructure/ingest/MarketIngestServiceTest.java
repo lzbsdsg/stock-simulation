@@ -18,16 +18,15 @@ import com.lzbsdsg.stocksimulation.market.domain.repository.StockInfoRepository;
 import com.lzbsdsg.stocksimulation.market.infrastructure.gateway.MarketCacheGateway;
 import com.lzbsdsg.stocksimulation.market.infrastructure.websocket.MarketWebSocketHandler;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import java.time.Duration;
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatchers;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
@@ -54,14 +53,15 @@ class MarketIngestServiceTest {
     when(redisTemplate.opsForValue()).thenReturn(valueOperations);
     when(marketActiveQuoteRegistry.listActiveCodes(any(), anyInt())).thenReturn(List.of());
 
-    ingestService = new MarketIngestService(
-        List.of(provider),
-        stockInfoRepository,
-        marketCacheGateway,
-        redisTemplate,
-        marketActiveQuoteRegistry,
-        marketWebSocketHandler,
-        new SimpleMeterRegistry());
+    ingestService =
+        new MarketIngestService(
+            List.of(provider),
+            stockInfoRepository,
+            marketCacheGateway,
+            redisTemplate,
+            marketActiveQuoteRegistry,
+            marketWebSocketHandler,
+            new SimpleMeterRegistry());
     setField(ingestService, "ingestEnabled", true);
     setField(ingestService, "broadcastMode", "redis");
     setField(ingestService, "activeWindowMs", 8000L);
@@ -73,7 +73,7 @@ class MarketIngestServiceTest {
   @Test
   void should_ingest_and_broadcast_when_become_leader() {
     when(valueOperations.setIfAbsent(
-        eq(MarketIngestService.INGEST_LEADER_KEY), any(), anyLong(), eq(TimeUnit.SECONDS)))
+            eq(MarketIngestService.INGEST_LEADER_KEY), any(), anyLong(), eq(TimeUnit.SECONDS)))
         .thenReturn(Boolean.TRUE);
     when(stockInfoRepository.findAllListed()).thenReturn(List.of(stock("sh600519")));
     QuoteSnapshot quote = quote("sh600519", "1688.88");
@@ -92,14 +92,15 @@ class MarketIngestServiceTest {
     MarketDataProvider providerA = org.mockito.Mockito.mock(MarketDataProvider.class);
     MarketDataProvider providerB = org.mockito.Mockito.mock(MarketDataProvider.class);
 
-    MarketIngestService multiProviderIngestService = new MarketIngestService(
-        List.of(providerA, providerB),
-        stockInfoRepository,
-        marketCacheGateway,
-        redisTemplate,
-        marketActiveQuoteRegistry,
-        marketWebSocketHandler,
-        new SimpleMeterRegistry());
+    MarketIngestService multiProviderIngestService =
+        new MarketIngestService(
+            List.of(providerA, providerB),
+            stockInfoRepository,
+            marketCacheGateway,
+            redisTemplate,
+            marketActiveQuoteRegistry,
+            marketWebSocketHandler,
+            new SimpleMeterRegistry());
     setField(multiProviderIngestService, "ingestEnabled", true);
     setField(multiProviderIngestService, "broadcastMode", "redis");
     setField(multiProviderIngestService, "activeWindowMs", 8000L);
@@ -108,10 +109,11 @@ class MarketIngestServiceTest {
     setField(multiProviderIngestService, "stockUniverseRefreshMs", 300000L);
 
     when(valueOperations.setIfAbsent(
-        eq(MarketIngestService.INGEST_LEADER_KEY), any(), anyLong(), eq(TimeUnit.SECONDS)))
+            eq(MarketIngestService.INGEST_LEADER_KEY), any(), anyLong(), eq(TimeUnit.SECONDS)))
         .thenReturn(Boolean.TRUE);
 
-    when(stockInfoRepository.findAllListed()).thenReturn(List.of(stock("sh600519"), stock("sz000001")));
+    when(stockInfoRepository.findAllListed())
+        .thenReturn(List.of(stock("sh600519"), stock("sz000001")));
 
     QuoteSnapshot quoteA = quote("sh600519", "1688.88");
     QuoteSnapshot quoteB = quote("sz000001", "12.34");
@@ -132,7 +134,8 @@ class MarketIngestServiceTest {
   void should_prioritize_active_codes_in_ingest_list() {
     when(marketActiveQuoteRegistry.listActiveCodes(any(), anyInt()))
         .thenReturn(List.of("sz000001", "sh600519"));
-    when(stockInfoRepository.findAllListed()).thenReturn(List.of(stock("sh600519"), stock("sh601318")));
+    when(stockInfoRepository.findAllListed())
+        .thenReturn(List.of(stock("sh600519"), stock("sh601318")));
 
     List<String> ingestCodes = ingestService.loadIngestCodes();
 
@@ -144,7 +147,7 @@ class MarketIngestServiceTest {
   void should_renew_leader_lock_when_still_owner() {
     AtomicReference<Object> tokenHolder = new AtomicReference<>();
     when(valueOperations.setIfAbsent(
-        eq(MarketIngestService.INGEST_LEADER_KEY), any(), anyLong(), eq(TimeUnit.SECONDS)))
+            eq(MarketIngestService.INGEST_LEADER_KEY), any(), anyLong(), eq(TimeUnit.SECONDS)))
         .thenAnswer(
             invocation -> {
               tokenHolder.set(invocation.getArgument(1));
@@ -167,7 +170,7 @@ class MarketIngestServiceTest {
   @Test
   void should_failover_when_previous_leader_lost_lock() {
     when(valueOperations.setIfAbsent(
-        eq(MarketIngestService.INGEST_LEADER_KEY), any(), anyLong(), eq(TimeUnit.SECONDS)))
+            eq(MarketIngestService.INGEST_LEADER_KEY), any(), anyLong(), eq(TimeUnit.SECONDS)))
         .thenReturn(Boolean.TRUE, Boolean.TRUE);
     when(valueOperations.get(MarketIngestService.INGEST_LEADER_KEY)).thenReturn("other-instance");
 
@@ -175,13 +178,14 @@ class MarketIngestServiceTest {
     assertTrue(ingestService.ensureLeadership());
 
     verify(valueOperations, times(2))
-        .setIfAbsent(eq(MarketIngestService.INGEST_LEADER_KEY), any(), anyLong(), eq(TimeUnit.SECONDS));
+        .setIfAbsent(
+            eq(MarketIngestService.INGEST_LEADER_KEY), any(), anyLong(), eq(TimeUnit.SECONDS));
   }
 
   @Test
   void should_not_become_leader_when_lock_is_held_by_other_instance() {
     when(valueOperations.setIfAbsent(
-        eq(MarketIngestService.INGEST_LEADER_KEY), any(), anyLong(), eq(TimeUnit.SECONDS)))
+            eq(MarketIngestService.INGEST_LEADER_KEY), any(), anyLong(), eq(TimeUnit.SECONDS)))
         .thenReturn(Boolean.FALSE);
 
     boolean leadership = ingestService.ensureLeadership();
@@ -193,7 +197,7 @@ class MarketIngestServiceTest {
   void should_publish_to_websocket_handler_when_broadcast_mode_is_broker() throws Exception {
     setField(ingestService, "broadcastMode", "broker");
     when(valueOperations.setIfAbsent(
-        eq(MarketIngestService.INGEST_LEADER_KEY), any(), anyLong(), eq(TimeUnit.SECONDS)))
+            eq(MarketIngestService.INGEST_LEADER_KEY), any(), anyLong(), eq(TimeUnit.SECONDS)))
         .thenReturn(Boolean.TRUE);
     when(stockInfoRepository.findAllListed()).thenReturn(List.of(stock("sh600519")));
     QuoteSnapshot quote = quote("sh600519", "1688.88");

@@ -8,8 +8,7 @@ import java.util.Objects;
 /** 行情融合策略：基于新鲜度与字段完整度决定是否覆盖缓存。 */
 public final class QuoteMergePolicy {
 
-  private QuoteMergePolicy() {
-  }
+  private QuoteMergePolicy() {}
 
   public static boolean shouldReplace(QuoteSnapshot existing, QuoteSnapshot candidate) {
     if (candidate == null) {

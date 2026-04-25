@@ -35,7 +35,8 @@ class AssetSnapshotSchedulerTest {
 
   @BeforeEach
   void setUp() {
-    scheduler = new AssetSnapshotScheduler(assetSnapshotService, accountRepository, stringRedisTemplate);
+    scheduler =
+        new AssetSnapshotScheduler(assetSnapshotService, accountRepository, stringRedisTemplate);
     ReflectionTestUtils.setField(scheduler, "batchSize", 2);
     ReflectionTestUtils.setField(scheduler, "lockTtlMinutes", 30L);
     when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);

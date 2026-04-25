@@ -112,7 +112,10 @@ public class RateLimitAspect {
   private String resolveIdentity() {
     ServletRequestAttributes attributes =
         (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-    if (trustIdentityHeader && attributes != null && identityHeader != null && !identityHeader.isBlank()) {
+    if (trustIdentityHeader
+        && attributes != null
+        && identityHeader != null
+        && !identityHeader.isBlank()) {
       String identityByHeader = attributes.getRequest().getHeader(identityHeader);
       if (identityByHeader != null && !identityByHeader.isBlank()) {
         return identityByHeader.trim();

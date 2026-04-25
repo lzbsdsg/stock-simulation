@@ -1,0 +1,422 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: /work/k6/perf-fullchain-and-endpoints.js
+        output: -
+
+     scenarios: (100.00%) 4 scenarios, 1210 max VUs, 1m30s max duration (incl. graceful stop):
+              * endpoint_market_quote: 90.00 iterations/s for 1m0s (maxVUs: 50-270, exec: marketQuoteOnly, gracefulStop: 30s)
+              * endpoint_portfolio_overview: 45.00 iterations/s for 1m0s (maxVUs: 50-200, exec: portfolioOverviewOnly, gracefulStop: 30s)
+              * endpoint_trade_list: 45.00 iterations/s for 1m0s (maxVUs: 50-200, exec: tradeListOnly, gracefulStop: 30s)
+              * full_chain_mix: 180.00 iterations/s for 1m0s (maxVUs: 108-540, exec: fullChainMix, gracefulStop: 30s)
+
+
+running (0m01.0s), 0049/0258 VUs, 300 complete and 0 interrupted iterations
+endpoint_market_quote         [   2% ] 005/050 VUs  0m01.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [   2% ] 013/050 VUs  0m01.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [   2% ] 003/050 VUs  0m01.0s/1m0s  45.00 iters/s
+full_chain_mix                [   2% ] 028/108 VUs  0m01.0s/1m0s  180.00 iters/s
+
+running (0m02.0s), 0002/0258 VUs, 707 complete and 0 interrupted iterations
+endpoint_market_quote         [   3% ] 000/050 VUs  0m02.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [   3% ] 000/050 VUs  0m02.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [   3% ] 000/050 VUs  0m02.0s/1m0s  45.00 iters/s
+full_chain_mix                [   3% ] 002/108 VUs  0m02.0s/1m0s  180.00 iters/s
+
+running (0m03.0s), 0003/0258 VUs, 1065 complete and 0 interrupted iterations
+endpoint_market_quote         [   5% ] 000/050 VUs  0m03.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [   5% ] 001/050 VUs  0m03.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [   5% ] 000/050 VUs  0m03.0s/1m0s  45.00 iters/s
+full_chain_mix                [   5% ] 002/108 VUs  0m03.0s/1m0s  180.00 iters/s
+
+running (0m04.0s), 0004/0258 VUs, 1425 complete and 0 interrupted iterations
+endpoint_market_quote         [   7% ] 000/050 VUs  0m04.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [   7% ] 000/050 VUs  0m04.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [   7% ] 000/050 VUs  0m04.0s/1m0s  45.00 iters/s
+full_chain_mix                [   7% ] 003/108 VUs  0m04.0s/1m0s  180.00 iters/s
+
+running (0m05.0s), 0062/0258 VUs, 1727 complete and 0 interrupted iterations
+endpoint_market_quote         [   8% ] 007/050 VUs  0m05.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [   8% ] 009/050 VUs  0m05.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [   8% ] 007/050 VUs  0m05.0s/1m0s  45.00 iters/s
+full_chain_mix                [   8% ] 038/108 VUs  0m05.0s/1m0s  180.00 iters/s
+
+running (0m06.0s), 0005/0258 VUs, 2143 complete and 0 interrupted iterations
+endpoint_market_quote         [  10% ] 000/050 VUs  0m06.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  10% ] 002/050 VUs  0m06.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  10% ] 001/050 VUs  0m06.0s/1m0s  45.00 iters/s
+full_chain_mix                [  10% ] 002/108 VUs  0m06.0s/1m0s  180.00 iters/s
+
+running (0m07.0s), 0002/0258 VUs, 2507 complete and 0 interrupted iterations
+endpoint_market_quote         [  12% ] 000/050 VUs  0m07.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  12% ] 001/050 VUs  0m07.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  12% ] 000/050 VUs  0m07.0s/1m0s  45.00 iters/s
+full_chain_mix                [  12% ] 001/108 VUs  0m07.0s/1m0s  180.00 iters/s
+
+running (0m08.0s), 0001/0258 VUs, 2868 complete and 0 interrupted iterations
+endpoint_market_quote         [  13% ] 000/050 VUs  0m08.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  13% ] 000/050 VUs  0m08.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  13% ] 000/050 VUs  0m08.0s/1m0s  45.00 iters/s
+full_chain_mix                [  13% ] 001/108 VUs  0m08.0s/1m0s  180.00 iters/s
+
+running (0m09.0s), 0003/0258 VUs, 3226 complete and 0 interrupted iterations
+endpoint_market_quote         [  15% ] 000/050 VUs  0m09.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  15% ] 001/050 VUs  0m09.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  15% ] 000/050 VUs  0m09.0s/1m0s  45.00 iters/s
+full_chain_mix                [  15% ] 002/108 VUs  0m09.0s/1m0s  180.00 iters/s
+
+running (0m10.0s), 0000/0258 VUs, 3588 complete and 0 interrupted iterations
+endpoint_market_quote         [  17% ] 000/050 VUs  0m10.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  17% ] 000/050 VUs  0m10.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  17% ] 000/050 VUs  0m10.0s/1m0s  45.00 iters/s
+full_chain_mix                [  17% ] 000/108 VUs  0m10.0s/1m0s  180.00 iters/s
+
+running (0m11.0s), 0001/0258 VUs, 3948 complete and 0 interrupted iterations
+endpoint_market_quote         [  18% ] 000/050 VUs  0m11.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  18% ] 000/050 VUs  0m11.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  18% ] 000/050 VUs  0m11.0s/1m0s  45.00 iters/s
+full_chain_mix                [  18% ] 001/108 VUs  0m11.0s/1m0s  180.00 iters/s
+
+running (0m12.0s), 0000/0258 VUs, 4308 complete and 0 interrupted iterations
+endpoint_market_quote         [  20% ] 000/050 VUs  0m12.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  20% ] 000/050 VUs  0m12.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  20% ] 000/050 VUs  0m12.0s/1m0s  45.00 iters/s
+full_chain_mix                [  20% ] 000/108 VUs  0m12.0s/1m0s  180.00 iters/s
+
+running (0m13.0s), 0001/0258 VUs, 4668 complete and 0 interrupted iterations
+endpoint_market_quote         [  22% ] 000/050 VUs  0m13.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  22% ] 000/050 VUs  0m13.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  22% ] 000/050 VUs  0m13.0s/1m0s  45.00 iters/s
+full_chain_mix                [  22% ] 001/108 VUs  0m13.0s/1m0s  180.00 iters/s
+
+running (0m14.0s), 0001/0258 VUs, 5027 complete and 0 interrupted iterations
+endpoint_market_quote         [  23% ] 000/050 VUs  0m14.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  23% ] 000/050 VUs  0m14.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  23% ] 000/050 VUs  0m14.0s/1m0s  45.00 iters/s
+full_chain_mix                [  23% ] 001/108 VUs  0m14.0s/1m0s  180.00 iters/s
+
+running (0m15.0s), 0005/0258 VUs, 5383 complete and 0 interrupted iterations
+endpoint_market_quote         [  25% ] 001/050 VUs  0m15.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  25% ] 002/050 VUs  0m15.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  25% ] 001/050 VUs  0m15.0s/1m0s  45.00 iters/s
+full_chain_mix                [  25% ] 001/108 VUs  0m15.0s/1m0s  180.00 iters/s
+
+running (0m16.0s), 0003/0258 VUs, 5746 complete and 0 interrupted iterations
+endpoint_market_quote         [  27% ] 000/050 VUs  0m16.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  27% ] 001/050 VUs  0m16.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  27% ] 000/050 VUs  0m16.0s/1m0s  45.00 iters/s
+full_chain_mix                [  27% ] 002/108 VUs  0m16.0s/1m0s  180.00 iters/s
+
+running (0m17.0s), 0002/0258 VUs, 6107 complete and 0 interrupted iterations
+endpoint_market_quote         [  28% ] 000/050 VUs  0m17.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  28% ] 001/050 VUs  0m17.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  28% ] 000/050 VUs  0m17.0s/1m0s  45.00 iters/s
+full_chain_mix                [  28% ] 001/108 VUs  0m17.0s/1m0s  180.00 iters/s
+
+running (0m18.0s), 0003/0258 VUs, 6466 complete and 0 interrupted iterations
+endpoint_market_quote         [  30% ] 000/050 VUs  0m18.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  30% ] 001/050 VUs  0m18.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  30% ] 000/050 VUs  0m18.0s/1m0s  45.00 iters/s
+full_chain_mix                [  30% ] 002/108 VUs  0m18.0s/1m0s  180.00 iters/s
+
+running (0m19.0s), 0002/0258 VUs, 6827 complete and 0 interrupted iterations
+endpoint_market_quote         [  32% ] 000/050 VUs  0m19.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  32% ] 001/050 VUs  0m19.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  32% ] 000/050 VUs  0m19.0s/1m0s  45.00 iters/s
+full_chain_mix                [  32% ] 001/108 VUs  0m19.0s/1m0s  180.00 iters/s
+
+running (0m20.0s), 0003/0258 VUs, 7185 complete and 0 interrupted iterations
+endpoint_market_quote         [  33% ] 000/050 VUs  0m20.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  33% ] 001/050 VUs  0m20.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  33% ] 000/050 VUs  0m20.0s/1m0s  45.00 iters/s
+full_chain_mix                [  33% ] 003/108 VUs  0m20.0s/1m0s  180.00 iters/s
+
+running (0m21.0s), 0002/0258 VUs, 7547 complete and 0 interrupted iterations
+endpoint_market_quote         [  35% ] 000/050 VUs  0m21.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  35% ] 001/050 VUs  0m21.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  35% ] 000/050 VUs  0m21.0s/1m0s  45.00 iters/s
+full_chain_mix                [  35% ] 001/108 VUs  0m21.0s/1m0s  180.00 iters/s
+
+running (0m22.0s), 0002/0258 VUs, 7907 complete and 0 interrupted iterations
+endpoint_market_quote         [  37% ] 000/050 VUs  0m22.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  37% ] 001/050 VUs  0m22.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  37% ] 000/050 VUs  0m22.0s/1m0s  45.00 iters/s
+full_chain_mix                [  37% ] 001/108 VUs  0m22.0s/1m0s  180.00 iters/s
+
+running (0m23.0s), 0001/0258 VUs, 8267 complete and 0 interrupted iterations
+endpoint_market_quote         [  38% ] 000/050 VUs  0m23.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  38% ] 000/050 VUs  0m23.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  38% ] 000/050 VUs  0m23.0s/1m0s  45.00 iters/s
+full_chain_mix                [  38% ] 001/108 VUs  0m23.0s/1m0s  180.00 iters/s
+
+running (0m24.0s), 0000/0258 VUs, 8628 complete and 0 interrupted iterations
+endpoint_market_quote         [  40% ] 000/050 VUs  0m24.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  40% ] 000/050 VUs  0m24.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  40% ] 000/050 VUs  0m24.0s/1m0s  45.00 iters/s
+full_chain_mix                [  40% ] 001/108 VUs  0m24.0s/1m0s  180.00 iters/s
+
+running (0m25.0s), 0002/0258 VUs, 8986 complete and 0 interrupted iterations
+endpoint_market_quote         [  42% ] 000/050 VUs  0m25.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  42% ] 001/050 VUs  0m25.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  42% ] 001/050 VUs  0m25.0s/1m0s  45.00 iters/s
+full_chain_mix                [  42% ] 000/108 VUs  0m25.0s/1m0s  180.00 iters/s
+
+running (0m26.0s), 0003/0258 VUs, 9346 complete and 0 interrupted iterations
+endpoint_market_quote         [  43% ] 000/050 VUs  0m26.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  43% ] 001/050 VUs  0m26.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  43% ] 000/050 VUs  0m26.0s/1m0s  45.00 iters/s
+full_chain_mix                [  43% ] 002/108 VUs  0m26.0s/1m0s  180.00 iters/s
+
+running (0m27.0s), 0002/0258 VUs, 9707 complete and 0 interrupted iterations
+endpoint_market_quote         [  45% ] 000/050 VUs  0m27.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  45% ] 001/050 VUs  0m27.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  45% ] 000/050 VUs  0m27.0s/1m0s  45.00 iters/s
+full_chain_mix                [  45% ] 001/108 VUs  0m27.0s/1m0s  180.00 iters/s
+
+running (0m28.0s), 0001/0258 VUs, 10068 complete and 0 interrupted iterations
+endpoint_market_quote         [  47% ] 000/050 VUs  0m28.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  47% ] 000/050 VUs  0m28.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  47% ] 000/050 VUs  0m28.0s/1m0s  45.00 iters/s
+full_chain_mix                [  47% ] 001/108 VUs  0m28.0s/1m0s  180.00 iters/s
+
+running (0m29.0s), 0003/0258 VUs, 10426 complete and 0 interrupted iterations
+endpoint_market_quote         [  48% ] 000/050 VUs  0m29.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  48% ] 001/050 VUs  0m29.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  48% ] 000/050 VUs  0m29.0s/1m0s  45.00 iters/s
+full_chain_mix                [  48% ] 002/108 VUs  0m29.0s/1m0s  180.00 iters/s
+
+running (0m30.0s), 0001/0258 VUs, 10788 complete and 0 interrupted iterations
+endpoint_market_quote         [  50% ] 000/050 VUs  0m30.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  50% ] 000/050 VUs  0m30.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  50% ] 000/050 VUs  0m30.0s/1m0s  45.00 iters/s
+full_chain_mix                [  50% ] 001/108 VUs  0m30.0s/1m0s  180.00 iters/s
+
+running (0m31.0s), 0003/0258 VUs, 11145 complete and 0 interrupted iterations
+endpoint_market_quote         [  52% ] 000/050 VUs  0m31.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  52% ] 001/050 VUs  0m31.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  52% ] 000/050 VUs  0m31.0s/1m0s  45.00 iters/s
+full_chain_mix                [  52% ] 002/108 VUs  0m31.0s/1m0s  180.00 iters/s
+
+running (0m32.0s), 0002/0258 VUs, 11507 complete and 0 interrupted iterations
+endpoint_market_quote         [  53% ] 000/050 VUs  0m32.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  53% ] 001/050 VUs  0m32.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  53% ] 000/050 VUs  0m32.0s/1m0s  45.00 iters/s
+full_chain_mix                [  53% ] 001/108 VUs  0m32.0s/1m0s  180.00 iters/s
+
+running (0m33.0s), 0003/0258 VUs, 11866 complete and 0 interrupted iterations
+endpoint_market_quote         [  55% ] 000/050 VUs  0m33.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  55% ] 001/050 VUs  0m33.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  55% ] 000/050 VUs  0m33.0s/1m0s  45.00 iters/s
+full_chain_mix                [  55% ] 002/108 VUs  0m33.0s/1m0s  180.00 iters/s
+
+running (0m34.0s), 0003/0258 VUs, 12226 complete and 0 interrupted iterations
+endpoint_market_quote         [  57% ] 000/050 VUs  0m34.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  57% ] 001/050 VUs  0m34.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  57% ] 000/050 VUs  0m34.0s/1m0s  45.00 iters/s
+full_chain_mix                [  57% ] 002/108 VUs  0m34.0s/1m0s  180.00 iters/s
+
+running (0m35.0s), 0002/0258 VUs, 12586 complete and 0 interrupted iterations
+endpoint_market_quote         [  58% ] 000/050 VUs  0m35.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  58% ] 001/050 VUs  0m35.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  58% ] 000/050 VUs  0m35.0s/1m0s  45.00 iters/s
+full_chain_mix                [  58% ] 001/108 VUs  0m35.0s/1m0s  180.00 iters/s
+
+running (0m36.0s), 0002/0258 VUs, 12946 complete and 0 interrupted iterations
+endpoint_market_quote         [  60% ] 000/050 VUs  0m36.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  60% ] 001/050 VUs  0m36.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  60% ] 000/050 VUs  0m36.0s/1m0s  45.00 iters/s
+full_chain_mix                [  60% ] 001/108 VUs  0m36.0s/1m0s  180.00 iters/s
+
+running (0m37.0s), 0003/0258 VUs, 13306 complete and 0 interrupted iterations
+endpoint_market_quote         [  62% ] 000/050 VUs  0m37.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  62% ] 001/050 VUs  0m37.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  62% ] 000/050 VUs  0m37.0s/1m0s  45.00 iters/s
+full_chain_mix                [  62% ] 002/108 VUs  0m37.0s/1m0s  180.00 iters/s
+
+running (0m38.0s), 0000/0258 VUs, 13668 complete and 0 interrupted iterations
+endpoint_market_quote         [  63% ] 000/050 VUs  0m38.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  63% ] 000/050 VUs  0m38.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  63% ] 000/050 VUs  0m38.0s/1m0s  45.00 iters/s
+full_chain_mix                [  63% ] 000/108 VUs  0m38.0s/1m0s  180.00 iters/s
+
+running (0m39.0s), 0003/0258 VUs, 14025 complete and 0 interrupted iterations
+endpoint_market_quote         [  65% ] 000/050 VUs  0m39.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  65% ] 001/050 VUs  0m39.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  65% ] 000/050 VUs  0m39.0s/1m0s  45.00 iters/s
+full_chain_mix                [  65% ] 002/108 VUs  0m39.0s/1m0s  180.00 iters/s
+
+running (0m40.0s), 0003/0258 VUs, 14385 complete and 0 interrupted iterations
+endpoint_market_quote         [  67% ] 000/050 VUs  0m40.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  67% ] 001/050 VUs  0m40.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  67% ] 000/050 VUs  0m40.0s/1m0s  45.00 iters/s
+full_chain_mix                [  67% ] 002/108 VUs  0m40.0s/1m0s  180.00 iters/s
+
+running (0m41.0s), 0001/0258 VUs, 14748 complete and 0 interrupted iterations
+endpoint_market_quote         [  68% ] 000/050 VUs  0m41.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  68% ] 000/050 VUs  0m41.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  68% ] 000/050 VUs  0m41.0s/1m0s  45.00 iters/s
+full_chain_mix                [  68% ] 001/108 VUs  0m41.0s/1m0s  180.00 iters/s
+
+running (0m42.0s), 0002/0258 VUs, 15107 complete and 0 interrupted iterations
+endpoint_market_quote         [  70% ] 000/050 VUs  0m42.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  70% ] 001/050 VUs  0m42.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  70% ] 000/050 VUs  0m42.0s/1m0s  45.00 iters/s
+full_chain_mix                [  70% ] 001/108 VUs  0m42.0s/1m0s  180.00 iters/s
+
+running (0m43.0s), 0000/0258 VUs, 15468 complete and 0 interrupted iterations
+endpoint_market_quote         [  72% ] 000/050 VUs  0m43.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  72% ] 000/050 VUs  0m43.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  72% ] 000/050 VUs  0m43.0s/1m0s  45.00 iters/s
+full_chain_mix                [  72% ] 000/108 VUs  0m43.0s/1m0s  180.00 iters/s
+
+running (0m44.0s), 0004/0258 VUs, 15825 complete and 0 interrupted iterations
+endpoint_market_quote         [  73% ] 000/050 VUs  0m44.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  73% ] 001/050 VUs  0m44.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  73% ] 001/050 VUs  0m44.0s/1m0s  45.00 iters/s
+full_chain_mix                [  73% ] 002/108 VUs  0m44.0s/1m0s  180.00 iters/s
+
+running (0m45.0s), 0000/0258 VUs, 16188 complete and 0 interrupted iterations
+endpoint_market_quote         [  75% ] 000/050 VUs  0m45.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  75% ] 000/050 VUs  0m45.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  75% ] 000/050 VUs  0m45.0s/1m0s  45.00 iters/s
+full_chain_mix                [  75% ] 000/108 VUs  0m45.0s/1m0s  180.00 iters/s
+
+running (0m46.0s), 0000/0258 VUs, 16548 complete and 0 interrupted iterations
+endpoint_market_quote         [  77% ] 000/050 VUs  0m46.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  77% ] 000/050 VUs  0m46.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  77% ] 000/050 VUs  0m46.0s/1m0s  45.00 iters/s
+full_chain_mix                [  77% ] 000/108 VUs  0m46.0s/1m0s  180.00 iters/s
+
+running (0m47.0s), 0001/0258 VUs, 16908 complete and 0 interrupted iterations
+endpoint_market_quote         [  78% ] 000/050 VUs  0m47.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  78% ] 000/050 VUs  0m47.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  78% ] 000/050 VUs  0m47.0s/1m0s  45.00 iters/s
+full_chain_mix                [  78% ] 001/108 VUs  0m47.0s/1m0s  180.00 iters/s
+
+running (0m48.0s), 0002/0258 VUs, 17267 complete and 0 interrupted iterations
+endpoint_market_quote         [  80% ] 000/050 VUs  0m48.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  80% ] 000/050 VUs  0m48.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  80% ] 000/050 VUs  0m48.0s/1m0s  45.00 iters/s
+full_chain_mix                [  80% ] 002/108 VUs  0m48.0s/1m0s  180.00 iters/s
+
+running (0m49.0s), 0002/0258 VUs, 17626 complete and 0 interrupted iterations
+endpoint_market_quote         [  82% ] 000/050 VUs  0m49.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  82% ] 001/050 VUs  0m49.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  82% ] 000/050 VUs  0m49.0s/1m0s  45.00 iters/s
+full_chain_mix                [  82% ] 002/108 VUs  0m49.0s/1m0s  180.00 iters/s
+
+running (0m50.0s), 0002/0258 VUs, 17987 complete and 0 interrupted iterations
+endpoint_market_quote         [  83% ] 000/050 VUs  0m50.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  83% ] 001/050 VUs  0m50.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  83% ] 000/050 VUs  0m50.0s/1m0s  45.00 iters/s
+full_chain_mix                [  83% ] 001/108 VUs  0m50.0s/1m0s  180.00 iters/s
+
+running (0m51.0s), 0000/0258 VUs, 18348 complete and 0 interrupted iterations
+endpoint_market_quote         [  85% ] 000/050 VUs  0m51.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  85% ] 000/050 VUs  0m51.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  85% ] 000/050 VUs  0m51.0s/1m0s  45.00 iters/s
+full_chain_mix                [  85% ] 000/108 VUs  0m51.0s/1m0s  180.00 iters/s
+
+running (0m52.0s), 0001/0258 VUs, 18708 complete and 0 interrupted iterations
+endpoint_market_quote         [  87% ] 000/050 VUs  0m52.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  87% ] 000/050 VUs  0m52.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  87% ] 000/050 VUs  0m52.0s/1m0s  45.00 iters/s
+full_chain_mix                [  87% ] 001/108 VUs  0m52.0s/1m0s  180.00 iters/s
+
+running (0m53.0s), 0001/0258 VUs, 19067 complete and 0 interrupted iterations
+endpoint_market_quote         [  88% ] 000/050 VUs  0m53.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  88% ] 000/050 VUs  0m53.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  88% ] 000/050 VUs  0m53.0s/1m0s  45.00 iters/s
+full_chain_mix                [  88% ] 001/108 VUs  0m53.0s/1m0s  180.00 iters/s
+
+running (0m54.0s), 0001/0258 VUs, 19427 complete and 0 interrupted iterations
+endpoint_market_quote         [  90% ] 000/050 VUs  0m54.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  90% ] 000/050 VUs  0m54.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  90% ] 000/050 VUs  0m54.0s/1m0s  45.00 iters/s
+full_chain_mix                [  90% ] 001/108 VUs  0m54.0s/1m0s  180.00 iters/s
+
+running (0m55.0s), 0002/0258 VUs, 19786 complete and 0 interrupted iterations
+endpoint_market_quote         [  92% ] 000/050 VUs  0m55.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  92% ] 001/050 VUs  0m55.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  92% ] 000/050 VUs  0m55.0s/1m0s  45.00 iters/s
+full_chain_mix                [  92% ] 001/108 VUs  0m55.0s/1m0s  180.00 iters/s
+
+running (0m56.0s), 0002/0258 VUs, 20146 complete and 0 interrupted iterations
+endpoint_market_quote         [  93% ] 000/050 VUs  0m56.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  93% ] 001/050 VUs  0m56.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  93% ] 001/050 VUs  0m56.0s/1m0s  45.00 iters/s
+full_chain_mix                [  93% ] 000/108 VUs  0m56.0s/1m0s  180.00 iters/s
+
+running (0m57.0s), 0007/0258 VUs, 20501 complete and 0 interrupted iterations
+endpoint_market_quote         [  95% ] 001/050 VUs  0m57.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  95% ] 001/050 VUs  0m57.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  95% ] 001/050 VUs  0m57.0s/1m0s  45.00 iters/s
+full_chain_mix                [  95% ] 004/108 VUs  0m57.0s/1m0s  180.00 iters/s
+
+running (0m58.0s), 0002/0258 VUs, 20867 complete and 0 interrupted iterations
+endpoint_market_quote         [  97% ] 000/050 VUs  0m58.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  97% ] 001/050 VUs  0m58.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  97% ] 000/050 VUs  0m58.0s/1m0s  45.00 iters/s
+full_chain_mix                [  97% ] 001/108 VUs  0m58.0s/1m0s  180.00 iters/s
+
+running (0m59.0s), 0003/0258 VUs, 21225 complete and 0 interrupted iterations
+endpoint_market_quote         [  98% ] 000/050 VUs  0m59.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [  98% ] 001/050 VUs  0m59.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [  98% ] 001/050 VUs  0m59.0s/1m0s  45.00 iters/s
+full_chain_mix                [  98% ] 001/108 VUs  0m59.0s/1m0s  180.00 iters/s
+
+running (1m00.0s), 0004/0258 VUs, 21584 complete and 0 interrupted iterations
+endpoint_market_quote         [ 100% ] 000/050 VUs  1m00.0s/1m0s  90.00 iters/s
+endpoint_portfolio_overview   [ 100% ] 002/050 VUs  1m00.0s/1m0s  45.00 iters/s
+endpoint_trade_list           [ 100% ] 000/050 VUs  1m00.0s/1m0s  45.00 iters/s
+full_chain_mix                [ 100% ] 001/108 VUs  1m00.0s/1m0s  180.00 iters/s
+# Full-chain and Endpoint Performance Summary
+
+## Overall
+
+- total_requests: 32404
+- total_qps: 539.13
+- total_failed_rate: 0.00%
+- total_p95_ms: 20.73
+- total_p99_ms: 67.02
+- business_success_total: 32404
+- business_failure_total: 0
+- business_success_per_second: 539.13
+
+## Full-chain mix
+
+- configured_rps: 180
+- market_ratio: 0.65
+- portfolio_ratio: 0.2
+- trade_ratio: 0.15
+- pre_allocated_vus: 108
+- max_vus: 540
+- full_chain_success_total: 10801
+- full_chain_failure_total: 0
+- full_chain_success_per_second: 179.71
+- full_chain_p95_ms: 35.00
+- full_chain_p99_ms: 132.00
+
+## Per-scenario QPS
+
+| scenario | configured_rate | qps | success_per_second | p95(ms) | p99(ms) | failed_rate |
+|---|---:|---:|---:|---:|---:|---:|
+| endpoint_market_quote | 90 | 89.86 | 89.86 | 3.86 | 43.36 | 0.00% |
+| endpoint_portfolio_overview | 45 | 44.92 | 44.92 | 36.53 | 173.69 | 0.00% |
+| endpoint_trade_list | 45 | 44.94 | 44.94 | 9.88 | 79.31 | 0.00% |
+| full_chain_mix | 180 | 359.41 | 359.41 | 19.21 | 62.23 | 0.00% |
+
+QPS definition: completed requests / test duration (k6 http_reqs.rate).
+success_per_second definition: qps × (1 - failed_rate).
+
+running (1m00.1s), 0000/0258 VUs, 21603 complete and 0 interrupted iterations
+endpoint_market_quote       ✓ [ 100% ] 000/050 VUs  1m0s  90.00 iters/s
+endpoint_portfolio_overview ✓ [ 100% ] 000/050 VUs  1m0s  45.00 iters/s
+endpoint_trade_list         ✓ [ 100% ] 000/050 VUs  1m0s  45.00 iters/s
+full_chain_mix              ✓ [ 100% ] 000/108 VUs  1m0s  180.00 iters/s

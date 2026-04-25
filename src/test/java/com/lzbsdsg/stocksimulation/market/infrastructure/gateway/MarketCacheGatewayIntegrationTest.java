@@ -49,7 +49,12 @@ class MarketCacheGatewayIntegrationTest {
 
     marketCacheGateway.cacheQuote("sh600519", snapshot);
 
-    verify(valueOperations).set(eq("market:quote:sh600519"), eq(snapshot), anyLong(), eq(java.util.concurrent.TimeUnit.MILLISECONDS));
+    verify(valueOperations)
+        .set(
+            eq("market:quote:sh600519"),
+            eq(snapshot),
+            anyLong(),
+            eq(java.util.concurrent.TimeUnit.MILLISECONDS));
     verify(valueOperations)
         .set(
             eq("market:quote:stale:sh600519"),

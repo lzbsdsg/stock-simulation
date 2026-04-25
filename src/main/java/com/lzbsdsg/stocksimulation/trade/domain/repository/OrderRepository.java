@@ -16,9 +16,14 @@ public interface OrderRepository {
   List<Order> findByUserIdAndCreatedAtBetween(
       Long userId, LocalDateTime from, LocalDateTime to, int page, int size);
 
+  List<Order> findActiveByUserIdAndCreatedAtBetween(
+      Long userId, LocalDateTime from, LocalDateTime to, int page, int size);
+
   List<Order> findByUserIdAndStatus(Long userId, OrderStatus status);
 
   long countByUserIdAndCreatedAtBetween(Long userId, LocalDateTime from, LocalDateTime to);
+
+  long countActiveByUserIdAndCreatedAtBetween(Long userId, LocalDateTime from, LocalDateTime to);
 
   List<Order> findPendingOrders();
 

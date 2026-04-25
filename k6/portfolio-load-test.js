@@ -1,5 +1,6 @@
 import http from 'k6/http';
 import { check, fail, sleep } from 'k6';
+import { Counter, Rate } from 'k6/metrics';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
 const TOKEN = __ENV.TOKEN || '';
@@ -12,6 +13,10 @@ const RATE_LIMIT_IDENTITY_PREFIX = __ENV.RATE_LIMIT_IDENTITY_PREFIX || 'k6-portf
 const K6_USER_ID_BASE = Number(__ENV.K6_USER_ID_BASE || '1000');
 const K6_USER_ID_SPAN = Math.max(Number(__ENV.K6_USER_ID_SPAN || '200'), 1);
 
+const successTotal = new Counter('portfolio_success_total');
+const failureTotal = new Counter('portfolio_failure_total');
+const successRate = new Rate('portfolio_success_rate');
+
 export const options = {
   vus: VUS,
   duration: DURATION,
@@ -21,6 +26,7 @@ export const options = {
     'http_req_duration{endpoint:positions}': ['p(99)<200'],
     'http_req_duration{endpoint:fund-flows}': ['p(99)<300'],
     'http_req_duration{endpoint:equity-curve}': ['p(99)<300'],
+    portfolio_success_rate: ['rate>0.99'],
   },
 };
 
@@ -47,6 +53,27 @@ function authHeaders() {
   return headers;
 }
 
+function expectedStatus(status) {
+  return ACCEPT_429 ? status === 200 || status === 429 : status === 200;
+}
+
+function hit(path, endpoint) {
+  const res = http.get(`${BASE_URL}${path}`, {
+    headers: authHeaders(),
+    tags: { endpoint },
+  });
+  const ok = check(res, {
+    [`${endpoint} status expected`]: (r) => expectedStatus(r.status),
+  });
+  successRate.add(ok);
+  if (ok) {
+    successTotal.add(1);
+  } else {
+    failureTotal.add(1);
+  }
+  return res;
+}
+
 export function setup() {
   const health = http.get(`${BASE_URL}/actuator/health`, { timeout: '3s' });
   if (health.status !== 200) {
@@ -55,40 +82,9 @@ export function setup() {
 }
 
 export default function () {
-  const headers = authHeaders();
-
-  const overviewRes = http.get(`${BASE_URL}/api/v1/portfolio/overview`, {
-    headers,
-    tags: { endpoint: 'overview' },
-  });
-  check(overviewRes, {
-    'overview status expected': (r) => (ACCEPT_429 ? r.status === 200 || r.status === 429 : r.status === 200),
-  });
-
-  const positionsRes = http.get(`${BASE_URL}/api/v1/portfolio/positions`, {
-    headers,
-    tags: { endpoint: 'positions' },
-  });
-  check(positionsRes, {
-    'positions status expected': (r) => (ACCEPT_429 ? r.status === 200 || r.status === 429 : r.status === 200),
-  });
-
-  const flowsRes = http.get(`${BASE_URL}/api/v1/portfolio/fund-flows?page=1&size=20`, {
-    headers,
-    tags: { endpoint: 'fund-flows' },
-  });
-  check(flowsRes, {
-    'fund flows status expected': (r) => (ACCEPT_429 ? r.status === 200 || r.status === 429 : r.status === 200),
-  });
-
-  const curveRes = http.get(`${BASE_URL}/api/v1/portfolio/equity-curve?days=${DAYS}`, {
-    headers,
-    tags: { endpoint: 'equity-curve' },
-  });
-  check(curveRes, {
-    'equity curve status expected': (r) => (ACCEPT_429 ? r.status === 200 || r.status === 429 : r.status === 200),
-  });
-
+  hit('/api/v1/portfolio/overview', 'overview');
+  hit('/api/v1/portfolio/positions?page=1&size=20', 'positions');
+  hit('/api/v1/portfolio/fund-flows?page=1&size=20', 'fund-flows');
+  hit(`/api/v1/portfolio/equity-curve?days=${DAYS}`, 'equity-curve');
   sleep(1);
 }
-

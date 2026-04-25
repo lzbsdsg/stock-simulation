@@ -9,7 +9,6 @@ import com.lzbsdsg.stocksimulation.market.domain.entity.KLinePoint;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -39,7 +38,8 @@ class TencentMarketDataAdapterTest {
               }
             }
             """);
-    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(response);
+    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+        .thenReturn(response);
 
     TencentMarketDataAdapter adapter = new TencentMarketDataAdapter(httpClient);
     List<KLinePoint> points =

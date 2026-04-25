@@ -27,7 +27,8 @@ class PositionDomainServiceTest {
     position.setCostPrice(new BigDecimal("10.0000"));
     position.setTotalCost(new BigDecimal("1000.00"));
 
-    positionDomainService.applyBuyFill(position, 100, new BigDecimal("12.0000"), LocalDate.of(2026, 3, 27));
+    positionDomainService.applyBuyFill(
+        position, 100, new BigDecimal("12.0000"), LocalDate.of(2026, 3, 27));
 
     assertEquals(200, position.getTotalQuantity());
     assertEquals(new BigDecimal("11.0000"), position.getCostPrice());
@@ -39,7 +40,8 @@ class PositionDomainServiceTest {
   void should_mark_new_buy_position_as_frozen_until_next_trading_day() {
     Position position = emptyPosition();
 
-    positionDomainService.applyBuyFill(position, 100, new BigDecimal("10.00"), LocalDate.of(2026, 3, 27));
+    positionDomainService.applyBuyFill(
+        position, 100, new BigDecimal("10.00"), LocalDate.of(2026, 3, 27));
 
     assertEquals(100, position.getTotalQuantity());
     assertEquals(100, position.getFrozenQuantity());
@@ -51,7 +53,8 @@ class PositionDomainServiceTest {
   void should_handle_first_buy_as_initial_cost_price() {
     Position position = emptyPosition();
 
-    positionDomainService.applyBuyFill(position, 100, new BigDecimal("9.8765"), LocalDate.of(2026, 3, 24));
+    positionDomainService.applyBuyFill(
+        position, 100, new BigDecimal("9.8765"), LocalDate.of(2026, 3, 24));
 
     assertEquals(new BigDecimal("9.8765"), position.getCostPrice());
     assertEquals(new BigDecimal("987.6500"), position.getTotalCost());
@@ -62,7 +65,8 @@ class PositionDomainServiceTest {
     Position position = emptyPosition();
 
     // 将手续费摊入每股成交价后再入账，校验成本累计精度
-    positionDomainService.applyBuyFill(position, 100, new BigDecimal("10.0532"), LocalDate.of(2026, 3, 24));
+    positionDomainService.applyBuyFill(
+        position, 100, new BigDecimal("10.0532"), LocalDate.of(2026, 3, 24));
 
     assertEquals(new BigDecimal("10.0532"), position.getCostPrice());
     assertEquals(new BigDecimal("1005.3200"), position.getTotalCost());
@@ -111,7 +115,8 @@ class PositionDomainServiceTest {
     position.setTotalQuantity(100);
     position.setFrozenQuantity(50);
 
-    assertThrows(IllegalStateException.class, () -> positionDomainService.applySellFill(position, 100));
+    assertThrows(
+        IllegalStateException.class, () -> positionDomainService.applySellFill(position, 100));
   }
 
   private Position emptyPosition() {

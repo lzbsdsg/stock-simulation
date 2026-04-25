@@ -105,7 +105,7 @@ public class TradeApplicationService {
             .description("Duration of single order match flow")
             .publishPercentiles(0.95, 0.99)
             .publishPercentileHistogram()
-        .register(meterRegistry);
+            .register(meterRegistry);
   }
 
   private void ensureMetricsInitialized() {
@@ -272,9 +272,21 @@ public class TradeApplicationService {
     LocalDateTime now = LocalDateTime.now(ZONE_SHANGHAI);
     LocalDateTime startOfToday = now.toLocalDate().atStartOfDay();
 
+    String normalizedScope = scope == null ? "today" : scope.trim().toLowerCase(Locale.ROOT);
+    if ("today".equals(normalizedScope)) {
+      List<OrderVO> records =
+          orderRepository
+              .findActiveByUserIdAndCreatedAtBetween(userId, startOfToday, now, safePage, safeSize)
+              .stream()
+              .map(this::toOrderVO)
+              .toList();
+      long total =
+          orderRepository.countActiveByUserIdAndCreatedAtBetween(userId, startOfToday, now);
+      return new PageResult<>(records, total, safePage, safeSize);
+    }
+
     LocalDateTime from;
     LocalDateTime to;
-    String normalizedScope = scope == null ? "today" : scope.trim().toLowerCase(Locale.ROOT);
     switch (normalizedScope) {
       case "history" -> {
         from = LocalDate.of(1970, 1, 1).atStartOfDay();
@@ -307,7 +319,9 @@ public class TradeApplicationService {
     int safePage = sanitizePage(page);
     int safeSize = sanitizeSize(size);
     List<TradeVO> records =
-        tradeRepository.findByUserId(userId, safePage, safeSize).stream().map(this::toTradeVO).toList();
+        tradeRepository.findByUserId(userId, safePage, safeSize).stream()
+            .map(this::toTradeVO)
+            .toList();
     long total = tradeRepository.countByUserId(userId);
     return new PageResult<>(records, total, safePage, safeSize);
   }
@@ -323,8 +337,9 @@ public class TradeApplicationService {
         log.warn("trade.match.skip_not_found orderId={}", orderId);
         return MatchResult.SKIPPED_NOT_FOUND;
       }
-      if (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.PARTIAL_FILLED) {
-        log.info("trade.match.idempotent_skip orderId={} status={}", orderId, order.getStatus());
+      if (order.getStatus() != OrderStatus.PENDING
+          && order.getStatus() != OrderStatus.PARTIAL_FILLED) {
+        log.debug("trade.match.idempotent_skip orderId={} status={}", orderId, order.getStatus());
         return MatchResult.SKIPPED_ALREADY_DONE;
       }
 
@@ -366,7 +381,7 @@ public class TradeApplicationService {
       publishTradeFilledEventAfterCommit(order, trade);
       tradeOrderFilledCounter.increment();
 
-      log.info(
+      log.debug(
           "trade.match.ok orderId={} tradeId={} userId={} side={} price={} qty={}",
           order.getId(),
           trade.getId(),
@@ -376,7 +391,8 @@ public class TradeApplicationService {
           trade.getTradeQuantity());
       return MatchResult.MATCHED;
     } finally {
-      tradeMatchDurationTimer.record(System.nanoTime() - startNano, java.util.concurrent.TimeUnit.NANOSECONDS);
+      tradeMatchDurationTimer.record(
+          System.nanoTime() - startNano, java.util.concurrent.TimeUnit.NANOSECONDS);
     }
   }
 
@@ -391,7 +407,8 @@ public class TradeApplicationService {
       if (processed >= safeBatchSize) {
         break;
       }
-      if (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.PARTIAL_FILLED) {
+      if (order.getStatus() != OrderStatus.PENDING
+          && order.getStatus() != OrderStatus.PARTIAL_FILLED) {
         continue;
       }
       order.setStatus(OrderStatus.EXPIRED);
@@ -508,7 +525,10 @@ public class TradeApplicationService {
       return quote.getStockName();
     }
     String stockCode = resolveStockCode(requestedCode, quote);
-    return stockInfoRepository.findByStockCode(stockCode).map(s -> s.getStockName()).orElse(stockCode);
+    return stockInfoRepository
+        .findByStockCode(stockCode)
+        .map(s -> s.getStockName())
+        .orElse(stockCode);
   }
 
   private void freezeSellPosition(Long userId, String stockCode, int quantity) {
@@ -540,7 +560,9 @@ public class TradeApplicationService {
             order.getUserId(), frozenAmount, actualCost);
 
     Position position =
-        positionRepository.findByUserIdAndStockCodeForUpdate(order.getUserId(), order.getStockCode()).orElse(null);
+        positionRepository
+            .findByUserIdAndStockCodeForUpdate(order.getUserId(), order.getStockCode())
+            .orElse(null);
     if (position == null) {
       position = new Position();
       position.setUserId(order.getUserId());
@@ -695,7 +717,7 @@ public class TradeApplicationService {
           TX_TARGET_MS);
       return;
     }
-    log.info("trade.{}.ok userId={} orderId={} elapsedMs={}", action, userId, orderId, elapsedMs);
+    log.debug("trade.{}.ok userId={} orderId={} elapsedMs={}", action, userId, orderId, elapsedMs);
   }
 
   private Long currentUserId() {
