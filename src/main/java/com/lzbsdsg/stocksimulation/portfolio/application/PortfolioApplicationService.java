@@ -4,6 +4,7 @@ import com.lzbsdsg.stocksimulation.common.annotation.ReadOnly;
 import com.lzbsdsg.stocksimulation.common.exception.BizException;
 import com.lzbsdsg.stocksimulation.common.result.ErrorCode;
 import com.lzbsdsg.stocksimulation.common.result.PageResult;
+import com.lzbsdsg.stocksimulation.config.CaffeineConfig;
 import com.lzbsdsg.stocksimulation.market.domain.entity.QuoteSnapshot;
 import com.lzbsdsg.stocksimulation.market.domain.service.MarketDataFacade;
 import com.lzbsdsg.stocksimulation.portfolio.application.vo.EquityCurvePointVO;
@@ -17,6 +18,7 @@ import com.lzbsdsg.stocksimulation.portfolio.domain.entity.Position;
 import com.lzbsdsg.stocksimulation.portfolio.domain.repository.AssetSnapshotRepository;
 import com.lzbsdsg.stocksimulation.portfolio.domain.repository.FundFlowRepository;
 import com.lzbsdsg.stocksimulation.portfolio.domain.repository.PositionRepository;
+import com.lzbsdsg.stocksimulation.portfolio.domain.repository.PositionRepository.PositionPage;
 import com.lzbsdsg.stocksimulation.portfolio.domain.service.PositionDomainService;
 import com.lzbsdsg.stocksimulation.user.domain.entity.Account;
 import com.lzbsdsg.stocksimulation.user.domain.repository.AccountRepository;
@@ -32,6 +34,8 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -56,6 +60,7 @@ public class PortfolioApplicationService {
   private final FundFlowRepository fundFlowRepository;
   private final AssetSnapshotRepository assetSnapshotRepository;
   private final MarketDataFacade marketDataFacade;
+  private final CacheManager cacheManager;
 
   private final PositionDomainService positionDomainService = new PositionDomainService();
 
@@ -67,6 +72,22 @@ public class PortfolioApplicationService {
   @ReadOnly
   public OverviewVO getOverview() {
     Long userId = currentUserId();
+    return getCachedOverview(userId);
+  }
+
+  private OverviewVO getCachedOverview(Long userId) {
+    String cacheKey = "overview:" + userId;
+    Cache cache = portfolioQueryCache();
+    OverviewVO cached = cache.get(cacheKey, OverviewVO.class);
+    if (cached != null) {
+      return cached;
+    }
+    OverviewVO loaded = buildOverview(userId);
+    cache.put(cacheKey, loaded);
+    return loaded;
+  }
+
+  private OverviewVO buildOverview(Long userId) {
     Account account =
         accountRepository
             .findByUserId(userId)
@@ -122,8 +143,26 @@ public class PortfolioApplicationService {
     Long userId = currentUserId();
     int safePage = sanitizePage(page);
     int safeSize = sanitizeSize(size);
-    List<Position> positions = positionRepository.findByUserId(userId, safePage, safeSize);
-    long total = positionRepository.countByUserId(userId);
+    return getCachedPositions(userId, safePage, safeSize);
+  }
+
+  @SuppressWarnings("unchecked")
+  private PageResult<PositionVO> getCachedPositions(Long userId, int safePage, int safeSize) {
+    String cacheKey = "positions:" + userId + ":" + safePage + ":" + safeSize;
+    Cache cache = portfolioQueryCache();
+    Cache.ValueWrapper wrapper = cache.get(cacheKey);
+    if (wrapper != null && wrapper.get() instanceof PageResult<?> cached) {
+      return (PageResult<PositionVO>) cached;
+    }
+    PageResult<PositionVO> loaded = buildPositions(userId, safePage, safeSize);
+    cache.put(cacheKey, loaded);
+    return loaded;
+  }
+
+  private PageResult<PositionVO> buildPositions(Long userId, int safePage, int safeSize) {
+    PositionPage positionPage = positionRepository.findPageByUserId(userId, safePage, safeSize);
+    List<Position> positions = positionPage.records();
+    long total = positionPage.total();
     if (positions.isEmpty()) {
       return new PageResult<>(List.of(), total, safePage, safeSize);
     }
@@ -132,6 +171,15 @@ public class PortfolioApplicationService {
     List<PositionVO> records =
         positions.stream().map(position -> toPositionVO(position, quoteMap)).toList();
     return new PageResult<>(records, total, safePage, safeSize);
+  }
+
+  private Cache portfolioQueryCache() {
+    Cache cache = cacheManager.getCache(CaffeineConfig.CACHE_PORTFOLIO_QUERY);
+    if (cache == null) {
+      throw new IllegalStateException(
+          "No cache configured for region: " + CaffeineConfig.CACHE_PORTFOLIO_QUERY);
+    }
+    return cache;
   }
 
   /** 获取资金流水 */

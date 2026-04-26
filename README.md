@@ -161,12 +161,13 @@ WebSocket 入口：
 
 结果：
 
-- 总吞吐：`1762.07 req/s`
-- 总延迟：`p95=13.24ms`，`p99=34.02ms`
+- 总吞吐：`1755.48 req/s`
+- 总延迟：`p95=11.25ms`，`p99=30.70ms`
 - 全链路业务：`39001` 成功，`0` 失败
-- 行情独立场景：`251.73 qps`，`p95=3.05ms`
-- 资产总览独立场景：`125.87 qps`，`p95=28.21ms`
-- 订单列表独立场景：`125.87 qps`，`p95=6.31ms`
+- 全链路耗时：`p95=31ms`，`p99=47ms`
+- 行情独立场景：`250.79 qps`，`p95=2.61ms`
+- 资产总览独立场景：`125.40 qps`，`p95=26.42ms`
+- 订单列表独立场景：`125.40 qps`，`p95=5.89ms`
 
 为什么选它：
 
@@ -178,21 +179,22 @@ WebSocket 入口：
 
 顺序压测 `k6/perf-endpoints-common-qps.js` 的最新结果：
 
-- 总吞吐：`1305.12 req/s`
-- 总延迟：`p95=102.67ms`，`p99=716.03ms`
-- `endpoint_failure_total=1`
+- 总吞吐：`1301.61 req/s`
+- 总延迟：`p95=5.57ms`，`p99=19.66ms`
+- `endpoint_failure_total=0`
 
 关键接口：
 
-- `market_quote`：`213.07 qps`，`p95=56.31ms`
-- `portfolio_overview`：`114.79 qps`，`p95=510.70ms`
-- `portfolio_positions`：`86.18 qps`，`p95=492.88ms`
-- `trade_orders`：`96.86 qps`，`p95=102.61ms`
+- `market_quote`：`212.09 qps`，`p95=2.11ms`，`p99=3.75ms`
+- `portfolio_overview`：`115.69 qps`，`p95=21.56ms`，`p99=33.53ms`
+- `portfolio_positions`：`86.77 qps`，`p95=21.41ms`，`p99=33.83ms`
+- `trade_orders`：`96.40 qps`，`p95=4.92ms`，`p99=7.02ms`
 
 结论：
 
 - 行情、订单、通知、自选股等查询链路整体健康。
-- 当前最需要继续优化的是 `portfolio_overview` 和 `portfolio_positions` 这两条资产聚合查询链路。
+- `portfolio_overview` 和 `portfolio_positions` 已通过优化后复测：`2s` 短 TTL 资产查询缓存、分页 count 复用和持仓分页排序索引把两条资产聚合查询从约 `500ms` P95 降到约 `21ms` P95。
+- 后续仍需要继续跟踪资产查询 P99，并评估账户/持仓快照或结果聚合字段缓存，进一步降低复杂查询尾延迟。
 
 ### 3. WebSocket
 

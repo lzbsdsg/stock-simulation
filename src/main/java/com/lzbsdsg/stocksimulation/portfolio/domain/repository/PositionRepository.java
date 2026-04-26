@@ -9,6 +9,8 @@ import java.util.Optional;
 /** 持仓仓储接口（domain 层定义） */
 public interface PositionRepository {
 
+  record PositionPage(List<Position> records, long total) {}
+
   Optional<Position> findByUserIdAndStockCode(Long userId, String stockCode);
 
   Optional<Position> findByUserIdAndStockCodeForUpdate(Long userId, String stockCode);
@@ -16,6 +18,8 @@ public interface PositionRepository {
   List<Position> findByUserId(Long userId);
 
   List<Position> findByUserId(Long userId, int page, int size);
+
+  PositionPage findPageByUserId(Long userId, int page, int size);
 
   long countByUserId(Long userId);
 

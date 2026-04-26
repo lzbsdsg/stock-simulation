@@ -1,0 +1,751 @@
+{
+    "metrics": {
+        "http_req_duration{scenario:ep_market_listed}": {
+            "p(90)": 2.8798673,
+            "p(95)": 3.2945510999999987,
+            "p(99)": 5.52467407,
+            "avg": 2.2805308221428593,
+            "min": 0.981069,
+            "med": 1.977452,
+            "max": 612.574875,
+            "thresholds": {
+                "p(95)<500": false,
+                "p(99)<1200": false
+            }
+        },
+        "vus": {
+            "value": 7,
+            "min": 0,
+            "max": 12
+        },
+        "http_expected_status_rate{scenario:ep_trade_orders}": {
+            "passes": 6000,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.95": false
+            },
+            "value": 1
+        },
+        "http_reqs{scenario:ep_portfolio_equity_curve}": {
+            "count": 3601,
+            "rate": 57.855235979205965,
+            "thresholds": {
+                "count>0": false
+            }
+        },
+        "http_expected_status_rate{scenario:ep_notifications_get}": {
+            "passes": 4200,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.95": false
+            },
+            "value": 1
+        },
+        "http_reqs{scenario:ep_market_search}": {
+            "rate": 57.855235979205965,
+            "count": 3601,
+            "thresholds": {
+                "count>0": false
+            }
+        },
+        "http_req_duration{scenario:ep_user_me}": {
+            "min": 1.061822,
+            "med": 2.303321,
+            "max": 22.737098,
+            "p(90)": 3.111935,
+            "p(95)": 3.617152,
+            "p(99)": 5.498558,
+            "avg": 2.448138218272696,
+            "thresholds": {
+                "p(95)<500": false,
+                "p(99)<1200": false
+            }
+        },
+        "http_reqs{scenario:ep_notifications_unread_count}": {
+            "count": 3601,
+            "rate": 57.855235979205965,
+            "thresholds": {
+                "count>0": false
+            }
+        },
+        "http_expected_status_rate{scenario:ep_market_listed}": {
+            "passes": 4200,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.95": false
+            },
+            "value": 1
+        },
+        "http_reqs{scenario:ep_trade_trades}": {
+            "count": 4801,
+            "rate": 77.13495916027988,
+            "thresholds": {
+                "count>0": false
+            }
+        },
+        "http_reqs{scenario:ep_market_quotes_batch}": {
+            "count": 4801,
+            "rate": 77.13495916027988,
+            "thresholds": {
+                "count>0": false
+            }
+        },
+        "http_expected_status_rate{scenario:ep_trade_trades}": {
+            "fails": 0,
+            "passes": 4801,
+            "thresholds": {
+                "rate>0.95": false
+            },
+            "value": 1
+        },
+        "http_req_waiting": {
+            "p(95)": 5.314541049999994,
+            "p(99)": 19.481383069999918,
+            "avg": 2.7597624483546115,
+            "min": 0.448815,
+            "med": 1.9831675,
+            "max": 628.237855,
+            "p(90)": 3.9945747
+        },
+        "http_reqs{scenario:ep_portfolio_positions}": {
+            "count": 5401,
+            "rate": 86.77482075081684,
+            "thresholds": {
+                "count>0": false
+            }
+        },
+        "http_req_duration{scenario:ep_notifications_get}": {
+            "avg": 3.4742893354761972,
+            "min": 1.526006,
+            "med": 3.132994,
+            "max": 614.169102,
+            "p(90)": 4.3857797,
+            "p(95)": 4.9474104,
+            "p(99)": 7.466809110000015,
+            "thresholds": {
+                "p(95)<500": false,
+                "p(99)<1200": false
+            }
+        },
+        "http_reqs{scenario:ep_market_quote}": {
+            "count": 13201,
+            "rate": 212.09302142779728,
+            "thresholds": {
+                "count>0": false
+            }
+        },
+        "http_req_duration{scenario:ep_market_search}": {
+            "p(99)": 6.053718,
+            "avg": 2.385539690086084,
+            "min": 1.003636,
+            "med": 2.134889,
+            "max": 157.354923,
+            "p(90)": 2.993399,
+            "p(95)": 3.487248,
+            "thresholds": {
+                "p(95)<500": false,
+                "p(99)<1200": false
+            }
+        },
+        "http_req_duration{scenario:ep_portfolio_equity_curve}": {
+            "p(90)": 4.394605,
+            "p(95)": 5.005562,
+            "p(99)": 7.235328,
+            "avg": 3.4716107786725923,
+            "min": 1.738811,
+            "med": 3.267952,
+            "max": 22.54021,
+            "thresholds": {
+                "p(95)<500": false,
+                "p(99)<1200": false
+            }
+        },
+        "http_expected_status_rate{scenario:ep_market_realtime_metrics}": {
+            "fails": 0,
+            "passes": 1801,
+            "thresholds": {
+                "rate>0.95": false
+            },
+            "value": 1
+        },
+        "http_req_tls_handshaking": {
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0
+        },
+        "http_req_duration{scenario:ep_trade_trades}": {
+            "avg": 3.6567182576546613,
+            "min": 1.531919,
+            "med": 3.252435,
+            "max": 609.155828,
+            "p(90)": 4.547526,
+            "p(95)": 5.178264,
+            "p(99)": 7.644669,
+            "thresholds": {
+                "p(95)<500": false,
+                "p(99)<1200": false
+            }
+        },
+        "http_expected_status_rate{scenario:ep_market_search}": {
+            "passes": 3601,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.95": false
+            },
+            "value": 1
+        },
+        "http_expected_status_rate{scenario:ep_market_quote}": {
+            "passes": 13201,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.95": false
+            },
+            "value": 1
+        },
+        "http_req_duration{scenario:ep_watchlist_get}": {
+            "min": 0.834139,
+            "med": 1.890078,
+            "max": 607.801338,
+            "p(90)": 2.677412,
+            "p(95)": 3.063073,
+            "p(99)": 5.062732,
+            "avg": 2.1371730064569876,
+            "thresholds": {
+                "p(95)<500": false,
+                "p(99)<1200": false
+            }
+        },
+        "http_expected_status_rate{scenario:ep_market_quotes_batch}": {
+            "passes": 4801,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.95": false
+            },
+            "value": 1
+        },
+        "http_expected_status_rate{scenario:ep_market_kline}": {
+            "passes": 2401,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.95": false
+            },
+            "value": 1
+        },
+        "iterations": {
+            "count": 81014,
+            "rate": 1301.6062448262683
+        },
+        "checks": {
+            "passes": 81014,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.95": false
+            },
+            "value": 1
+        },
+        "http_req_duration{scenario:ep_market_indexes}": {
+            "max": 12.947298,
+            "p(90)": 1.88188,
+            "p(95)": 2.242313,
+            "p(99)": 4.190113,
+            "avg": 1.4260083082477064,
+            "min": 0.505477,
+            "med": 1.311754,
+            "thresholds": {
+                "p(95)<500": false,
+                "p(99)<1200": false
+            }
+        },
+        "http_req_blocked": {
+            "avg": 0.037415495013207414,
+            "min": 0.000983,
+            "med": 0.004995,
+            "max": 46.38905,
+            "p(90)": 0.008277,
+            "p(95)": 0.009986349999999991,
+            "p(99)": 0.053649629999999775
+        },
+        "data_received": {
+            "count": 126029429,
+            "rate": 2024843.7531573407
+        },
+        "http_req_duration{scenario:ep_trade_orders}": {
+            "p(99)": 7.017391210000007,
+            "avg": 3.2890920173333393,
+            "min": 1.419565,
+            "med": 3.0135199999999998,
+            "max": 495.28752,
+            "p(90)": 4.3108361,
+            "p(95)": 4.92164495,
+            "thresholds": {
+                "p(95)<500": false,
+                "p(99)<1200": false
+            }
+        },
+        "iteration_duration": {
+            "avg": 3.0388001182265185,
+            "min": 0.588283,
+            "med": 2.326762,
+            "max": 221.460868,
+            "p(90)": 4.411766399999999,
+            "p(95)": 5.82955054999997,
+            "p(99)": 20.45714930999994
+        },
+        "http_req_duration": {
+            "p(95)": 5.57363244999998,
+            "p(99)": 19.65752008999994,
+            "avg": 2.9269231471473875,
+            "min": 0.505477,
+            "med": 2.1495555,
+            "max": 628.484839,
+            "p(90)": 4.196074799999999,
+            "thresholds": {
+                "p(99)<1200": false,
+                "p(95)<500": false
+            }
+        },
+        "http_reqs{scenario:ep_market_listed}": {
+            "count": 4200,
+            "rate": 67.4790311337587,
+            "thresholds": {
+                "count>0": false
+            }
+        },
+        "http_expected_status_rate{scenario:ep_portfolio_equity_curve}": {
+            "passes": 3601,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.95": false
+            },
+            "value": 1
+        },
+        "http_req_duration{expected_response:true}": {
+            "avg": 2.9269231471473875,
+            "min": 0.505477,
+            "med": 2.1495555,
+            "max": 628.484839,
+            "p(90)": 4.196074799999999,
+            "p(95)": 5.57363244999998,
+            "p(99)": 19.65752008999994
+        },
+        "http_req_duration{scenario:ep_portfolio_positions}": {
+            "p(99)": 33.83,
+            "avg": 5.279294343084611,
+            "min": 0.880027,
+            "med": 2.36467,
+            "max": 201.920813,
+            "p(90)": 11.94847,
+            "p(95)": 21.41493,
+            "thresholds": {
+                "p(95)<500": false,
+                "p(99)<1200": false
+            }
+        },
+        "http_reqs{scenario:ep_market_realtime_metrics}": {
+            "count": 1801,
+            "rate": 28.935651207595097,
+            "thresholds": {
+                "count>0": false
+            }
+        },
+        "http_req_connecting": {
+            "max": 46.249318,
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 0,
+            "avg": 0.030428757597452283,
+            "min": 0,
+            "med": 0
+        },
+        "http_req_duration{scenario:ep_portfolio_overview}": {
+            "p(90)": 11.901604,
+            "p(95)": 21.555192,
+            "p(99)": 33.5294,
+            "avg": 5.58181991528956,
+            "min": 0.890295,
+            "med": 2.352883,
+            "max": 628.484839,
+            "thresholds": {
+                "p(95)<500": false,
+                "p(99)<1200": false
+            }
+        },
+        "http_req_duration{scenario:ep_market_quotes_batch}": {
+            "p(95)": 2.327425,
+            "p(99)": 4.422893,
+            "avg": 1.6102494280358244,
+            "min": 0.506099,
+            "med": 1.321426,
+            "max": 529.028112,
+            "p(90)": 1.952151,
+            "thresholds": {
+                "p(99)<1200": false,
+                "p(95)<500": false
+            }
+        },
+        "http_req_duration{scenario:ep_portfolio_fund_flows}": {
+            "p(90)": 5.53967,
+            "p(95)": 6.238148,
+            "p(99)": 9.557949,
+            "avg": 4.246281094501311,
+            "min": 1.825206,
+            "med": 3.820875,
+            "max": 613.973876,
+            "thresholds": {
+                "p(95)<500": false,
+                "p(99)<1200": false
+            }
+        },
+        "endpoint_business_success_rate": {
+            "passes": 81014,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.95": false
+            },
+            "value": 1
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 81014,
+            "value": 0
+        },
+        "http_req_receiving": {
+            "p(99)": 0.5830603399999986,
+            "avg": 0.14136606582812838,
+            "min": 0.009901,
+            "med": 0.10031799999999999,
+            "max": 20.768345,
+            "p(90)": 0.2814002,
+            "p(95)": 0.3563591999999992
+        },
+        "http_expected_status_rate{scenario:ep_market_indexes}": {
+            "passes": 3601,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.95": false
+            },
+            "value": 1
+        },
+        "http_reqs{scenario:ep_market_indexes}": {
+            "rate": 57.855235979205965,
+            "count": 3601,
+            "thresholds": {
+                "count>0": false
+            }
+        },
+        "http_reqs{scenario:ep_market_kline}": {
+            "count": 2401,
+            "rate": 38.57551279813205,
+            "thresholds": {
+                "count>0": false
+            }
+        },
+        "http_expected_status_rate{scenario:ep_portfolio_fund_flows}": {
+            "passes": 4201,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.95": false
+            },
+            "value": 1
+        },
+        "http_req_duration{scenario:ep_market_quote}": {
+            "p(95)": 2.106222,
+            "p(99)": 3.745732,
+            "avg": 1.4516048453147492,
+            "min": 0.519233,
+            "med": 1.217913,
+            "max": 612.685522,
+            "p(90)": 1.824113,
+            "thresholds": {
+                "p(95)<500": false,
+                "p(99)<1200": false
+            }
+        },
+        "http_expected_status_rate": {
+            "passes": 81014,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.95": false
+            },
+            "value": 1
+        },
+        "http_expected_status_rate{scenario:ep_portfolio_overview}": {
+            "passes": 7201,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.95": false
+            },
+            "value": 1
+        },
+        "http_reqs{scenario:ep_notifications_get}": {
+            "count": 4200,
+            "rate": 67.4790311337587,
+            "thresholds": {
+                "count>0": false
+            }
+        },
+        "endpoint_success_total": {
+            "count": 81014,
+            "rate": 1301.6062448262683
+        },
+        "http_req_duration{scenario:ep_notifications_unread_count}": {
+            "avg": 2.183240460983059,
+            "min": 0.973943,
+            "med": 2.028776,
+            "max": 20.925111,
+            "p(90)": 2.829869,
+            "p(95)": 3.260395,
+            "p(99)": 5.408793,
+            "thresholds": {
+                "p(95)<500": false,
+                "p(99)<1200": false
+            }
+        },
+        "vus_max": {
+            "value": 680,
+            "min": 680,
+            "max": 680
+        },
+        "http_reqs": {
+            "count": 81014,
+            "rate": 1301.6062448262683
+        },
+        "http_expected_status_rate{scenario:ep_watchlist_get}": {
+            "passes": 4801,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.95": false
+            },
+            "value": 1
+        },
+        "http_expected_status_rate{scenario:ep_notifications_unread_count}": {
+            "passes": 3601,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.95": false
+            },
+            "value": 1
+        },
+        "http_expected_status_rate{scenario:ep_user_me}": {
+            "passes": 3601,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.95": false
+            },
+            "value": 1
+        },
+        "http_req_duration{scenario:ep_market_realtime_metrics}": {
+            "p(95)": 4.292589,
+            "p(99)": 6.919745,
+            "avg": 2.7967715330372034,
+            "min": 1.444458,
+            "med": 2.559326,
+            "max": 14.349421,
+            "p(90)": 3.726188,
+            "thresholds": {
+                "p(99)<1200": false,
+                "p(95)<500": false
+            }
+        },
+        "http_reqs{scenario:ep_portfolio_fund_flows}": {
+            "count": 4201,
+            "rate": 67.49509756974292,
+            "thresholds": {
+                "count>0": false
+            }
+        },
+        "http_req_duration{scenario:ep_market_kline}": {
+            "p(90)": 2.257991,
+            "p(95)": 2.678343,
+            "p(99)": 4.870189,
+            "avg": 1.6738960037484365,
+            "min": 0.681125,
+            "med": 1.530216,
+            "max": 27.946023,
+            "thresholds": {
+                "p(95)<500": false,
+                "p(99)<1200": false
+            }
+        },
+        "http_req_sending": {
+            "max": 2.389824,
+            "p(90)": 0.051971699999999996,
+            "p(95)": 0.07364009999999994,
+            "p(99)": 0.13510884999999975,
+            "avg": 0.025794632964672673,
+            "min": 0.003107,
+            "med": 0.017461499999999998
+        },
+        "http_reqs{scenario:ep_user_me}": {
+            "count": 3601,
+            "rate": 57.855235979205965,
+            "thresholds": {
+                "count>0": false
+            }
+        },
+        "data_sent": {
+            "count": 18788293,
+            "rate": 301860.90673742397
+        },
+        "http_expected_status_rate{scenario:ep_portfolio_positions}": {
+            "passes": 5401,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.95": false
+            },
+            "value": 1
+        },
+        "http_reqs{scenario:ep_watchlist_get}": {
+            "count": 4801,
+            "rate": 77.13495916027988,
+            "thresholds": {
+                "count>0": false
+            }
+        },
+        "http_reqs{scenario:ep_portfolio_overview}": {
+            "count": 7201,
+            "rate": 115.6944055224277,
+            "thresholds": {
+                "count>0": false
+            }
+        },
+        "http_reqs{scenario:ep_trade_orders}": {
+            "count": 6000,
+            "rate": 96.39861590536957,
+            "thresholds": {
+                "count>0": false
+            }
+        }
+    },
+    "root_group": {
+        "groups": {},
+        "checks": {
+                "market_indexes status ok": {
+                    "name": "market_indexes status ok",
+                    "path": "::market_indexes status ok",
+                    "id": "5af57986673165c32f2fed0314b241ca",
+                    "passes": 3601,
+                    "fails": 0
+                },
+                "market_listed status ok": {
+                    "name": "market_listed status ok",
+                    "path": "::market_listed status ok",
+                    "id": "620ddc7c03faa379f875268e882dbd6d",
+                    "passes": 4200,
+                    "fails": 0
+                },
+                "watchlist_get status ok": {
+                    "name": "watchlist_get status ok",
+                    "path": "::watchlist_get status ok",
+                    "id": "5c2dfa1b7561339c2fc33b92d34f42bf",
+                    "passes": 4801,
+                    "fails": 0
+                },
+                "market_realtime_metrics status ok": {
+                    "name": "market_realtime_metrics status ok",
+                    "path": "::market_realtime_metrics status ok",
+                    "id": "5587f892d56db0702811a70e29892e0a",
+                    "passes": 1801,
+                    "fails": 0
+                },
+                "notifications_unread_count status ok": {
+                    "path": "::notifications_unread_count status ok",
+                    "id": "597f30a784f3555b495460fccbd0c2d5",
+                    "passes": 3601,
+                    "fails": 0,
+                    "name": "notifications_unread_count status ok"
+                },
+                "trade_orders status ok": {
+                    "name": "trade_orders status ok",
+                    "path": "::trade_orders status ok",
+                    "id": "9fe1fcbb7736f98d5e78bddb1e3dabd8",
+                    "passes": 6000,
+                    "fails": 0
+                },
+                "notifications_get status ok": {
+                    "id": "7df80739017cfc651af6e35111fd76b8",
+                    "passes": 4200,
+                    "fails": 0,
+                    "name": "notifications_get status ok",
+                    "path": "::notifications_get status ok"
+                },
+                "trade_trades status ok": {
+                    "name": "trade_trades status ok",
+                    "path": "::trade_trades status ok",
+                    "id": "8605090522c658b9479b55b99b9979da",
+                    "passes": 4801,
+                    "fails": 0
+                },
+                "user_me status ok": {
+                    "name": "user_me status ok",
+                    "path": "::user_me status ok",
+                    "id": "3449fe8e64f6ab008be1331d0d85d934",
+                    "passes": 3601,
+                    "fails": 0
+                },
+                "portfolio_equity_curve status ok": {
+                    "name": "portfolio_equity_curve status ok",
+                    "path": "::portfolio_equity_curve status ok",
+                    "id": "0c6ab28d085604132ea128e92d302b77",
+                    "passes": 3601,
+                    "fails": 0
+                },
+                "portfolio_fund_flows status ok": {
+                    "passes": 4201,
+                    "fails": 0,
+                    "name": "portfolio_fund_flows status ok",
+                    "path": "::portfolio_fund_flows status ok",
+                    "id": "3bbf9b9ded7b91f0c0afe4057ed80a14"
+                },
+                "market_kline status ok": {
+                    "name": "market_kline status ok",
+                    "path": "::market_kline status ok",
+                    "id": "4535d47dfc995e4ee44758fe7c407c27",
+                    "passes": 2401,
+                    "fails": 0
+                },
+                "market_quote status ok": {
+                    "id": "459f9970f3aaae09eebbf25bb3ff4cc7",
+                    "passes": 13201,
+                    "fails": 0,
+                    "name": "market_quote status ok",
+                    "path": "::market_quote status ok"
+                },
+                "market_quotes_batch status ok": {
+                    "path": "::market_quotes_batch status ok",
+                    "id": "585ea20ba1e9bc7773a5b15f03113573",
+                    "passes": 4801,
+                    "fails": 0,
+                    "name": "market_quotes_batch status ok"
+                },
+                "market_search status ok": {
+                    "passes": 3601,
+                    "fails": 0,
+                    "name": "market_search status ok",
+                    "path": "::market_search status ok",
+                    "id": "c3d333d57876db300b54d2efc8f7f145"
+                },
+                "portfolio_overview status ok": {
+                    "passes": 7201,
+                    "fails": 0,
+                    "name": "portfolio_overview status ok",
+                    "path": "::portfolio_overview status ok",
+                    "id": "b75fed2968399b0584db3a73c7b0b6d3"
+                },
+                "portfolio_positions status ok": {
+                    "name": "portfolio_positions status ok",
+                    "path": "::portfolio_positions status ok",
+                    "id": "655138295d7d355137f4a922517ec972",
+                    "passes": 5401,
+                    "fails": 0
+                }
+            },
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e"
+    }
+}

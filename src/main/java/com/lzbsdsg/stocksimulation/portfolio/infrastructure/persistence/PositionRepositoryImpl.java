@@ -48,13 +48,20 @@ public class PositionRepositoryImpl implements PositionRepository {
 
   @Override
   public List<Position> findByUserId(Long userId, int page, int size) {
+    return findPageByUserId(userId, page, size).records();
+  }
+
+  @Override
+  public PositionPage findPageByUserId(Long userId, int page, int size) {
     Page<PositionDO> p =
         positionMapper.selectPage(
             new Page<>(page, size),
             new LambdaQueryWrapper<PositionDO>()
                 .eq(PositionDO::getUserId, userId)
                 .orderByDesc(PositionDO::getCreatedAt));
-    return p.getRecords().stream().map(this::toDomain).collect(Collectors.toList());
+    List<Position> records =
+        p.getRecords().stream().map(this::toDomain).collect(Collectors.toList());
+    return new PositionPage(records, p.getTotal());
   }
 
   @Override

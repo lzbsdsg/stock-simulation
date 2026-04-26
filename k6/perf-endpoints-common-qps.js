@@ -39,6 +39,7 @@ const endpointDefs = [
 const endpointSuccessTotal = new Counter('endpoint_success_total');
 const endpointFailureTotal = new Counter('endpoint_failure_total');
 const endpointBusinessSuccessRate = new Rate('endpoint_business_success_rate');
+const httpExpectedStatusRate = new Rate('http_expected_status_rate');
 
 function effectiveUserId() {
   return K6_USER_ID_BASE + ((__VU - 1) % K6_USER_ID_SPAN);
@@ -75,8 +76,8 @@ function expectedStatus(status) {
 function buildOptions() {
   const scenarios = {};
   const thresholds = {
-    http_req_failed: ['rate<0.05'],
     http_req_duration: ['p(95)<500', 'p(99)<1200'],
+    http_expected_status_rate: ['rate>0.95'],
     endpoint_business_success_rate: ['rate>0.95'],
     checks: ['rate>0.95'],
   };
@@ -108,7 +109,7 @@ function buildOptions() {
 
     thresholds[`http_reqs{scenario:${scenarioName}}`] = ['count>0'];
     thresholds[`http_req_duration{scenario:${scenarioName}}`] = ['p(95)<500', 'p(99)<1200'];
-    thresholds[`http_req_failed{scenario:${scenarioName}}`] = ['rate<0.05'];
+    thresholds[`http_expected_status_rate{scenario:${scenarioName}}`] = ['rate>0.95'];
   });
 
   return {
@@ -131,6 +132,7 @@ function hit(path, endpointTag) {
     [`${endpointTag} status ok`]: (r) => expectedStatus(r.status),
   });
 
+  httpExpectedStatusRate.add(ok);
   endpointBusinessSuccessRate.add(ok);
   if (ok) {
     endpointSuccessTotal.add(1);
@@ -217,6 +219,12 @@ function readMetric(data, key, field) {
   if (metric[field] !== undefined) {
     return metric[field];
   }
+  if (field === 'value') {
+    const passes = metric.passes ?? 0;
+    const fails = metric.fails ?? 0;
+    const total = passes + fails;
+    return total > 0 ? passes / total : null;
+  }
   if (metric.values && metric.values[field] !== undefined) {
     return metric.values[field];
   }
@@ -238,6 +246,7 @@ export function handleSummary(data) {
   const totalReqs = readMetric(data, 'http_reqs', 'count') || 0;
   const totalQps = readMetric(data, 'http_reqs', 'rate') || 0;
   const totalFailedRate = readMetric(data, 'http_req_failed', 'value') || 0;
+  const totalExpectedStatusRate = readMetric(data, 'http_expected_status_rate', 'value') || 0;
   const p95 = readMetric(data, 'http_req_duration', 'p(95)') || 0;
   const p99 = readMetric(data, 'http_req_duration', 'p(99)') || 0;
   const successTotal = readMetric(data, 'endpoint_success_total', 'count') || 0;
@@ -250,6 +259,7 @@ export function handleSummary(data) {
   lines.push(`- total_requests: ${totalReqs}`);
   lines.push(`- total_qps: ${totalQps.toFixed(2)}`);
   lines.push(`- total_failed_rate: ${(totalFailedRate * 100).toFixed(2)}%`);
+  lines.push(`- http_expected_status_rate: ${(totalExpectedStatusRate * 100).toFixed(2)}%`);
   lines.push(`- total_p95_ms: ${p95.toFixed(2)}`);
   lines.push(`- total_p99_ms: ${p99.toFixed(2)}`);
   lines.push(`- endpoint_success_total: ${successTotal}`);

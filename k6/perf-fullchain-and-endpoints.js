@@ -35,6 +35,7 @@ const fullChainSuccessRate = new Rate('full_chain_success_rate');
 const businessSuccessTotal = new Counter('business_success_total');
 const businessFailureTotal = new Counter('business_failure_total');
 const businessSuccessRate = new Rate('business_success_rate');
+const httpExpectedStatusRate = new Rate('http_expected_status_rate');
 const fullChainDuration = new Trend('full_chain_duration_ms');
 
 export const options = {
@@ -88,15 +89,15 @@ export const options = {
     },
   },
   thresholds: {
-    http_req_failed: ['rate<0.01'],
     'http_reqs{scenario:full_chain_mix}': ['count>0'],
     'http_reqs{scenario:endpoint_market_quote}': ['count>0'],
     'http_reqs{scenario:endpoint_portfolio_overview}': ['count>0'],
     'http_reqs{scenario:endpoint_trade_list}': ['count>0'],
-    'http_req_failed{scenario:full_chain_mix}': ['rate<0.01'],
-    'http_req_failed{scenario:endpoint_market_quote}': ['rate<0.01'],
-    'http_req_failed{scenario:endpoint_portfolio_overview}': ['rate<0.01'],
-    'http_req_failed{scenario:endpoint_trade_list}': ['rate<0.01'],
+    http_expected_status_rate: ['rate>0.99'],
+    'http_expected_status_rate{scenario:full_chain_mix}': ['rate>0.99'],
+    'http_expected_status_rate{scenario:endpoint_market_quote}': ['rate>0.99'],
+    'http_expected_status_rate{scenario:endpoint_portfolio_overview}': ['rate>0.99'],
+    'http_expected_status_rate{scenario:endpoint_trade_list}': ['rate>0.99'],
     'http_req_duration{scenario:full_chain_mix}': ['p(95)<180', 'p(99)<450'],
     'http_req_duration{scenario:endpoint_market_quote}': ['p(95)<120', 'p(99)<250'],
     'http_req_duration{scenario:endpoint_portfolio_overview}': ['p(95)<120', 'p(99)<280'],
@@ -137,6 +138,7 @@ function hit(path, tag) {
     [`${tag} status expected`]: (r) => isExpectedStatus(r.status),
   });
 
+  httpExpectedStatusRate.add(ok);
   businessSuccessRate.add(ok);
   if (ok) {
     businessSuccessTotal.add(1);
@@ -207,6 +209,15 @@ function readMetric(data, key, field) {
   if (metric[field] !== undefined) {
     return metric[field];
   }
+  if (field === 'value') {
+    if (metric.rate !== undefined) {
+      return metric.rate;
+    }
+    const passes = metric.passes ?? 0;
+    const fails = metric.fails ?? 0;
+    const total = passes + fails;
+    return total > 0 ? passes / total : null;
+  }
   if (metric.values && metric.values[field] !== undefined) {
     return metric.values[field];
   }
@@ -248,6 +259,7 @@ export function handleSummary(data) {
   const totalReqs = readMetric(data, 'http_reqs', 'count') || 0;
   const totalQps = readMetric(data, 'http_reqs', 'rate') || 0;
   const totalFailedRate = readMetric(data, 'http_req_failed', 'value') || 0;
+  const totalExpectedStatusRate = readMetric(data, 'http_expected_status_rate', 'value') || 0;
   const p95 = readMetric(data, 'http_req_duration', 'p(95)') || 0;
   const p99 = readMetric(data, 'http_req_duration', 'p(99)') || 0;
   const fullChainSuccess = readMetric(data, 'full_chain_success_total', 'count') || 0;
@@ -266,6 +278,7 @@ export function handleSummary(data) {
   lines.push(`- total_requests: ${totalReqs}`);
   lines.push(`- total_qps: ${totalQps.toFixed(2)}`);
   lines.push(`- total_failed_rate: ${(totalFailedRate * 100).toFixed(2)}%`);
+  lines.push(`- http_expected_status_rate: ${(totalExpectedStatusRate * 100).toFixed(2)}%`);
   lines.push(`- total_p95_ms: ${p95.toFixed(2)}`);
   lines.push(`- total_p99_ms: ${p99.toFixed(2)}`);
   lines.push(`- business_success_total: ${businessSuccess}`);
